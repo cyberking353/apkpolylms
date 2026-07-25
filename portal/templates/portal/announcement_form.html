@@ -1,0 +1,88 @@
+{% extends 'portal/base.html' %}
+{% block title %}New Announcement{% endblock %}
+{% block page_title %}New Announcement{% endblock %}
+{% block content %}
+<div class="portal-card" style="max-width:620px">
+  <div class="portal-card-head"><h3>Post Announcement</h3></div>
+  <div class="portal-card-body" style="padding:20px">
+    <form method="post">
+      {% csrf_token %}
+      <div class="field">
+        <label>Title *</label>
+        <input type="text" name="title" required placeholder="e.g. Semester Exam Timetable Released">
+      </div>
+      <div class="field">
+        <label>Message *</label>
+        <textarea name="body" rows="5" required placeholder="Write the full announcement here…"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Priority</label>
+          <select name="priority">
+            <option value="normal">Normal</option>
+            <option value="urgent">🔴 Urgent</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Expires On (optional)</label>
+          <input type="datetime-local" name="expires_at">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Who should see this?</label>
+        <select name="audience" id="audience-select" onchange="toggleAudienceFields()">
+          <option value="all">Everyone (all students)</option>
+          <option value="dept">Specific Department(s)</option>
+          <option value="level">Specific Level(s)</option>
+        </select>
+      </div>
+
+      <div id="dept-fields" style="display:none">
+        <div class="field">
+          <label>Select Department(s)</label>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div class="dept-pills-wrap">
+            {% for code,label in dept_choices %}
+            <label class="dept-pill">
+              <input type="checkbox" name="departments" value="{{ code }}">
+              <span>{{ label }}</span>
+            </label>
+            {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="level-fields" style="display:none">
+        <div class="field">
+          <label>Select Level(s)</label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            {% for code,label in level_choices %}
+            <label style="display:flex;align-items:center;gap:7px;font-size:.83rem;cursor:pointer;padding:6px 12px;border:1px solid var(--line);border-radius:var(--r-md)">
+              <input type="checkbox" name="levels" value="{{ code }}" style="width:15px;height:15px;accent-color:var(--teal)">
+              {{ label }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button type="submit" class="btn btn-teal">Post Announcement</button>
+        <a href="{% url 'portal:announcement_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleAudienceFields() {
+  var val = document.getElementById('audience-select').value;
+  document.getElementById('dept-fields').style.display  = val === 'dept'  ? 'block' : 'none';
+  document.getElementById('level-fields').style.display = val === 'level' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% block title %}{{ quiz.title }} — Al-Hikma LMS{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="qshell">
+  <div class="wrap">
+
+    <!-- Top bar -->
+    <div class="qtop">
+      <div>
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:3px">
+          <h1>{{ quiz.title }}</h1>
+          {% if quiz.quiz_type == 'final' %}
+            <span class="chip c-rose">🏁 Final Exam</span>
+          {% endif %}
+        </div>
+        <p class="sub">{{ course.title }} · {{ quiz.question_count }} Questions · {{ quiz.time_limit_minutes }} minutes</p>
+      </div>
+      <div class="tbox {% if quiz.quiz_type == 'final' %}tbox-gold{% endif %}">
+        <span style="font-size:1.1rem">⏱</span>
+        <div>
+          <div class="t-lbl" {% if quiz.quiz_type == 'final' %}style="color:var(--gold)"{% endif %}>Time Remaining</div>
+          <div class="t-val" id="timer" {% if quiz.quiz_type == 'final' %}style="color:var(--gold)"{% endif %}>
+            {{ quiz.time_limit_minutes }}:00
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if quiz.quiz_type == 'final' %}
+    <div class="exam-alert">⚠️ <span><strong>Final Exam Mode.</strong> This is timed. Pass mark: {{ quiz.pass_mark }}%. Attempt {{ attempt_number }} of {{ quiz.max_attempts }}.</span></div>
+    {% endif %}
+
+    <form method="post" action="{% url 'quizzes:submit_quiz' quiz.id %}" id="quiz-form">
+      {% csrf_token %}
+      <div class="qlayout">
+        <!-- Questions -->
+        <div>
+          <!-- Progress -->
+          <div class="qpr">
+            <div class="qpw"><div class="qpf" id="q-fill" style="width:0%"></div></div>
+            <span class="qcnt" id="q-count">0 / {{ quiz.question_count }}</span>
+          </div>
+
+          <!-- All questions (shown one at a time via JS) -->
+          {% for question in questions %}
+          <div class="qcard question-slide" id="q-{{ forloop.counter }}" {% if not forloop.first %}style="display:none"{% endif %}>
+            <div class="qlbl">Question {{ forloop.counter }} of {{ questions|length }}</div>
+            <div class="qtext">{{ question.text }}</div>
+            <div class="opts">
+              {% for choice in question.choices.all %}
+              <label class="opt" id="opt-{{ choice.id }}">
+                <input type="radio" name="question_{{ question.id }}" value="{{ choice.id }}"
+                       onchange="selectOpt(this, {{ forloop.counter0 }})">
+                <span class="opt-lt">{{ forloop.counter0|add:0|stringformat:"s"|slice:"0:1" }}{% if forloop.counter0 == 0 %}A{% elif forloop.counter0 == 1 %}B{% elif forloop.counter0 == 2 %}C{% else %}D{% endif %}</span>
+                <span class="opt-tx">{{ choice.text }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+
+          <!-- Navigation -->
+          <div class="qnav">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-prev" onclick="prevQ()" disabled>← Prev</button>
+            <span style="font-size:.76rem;color:var(--muted)" id="nav-hint">Select an answer to continue</span>
+            <div style="display:flex;gap:7px">
+              <button type="button" class="btn btn-teal btn-sm" id="btn-next" onclick="nextQ()">Next →</button>
+              <button type="submit" class="btn btn-gold btn-sm" id="btn-submit" style="display:none"
+                      data-confirm="Submit quiz now? You cannot change answers after submitting.">
+                Submit ✓
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="qsb card cp">
+          <h5>Question Map</h5>
+          <div class="qdots" id="q-dots">
+            {% for question in questions %}
+            <div class="qdot" id="dot-{{ forloop.counter }}" onclick="goToQ({{ forloop.counter }})">{{ forloop.counter }}</div>
+            {% endfor %}
+          </div>
+          <div style="height:1px;background:var(--line);margin:13px 0"></div>
+          <div class="qleg">
+            <div class="ql-item"><div class="ql-dot" style="background:var(--teal)"></div> Answered</div>
+            <div class="ql-item"><div class="ql-dot" style="border:2px solid var(--gold)"></div> Current</div>
+            <div class="ql-item"><div class="ql-dot" style="background:var(--surface-2);border:1px solid var(--line)"></div> Unanswered</div>
+          </div>
+          <div style="height:1px;background:var(--line);margin:13px 0"></div>
+          <div style="background:var(--bg);border-radius:var(--r-sm);padding:10px 12px;font-size:.76rem;color:var(--muted)">
+            <div style="margin-bottom:3px"><strong>Pass Mark:</strong> {{ quiz.pass_mark }}%</div>
+            <div><strong>Attempt:</strong> {{ attempt_number }} of {{ quiz.max_attempts }}</div>
+          </div>
+          <div style="margin-top:11px">
+            <button type="submit" class="btn btn-danger btn-full btn-sm"
+                    data-confirm="Submit exam now? This cannot be undone.">
+              🏁 Submit Now
+            </button>
+          </div>
+        </aside>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const TOTAL = {{ quiz.question_count }};
+const MINS  = {{ quiz.time_limit_minutes }};
+let current = 1;
+let answered = {};
+let timeLeft = MINS * 60;
+
+// Timer
+const timerEl = document.getElementById('timer');
+const interval = setInterval(() => {
+  timeLeft--;
+  const m = String(Math.floor(timeLeft / 60)).padStart(2,'0');
+  const s = String(timeLeft % 60).padStart(2,'0');
+  timerEl.textContent = `${m}:${s}`;
+  if (timeLeft <= 60)       timerEl.className = 't-val danger';
+  else if (timeLeft <= MINS * 60 * 0.25) timerEl.className = 't-val warn';
+  if (timeLeft <= 0) {
+    clearInterval(interval);
+    document.getElementById('quiz-form').submit();
+  }
+}, 1000);
+
+function showQ(n) {
+  document.querySelectorAll('.question-slide').forEach(el => el.style.display = 'none');
+  document.getElementById(`q-${n}`).style.display = 'block';
+  // progress
+  const pct = ((n - 1) / TOTAL) * 100;
+  document.getElementById('q-fill').style.width = pct + '%';
+  document.getElementById('q-count').textContent = `${n} / ${TOTAL}`;
+  // nav buttons
+  document.getElementById('btn-prev').disabled = (n === 1);
+  const isLast = (n === TOTAL);
+  document.getElementById('btn-next').style.display  = isLast ? 'none' : 'inline-flex';
+  document.getElementById('btn-submit').style.display = isLast ? 'inline-flex' : 'none';
+  // dots
+  document.querySelectorAll('.qdot').forEach(d => d.classList.remove('cur'));
+  const dot = document.getElementById(`dot-${n}`);
+  if (dot) dot.classList.add('cur');
+  current = n;
+}
+
+function nextQ() { if (current < TOTAL) showQ(current + 1); }
+function prevQ() { if (current > 1) showQ(current - 1); }
+function goToQ(n) { showQ(n); }
+
+function selectOpt(input, idx) {
+  answered[current] = true;
+  const dot = document.getElementById(`dot-${current}`);
+  if (dot) { dot.classList.remove('cur'); dot.classList.add('ans'); }
+  // style options
+  const slide = document.getElementById(`q-${current}`);
+  slide.querySelectorAll('.opt').forEach(o => o.classList.remove('sel'));
+  input.closest('.opt').classList.add('sel');
+}
+
+// Init
+showQ(1);
+</script>
+{% endblock %}

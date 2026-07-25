@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block title %}My Courses — Al-Hikma LMS{% endblock %}
+{% block nav_class %}dark{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="dash-shell">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sb" id="sidebar">
+    <div class="sb-u">
+      <div class="sb-av">{{ user.initials }}</div>
+      <div class="sb-name">{{ user.display_name }}</div>
+      <div class="sb-role">Lecturer · {{ user.get_department_display|default:"—" }}</div>
+      {% if user.staff_id %}
+      <div class="sb-role" style="font-size:.72rem;opacity:.6">{{ user.staff_id }}</div>
+      {% endif %}
+    </div>
+
+    <div class="sb-sec-lbl">Lecturer</div>
+    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl {% if request.resolver_match.url_name == 'lecturer_dashboard' %}on{% endif %}">
+      <span class="ic">🏠</span> My Courses
+      <span class="bge">{{ courses.count }}</span>
+    </a>
+    <a href="{% url 'courses:lecturer_course_create' %}" class="sbl">
+      <span class="ic">➕</span> New Course
+    </a>
+    <a href="{% url 'courses:lecturer_message_list' %}" class="sbl {% if 'message' in request.resolver_match.url_name %}on{% endif %}">
+      <span class="ic">✉️</span> Course Messages
+      {% if unread_message_count %}<span class="bge" style="background:var(--rose)">{{ unread_message_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'courses:lecturer_notifications' %}" class="sbl {% if 'notification' in request.resolver_match.url_name %}on{% endif %}">
+      <span class="ic">🔔</span> Notifications
+      {% if unread_notifications %}<span class="bge" style="background:var(--gold)">{{ unread_notifications }}</span>{% endif %}
+    </a>
+
+    <div class="sb-sec-lbl" style="margin-top:8px">Account</div>
+    <a href="{% url 'accounts:profile' %}" class="sbl">
+      <span class="ic">👤</span> Profile
+    </a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)">
+      <span class="ic">🚪</span> Sign Out
+    </a>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="dmain">
+
+    <!-- Welcome -->
+    <div class="wlc">
+      <div>
+        <h2>Welcome, {{ user.display_name }}! 👋</h2>
+        <p>
+          {{ user.get_department_display|default:"" }} Department —
+          {{ published_count }} published · {{ pending_count }} pending review · {{ draft_count }} draft
+          {% if rejected_count %} · {{ rejected_count }} rejected{% endif %}
+        </p>
+      </div>
+      <div class="wlc-em">🎓</div>
+    </div>
+
+    <!-- Pending / Rejected alerts -->
+    {% if pending_count %}
+    <div class="exam-alert" style="background:var(--gold-bg);border:1px solid var(--gold);margin-bottom:16px">
+      ⏳ <span>{{ pending_count }} course{{ pending_count|pluralize }} awaiting admin review. You can't edit them until admin approves or rejects.</span>
+    </div>
+    {% endif %}
+    {% if rejected_count %}
+    <div class="exam-alert" style="background:var(--rose-bg);border:1px solid var(--rose);margin-bottom:16px">
+      ✗ <span>{{ rejected_count }} course{{ rejected_count|pluralize }} were rejected. Open the course to read the admin note, then edit and resubmit.</span>
+    </div>
+    {% endif %}
+
+    <!-- Course grid -->
+    <div class="dsh">
+      <h3>My Courses</h3>
+      <a href="{% url 'courses:lecturer_course_create' %}" class="btn btn-teal btn-sm">+ New Course</a>
+    </div>
+
+    {% if courses %}
+    <div class="g3">
+      {% for course in courses %}
+      <article class="card cc" style="display:flex;flex-direction:column">
+        <div class="cc-thumb" style="background:linear-gradient(135deg,{{ course.color_start }},{{ course.color_end }});position:relative">
+          {{ course.icon }}
+          <span class="chip" style="position:absolute;top:9px;right:9px;z-index:2;
+            background:{% if course.status == 'published' %}var(--green){% elif course.status == 'pending' %}var(--gold){% elif course.status == 'rejected' %}var(--rose){% else %}var(--surface){% endif %};
+            color:{% if course.status == 'draft' %}var(--ink){% else %}#fff{% endif %}">
+            {% if course.status == 'published' %}✓ Live
+            {% elif course.status == 'pending' %}⏳ In Review
+            {% elif course.status == 'rejected' %}✗ Rejected
+            {% else %}✏️ Draft{% endif %}
+          </span>
+        </div>
+
+        <div class="cc-body">
+          <h4>{{ course.title }}</h4>
+          <p>{{ course.description|truncatewords:14 }}</p>
+          <div style="font-size:.75rem;color:var(--muted)">
+            {{ course.get_level_display }} · Sem {{ course.semester }} · {{ course.total_modules }} module{{ course.total_modules|pluralize }}
+            {% if course.is_borrowed %} · <span style="color:var(--teal)">Borrowed</span>{% endif %}
+          </div>
+          {% if course.review_note and course.status == 'rejected' %}
+          <div style="margin-top:8px;font-size:.75rem;color:var(--rose);background:var(--rose-bg);border-radius:var(--r-sm);padding:6px 9px">
+            <strong>Admin note:</strong> {{ course.review_note }}
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="cc-foot">
+          {% if course.status != 'pending' %}
+          <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="btn btn-ghost btn-sm">Edit</a>
+          <a href="{% url 'courses:lecturer_course_preview' course.slug %}" class="btn btn-ghost btn-sm">👁</a>
+          {% else %}
+          <span class="btn btn-ghost btn-sm" style="opacity:.4;cursor:default">Edit</span>
+          {% endif %}
+
+          {% if course.status == 'draft' or course.status == 'rejected' %}
+          <form method="post" action="{% url 'courses:lecturer_course_submit' course.slug %}">
+            {% csrf_token %}
+            <button class="btn btn-teal btn-sm"
+              data-confirm="Submit for admin review? You won't be able to edit it while it's under review.">
+              Submit →
+            </button>
+          </form>
+          {% elif course.status == 'published' %}
+          <a href="{% url 'courses:lecturer_course_results' course.slug %}" class="btn btn-ghost btn-sm">📊 Results</a>
+          <span class="chip c-green">{{ course.enrolled_count }} enrolled</span>
+          {% else %}
+          <span class="chip c-gold">Under Review</span>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📚</div>
+      <h3>No courses yet</h3>
+      <p>Create your first course and submit it for admin review before students can see it.</p>
+      <a href="{% url 'courses:lecturer_course_create' %}" class="btn btn-teal">Create Course →</a>
+    </div>
+    {% endif %}
+
+  </main>
+</div>
+{% endblock %}

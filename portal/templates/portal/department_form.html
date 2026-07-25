@@ -1,0 +1,46 @@
+{% extends 'portal/base.html' %}
+{% block title %}{% if is_new %}New Department{% else %}Edit: {{ dept.name }}{% endif %}{% endblock %}
+{% block page_title %}{% if is_new %}New Department{% else %}Edit Department{% endif %}{% endblock %}
+{% block content %}
+<div class="portal-card" style="max-width:480px">
+  <div class="portal-card-head">
+    <h3>{% if is_new %}Create Department{% else %}Edit {{ dept.name }}{% endif %}</h3>
+  </div>
+  <div class="portal-card-body" style="padding:20px">
+    <form method="post">
+      {% csrf_token %}
+      {% if is_new %}
+      <div class="field">
+        <label>Code * <span style="font-size:.75rem;color:var(--muted)">(short, unique, e.g. CS — cannot be changed later)</span></label>
+        <input type="text" name="code" required maxlength="10" placeholder="e.g. CS" style="text-transform:uppercase">
+      </div>
+      {% else %}
+      <div class="field">
+        <label>Code <span style="font-size:.75rem;color:var(--muted)">(cannot be changed)</span></label>
+        <input type="text" value="{{ dept.code }}" disabled style="background:var(--bg);color:var(--muted)">
+      </div>
+      {% endif %}
+      <div class="field">
+        <label>Full Name *</label>
+        <input type="text" name="name" value="{{ dept.name|default:'' }}" required placeholder="e.g. Computer Science">
+      </div>
+      <div class="field">
+        <label>Display Order <span style="font-size:.75rem;color:var(--muted)">(lower = shown first in dropdowns)</span></label>
+        <input type="number" name="order" value="{{ dept.order|default:0 }}" min="0">
+      </div>
+      {% if not is_new %}
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" name="is_active" {% if dept.is_active %}checked{% endif %} style="width:15px;height:15px;accent-color:var(--teal)">
+          Active (inactive departments are hidden from dropdowns)
+        </label>
+      </div>
+      {% endif %}
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button type="submit" class="btn btn-teal">{% if is_new %}Create{% else %}Save Changes{% endif %}</button>
+        <a href="{% url 'portal:department_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

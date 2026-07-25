@@ -1,0 +1,49 @@
+{% extends 'portal/base.html' %}
+{% block title %}Exams{% endblock %}
+{% block page_title %}Exams{% endblock %}
+{% block content %}
+<div style="display:flex;gap:8px;margin-bottom:16px">
+  <a href="?" class="btn {% if not active_status %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">All</a>
+  <a href="?status=draft" class="btn {% if active_status == 'draft' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">Draft</a>
+  <a href="?status=pending" class="btn {% if active_status == 'pending' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">Pending Approval</a>
+  <a href="?status=approved" class="btn {% if active_status == 'approved' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">Approved</a>
+</div>
+<div class="portal-card">
+  <div class="portal-card-head"><h3>{{ exams.count }} exam{{ exams.count|pluralize }}</h3></div>
+  <div class="portal-card-body">
+    <table class="portal-table">
+      <thead><tr><th>Exam</th><th>Course</th><th>Questions</th><th>Schedule</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for e in exams %}
+        <tr>
+          <td style="font-weight:600">{{ e.title }}</td>
+          <td style="font-size:.8rem;color:var(--muted)">{{ e.course.title }}</td>
+          <td>{{ e.question_count }}</td>
+          <td style="font-size:.76rem">
+            {% if e.open_at %}{{ e.open_at|date:"d M Y H:i" }} → {{ e.close_at|date:"d M Y H:i" }}
+            {% else %}Not scheduled{% endif %}
+          </td>
+          <td>
+            <span class="chip {% if e.exam_status == 'approved' %}c-green{% elif e.exam_status == 'pending' %}c-gold{% else %}{% endif %}">
+              {{ e.get_exam_status_display }}
+            </span>
+          </td>
+          <td>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <a href="{% url 'portal:exam_review' e.pk %}" class="btn {% if e.exam_status == 'pending' %}btn-gold{% else %}btn-ghost{% endif %} btn-sm">
+              {% if e.exam_status == 'pending' %}Approve{% else %}View{% endif %}
+            </a>
+            {% if e.exam_status == 'approved' %}
+            <a href="{% url 'portal:exam_reschedule_list' e.pk %}" class="btn btn-teal btn-sm">Reschedule</a>
+            {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No exams found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

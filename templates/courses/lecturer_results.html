@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load course_extras %}
+{% block title %}{{ course.title }} Results — Al-Hikma LMS{% endblock %}
+{% block nav_class %}dark{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="dash-shell">
+  <aside class="sb" id="sidebar">
+    <div class="sb-u">
+      <div class="sb-av">{{ user.initials }}</div>
+      <div class="sb-name">{{ user.display_name }}</div>
+      <div class="sb-role">Lecturer · {{ user.get_department_display|default:"—" }}</div>
+      {% if user.staff_id %}
+      <div class="sb-role" style="font-size:.72rem;opacity:.6">{{ user.staff_id }}</div>
+      {% endif %}
+    </div>
+
+    <div class="sb-sec-lbl">Lecturer</div>
+    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl">
+      <span class="ic">🏠</span> My Courses
+    </a>
+    <a href="{% url 'courses:lecturer_course_create' %}" class="sbl">
+      <span class="ic">➕</span> New Course
+    </a>
+    <a href="{% url 'courses:lecturer_message_list' %}" class="sbl">
+      <span class="ic">✉️</span> Course Messages
+    </a>
+
+    <div class="sb-sec-lbl" style="margin-top:8px">Account</div>
+    <a href="{% url 'accounts:profile' %}" class="sbl">
+      <span class="ic">👤</span> Profile
+    </a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)">
+      <span class="ic">🚪</span> Sign Out
+    </a>
+  </aside>
+
+  <main class="dmain">
+    <div class="wlc">
+      <div>
+        <h2>{{ course.title }} — Results 📊</h2>
+        <p>{{ course.get_level_display }} · Sem {{ course.semester }} · {{ rows|length }} student{{ rows|length|pluralize }}</p>
+      </div>
+      <div class="wlc-em">📊</div>
+    </div>
+
+    {% if not rows %}
+    <div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <h3>No results yet</h3>
+      <p>Students need to take quizzes and the exam before results appear here.</p>
+      <a href="{% url 'courses:lecturer_course_preview' course.slug %}" class="btn btn-teal">Back to Course →</a>
+    </div>
+    {% else %}
+    <div class="card" style="overflow-x:auto;padding:0">
+      <table style="width:100%;border-collapse:collapse;font-size:.83rem">
+        <thead>
+          <tr style="background:var(--bg);text-align:left">
+            <th style="padding:10px 12px;border-bottom:2px solid var(--line);position:sticky;top:0;background:var(--bg)">Student</th>
+            {% for module in modules %}
+              {% if module.quiz %}
+            <th style="padding:10px 12px;border-bottom:2px solid var(--line);text-align:center">Quiz {{ module.week_number }}<br><span style="font-weight:400;font-size:.7rem;color:var(--muted)">{{ module.quiz.pass_mark }}% pass</span></th>
+              {% endif %}
+            {% endfor %}
+            {% if course.exam %}
+            <th style="padding:10px 12px;border-bottom:2px solid var(--line);text-align:center">Exam<br><span style="font-weight:400;font-size:.7rem;color:var(--muted)">{{ course.exam.pass_mark }}% pass</span></th>
+            {% endif %}
+            <th style="padding:10px 12px;border-bottom:2px solid var(--line);text-align:center">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr style="border-bottom:1px solid var(--line)">
+            <td style="padding:10px 12px;font-weight:500">{{ row.student.get_full_name|default:row.student.username }}</td>
+            {% for module in modules %}
+              {% if module.quiz %}
+              {% with attempt=row.quiz_scores|get_item:module.id %}
+              <td style="padding:10px 12px;text-align:center">
+                {% if attempt %}
+                <span style="color:{% if attempt.passed %}var(--green){% else %}var(--rose){% endif %};font-weight:600">{{ attempt.score|floatformat:0 }}%</span>
+                {% else %}
+                <span style="color:var(--faint)">—</span>
+                {% endif %}
+              </td>
+              {% endwith %}
+              {% endif %}
+            {% endfor %}
+            {% if course.exam %}
+            <td style="padding:10px 12px;text-align:center">
+              {% if row.exam_attempt %}
+              <span style="color:{% if row.exam_attempt.passed %}var(--green){% else %}var(--rose){% endif %};font-weight:600">{{ row.exam_attempt.score|floatformat:0 }}%</span>
+              {% else %}
+              <span style="color:var(--faint)">—</span>
+              {% endif %}
+            </td>
+            {% endif %}
+            <td style="padding:10px 12px;text-align:center">
+              {% if row.exam_attempt and row.exam_attempt.passed %}
+              <span class="chip c-green">Completed</span>
+              {% elif row.exam_attempt %}
+              <span class="chip c-rose">Failed</span>
+              {% else %}
+              <span class="chip c-gold">In Progress</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:18px">
+      <a href="{% url 'courses:lecturer_course_preview' course.slug %}" class="btn btn-ghost">← Back to Course</a>
+    </div>
+
+  </main>
+</div>
+{% endblock %}

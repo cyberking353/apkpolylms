@@ -1,0 +1,108 @@
+{% extends 'portal/base.html' %}
+{% block title %}Reschedule — {{ exam.title }}{% endblock %}
+{% block page_title %}Exam Reschedule{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'portal:exam_list' %}" class="btn btn-ghost btn-sm">← Exams</a>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+
+  <!-- Create reschedule form -->
+  <div class="portal-card">
+    <div class="portal-card-head">
+      <h3>📅 Schedule Override for {{ exam.title }}</h3>
+    </div>
+    <div class="portal-card-body" style="padding:20px">
+
+      <div style="background:var(--bg);border-radius:var(--r-sm);padding:10px 14px;font-size:.8rem;color:var(--muted);margin-bottom:16px">
+        <strong style="color:var(--ink)">Global window:</strong>
+        {% if exam.open_at %}{{ exam.open_at|date:"d M Y H:i" }} → {{ exam.close_at|date:"d M Y H:i" }}{% else %}Not set{% endif %}
+      </div>
+
+      <form method="post" action="{% url 'portal:exam_reschedule_create' exam.pk %}">
+        {% csrf_token %}
+
+        <div class="field">
+          <label>Select Student(s) *</label>
+          <div style="max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--r-md);padding:10px">
+            {% for s in enrolled_students %}
+            <label style="display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:.83rem;cursor:pointer;border-bottom:1px solid var(--line)">
+              <input type="checkbox" name="students" value="{{ s.pk }}" style="width:14px;height:14px;accent-color:var(--teal)">
+              <span>
+                <strong>{{ s.get_full_name }}</strong>
+                <span style="color:var(--muted);font-size:.75rem"> · {{ s.matric_number }} · {{ s.get_department_display }} {{ s.get_academic_level_display }}</span>
+              </span>
+            </label>
+            {% empty %}
+            <div style="color:var(--muted);font-size:.82rem;padding:8px">No eligible students (all have already attempted or submitted this exam).</div>
+            {% endfor %}
+          </div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Only students who haven't yet submitted an attempt are shown.</div>
+        </div>
+
+        <div class="field">
+          <label>New Open Date & Time *</label>
+          <input type="datetime-local" name="open_at" required>
+        </div>
+        <div class="field">
+          <label>New Close Date & Time *</label>
+          <input type="datetime-local" name="close_at" required>
+        </div>
+        <div class="field">
+          <label>Reason (internal note)</label>
+          <textarea name="reason" rows="2" placeholder="e.g. Student was ill during the original window."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-teal"
+          data-confirm="Create schedule overrides for the selected students?">
+          Create Reschedule
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Existing reschedules -->
+  <div class="portal-card">
+    <div class="portal-card-head">
+      <h3>Existing Reschedules ({{ reschedules.count }})</h3>
+    </div>
+    <div class="portal-card-body">
+      {% if reschedules %}
+      <table class="portal-table">
+        <thead><tr><th>Student</th><th>Window</th><th>Reason</th><th></th></tr></thead>
+        <tbody>
+          {% for rs in reschedules %}
+          <tr>
+            <td>
+              <div style="font-weight:600;font-size:.83rem">{{ rs.student.get_full_name }}</div>
+              <div style="font-size:.72rem;color:var(--muted)">{{ rs.student.matric_number }}</div>
+            </td>
+            <td style="font-size:.76rem">
+              {{ rs.open_at|date:"d M Y H:i" }}<br>
+              → {{ rs.close_at|date:"d M Y H:i" }}
+            </td>
+            <td style="font-size:.76rem;color:var(--muted)">{{ rs.reason|default:"—" }}</td>
+            <td>
+              <form method="post" action="{% url 'portal:exam_reschedule_delete' rs.pk %}">
+                {% csrf_token %}
+                <button class="btn btn-danger btn-sm"
+                  data-confirm="Remove this reschedule? Student will revert to the global exam window.">
+                  Remove
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div style="padding:24px;text-align:center;color:var(--muted);font-size:.83rem">
+        No reschedules yet for this exam.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

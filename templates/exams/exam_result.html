@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Exam Result — Al-Hikma LMS{% endblock %}
+
+{% block content %}
+<div style="padding-top:calc(var(--nav-h) + 48px);padding-bottom:80px">
+  <div class="wrap" style="max-width:600px">
+    <div class="card res-card">
+
+      <div style="padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--line);text-align:center">
+        <div class="t-label" style="margin-bottom:3px">Al-Hikma Polytechnic</div>
+        <div class="t-heading" style="font-size:1.08rem;color:var(--teal)">{{ attempt.exam.course.title }} — Exam Result</div>
+      </div>
+
+      <div class="res-ic">{% if attempt.passed %}🏆{% else %}😔{% endif %}</div>
+      <div class="res-pct {% if not attempt.passed %}fail{% endif %}">{{ attempt.score|floatformat:0 }}%</div>
+      <h2 class="res-title t-heading">{% if attempt.passed %}Well Done!{% else %}Result Recorded{% endif %}</h2>
+      <p class="res-msg">
+        You answered {{ attempt.correct_answers }} out of {{ attempt.total_questions }} correctly.
+        {% if attempt.terminated_reason == 'violations' %}This exam was auto-submitted after repeated proctoring violations (exiting fullscreen / switching tabs).
+        {% elif attempt.auto_submitted %}This exam was auto-submitted when your time ran out.{% endif %}
+        The pass mark was {{ attempt.exam.pass_mark }}%.
+      </p>
+
+      <div class="res-stats">
+        <div class="rsi">
+          <div class="n" style="color:var(--green)">{{ attempt.correct_answers }}</div>
+          <div class="l">Correct</div>
+        </div>
+        <div class="rsi">
+          <div class="n" style="color:var(--rose)">{{ attempt.total_questions|add:"-"|add:attempt.correct_answers }}</div>
+          <div class="l">Wrong</div>
+        </div>
+        <div class="rsi">
+          <div class="n">{{ attempt.total_questions }}</div>
+          <div class="l">Total</div>
+        </div>
+      </div>
+
+      <div style="padding:9px 22px;border-radius:var(--r-full);font-weight:700;font-size:.85rem;text-align:center;margin:0 auto 22px;max-width:280px;display:block;
+           background:{% if attempt.passed %}var(--green){% else %}var(--rose){% endif %};color:#fff">
+        {% if attempt.passed %}✓ PASSED{% else %}✗ NOT PASSED{% endif %} — This score counts toward your final result
+      </div>
+
+      <div class="res-acts">
+        <a href="{% url 'courses:course_detail' attempt.exam.course.slug %}" class="btn btn-ghost">← Course</a>
+        <a href="{% url 'courses:dashboard' %}" class="btn btn-teal">Dashboard</a>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

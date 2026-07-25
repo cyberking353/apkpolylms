@@ -1,0 +1,29 @@
+{% extends 'portal/base.html' %}
+{% block title %}Edit Result{% endblock %}
+{% block page_title %}Edit Result{% endblock %}
+{% block content %}
+<div class="portal-card" style="max-width:480px">
+  <div class="portal-card-head"><h3>Override Result</h3></div>
+  <div class="portal-card-body" style="padding:20px">
+    <table class="portal-table" style="margin-bottom:18px">
+      <tr><td style="color:var(--muted)">Student</td><td style="font-weight:600">{{ result.student.get_full_name }}</td></tr>
+      <tr><td style="color:var(--muted)">Course</td><td>{{ result.course.title }}</td></tr>
+      <tr><td style="color:var(--muted)">Semester</td><td>{{ result.academic_year }} — Semester {{ result.semester }}</td></tr>
+      <tr><td style="color:var(--muted)">Current Grade</td><td><span class="chip {% if result.grade == 'A' or result.grade == 'B' %}c-green{% elif result.grade == 'F' %}c-rose{% else %}c-gold{% endif %}">{{ result.grade }} ({{ result.total|floatformat:1 }}/100)</span></td></tr>
+    </table>
+    <form method="post">
+      {% csrf_token %}
+      <div class="field-row">
+        <div class="field"><label>CA Score (out of 40)</label><input type="number" name="ca_score" value="{{ result.ca_score|floatformat:1 }}" step="0.1" min="0" max="40" required></div>
+        <div class="field"><label>Exam Score (out of 60)</label><input type="number" name="exam_score" value="{{ result.exam_score|floatformat:1 }}" step="0.1" min="0" max="60" required></div>
+      </div>
+      <div class="field"><label>Remark (shown to student)</label><textarea name="remark" rows="2">{{ result.remark }}</textarea></div>
+      <p style="font-size:.75rem;color:var(--muted);margin-bottom:12px">Saving will mark both scores as manually overridden (shown with ✎ in the results table). Total and grade are recalculated automatically.</p>
+      <div style="display:flex;gap:8px">
+        <button type="submit" class="btn btn-teal">Save Override</button>
+        <a href="{% url 'portal:result_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends 'portal/base.html' %}
+{% block title %}{% if is_new %}New Student{% else %}Edit Student{% endif %}{% endblock %}
+{% block page_title %}{% if is_new %}New Student{% else %}Edit: {{ student.get_full_name }}{% endif %}{% endblock %}
+{% block content %}
+<div class="portal-card" style="max-width:600px">
+  <div class="portal-card-head"><h3>{% if is_new %}Create Student Account{% else %}Edit Student{% endif %}</h3></div>
+  <div class="portal-card-body" style="padding:20px">
+    <form method="post">
+      {% csrf_token %}
+      <div class="field-row">
+        <div class="field"><label>First Name *</label><input type="text" name="first_name" value="{{ student.first_name|default:'' }}" required></div>
+        <div class="field"><label>Last Name *</label><input type="text" name="last_name" value="{{ student.last_name|default:'' }}" required></div>
+      </div>
+      {% if is_new %}
+      <div class="field"><label>Email * (used as login)</label><input type="email" name="email" required></div>
+      {% endif %}
+      <div class="field-row">
+        <div class="field"><label>Matric Number</label><input type="text" name="matric_number" value="{{ student.matric_number|default:'' }}"></div>
+        <div class="field"><label>Department</label>
+          <select name="department">
+            <option value="">— Select —</option>
+            {% for code,label in dept_choices %}<option value="{{ code }}" {% if student.department == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Academic Level</label>
+        <select name="academic_level">
+          <option value="">— Select —</option>
+          {% for code,label in level_choices %}<option value="{{ code }}" {% if student.academic_level == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field"><label>Password {% if not is_new %}(leave blank to keep current){% endif %}</label>
+        <input type="password" name="password" {% if is_new %}required{% endif %} placeholder="{% if is_new %}Set password{% else %}Leave blank to keep current{% endif %}">
+      </div>
+      {% if not is_new %}
+      <div class="field"><label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" name="is_active" {% if student.is_active %}checked{% endif %}> Account Active
+      </label></div>
+      {% endif %}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button type="submit" class="btn btn-teal">{% if is_new %}Create Student{% else %}Save Changes{% endif %}</button>
+        <a href="{% url 'portal:student_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

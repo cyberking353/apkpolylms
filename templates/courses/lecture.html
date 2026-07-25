@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% load course_extras %}
+{% block title %}{{ lecture.title }} — Al-Hikma LMS{% endblock %}
+{% block content %}
+<div style="padding-top:calc(var(--nav-h)+20px);padding-bottom:60px">
+  <div class="wrap">
+
+    <nav class="breadcrumb" style="margin-bottom:16px;font-size:.8rem">
+      <a href="{% if lecturer_preview %}{% url 'courses:lecturer_course_edit' course.slug %}{% else %}{% url 'courses:dashboard' %}{% endif %}">{% if lecturer_preview %}My Courses{% else %}Dashboard{% endif %}</a> ›
+      <a href="{% if lecturer_preview %}{% url 'courses:lecturer_course_preview' course.slug %}{% else %}{% url 'courses:course_detail' course.slug %}{% endif %}">{{ course.title }}</a> ›
+      <span>{{ lecture.title }}</span>
+    </nav>
+
+    {% if lecturer_preview %}
+    <div style="background:var(--gold-bg);border:1px solid var(--gold);border-radius:var(--r-md);padding:10px 16px;margin-bottom:14px;font-size:.83rem">
+      👁 <strong>Preview Mode</strong> — viewing as a student. Progress not recorded.
+    </div>
+    {% endif %}
+
+    <!-- Mobile: stack vertically. Desktop: video | sidebar -->
+    <div style="display:grid;grid-template-columns:1fr 280px;gap:24px;align-items:start">
+
+      <!-- Left: video + info -->
+      <div>
+        <!-- Video container — 16/9 aspect ratio, full width on all screens -->
+        <div style="background:#000;border-radius:var(--r-lg);width:100%;position:relative;padding-bottom:56.25%;height:0;overflow:hidden;margin-bottom:18px">
+          {% if embed_url %}
+          <iframe
+            src="{{ embed_url }}"
+            style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;border-radius:var(--r-lg)"
+            allowfullscreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            loading="lazy">
+          </iframe>
+          {% else %}
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,.5)">
+            <div style="font-size:3rem;margin-bottom:12px">🎥</div>
+            <p style="font-size:.85rem">Video not yet available</p>
+          </div>
+          {% endif %}
+        </div>
+
+        <h1 class="t-heading" style="font-size:1.3rem;margin-bottom:6px">{{ lecture.title }}</h1>
+        <p style="color:var(--muted);font-size:.82rem;margin-bottom:12px">
+          {{ lecture.duration_minutes }} min · {{ lecture.module.title }}
+        </p>
+
+        {% if not lecturer_preview %}
+        <div style="background:var(--bg);border-radius:var(--r-md);padding:10px 14px;margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:4px">
+            <span>Lecture {{ lecture_index|add:1 }} of {{ module_lectures|length }} in {{ module.title }}</span>
+            <span>{% if module_completion|get_item:module.id %}✓ Module Complete{% else %}{{ lecture_index|add:1 }}/{{ module_lectures|length }}{% endif %}</span>
+          </div>
+          <div class="prog sm">
+            <div class="prog-fill" style="width:{% widthratio lecture_index|add:1 module_lectures|length 100 %}%"></div>
+          </div>
+        </div>
+
+        {% if module_completion|get_item:module.id and next_target_url %}
+        <div style="background:var(--green-bg);border:1px solid var(--green);border-radius:var(--r-md);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <span style="font-size:.85rem;color:var(--green);font-weight:600">✓ {{ module.title }} — Complete!</span>
+          <a href="{{ next_target_url }}" class="btn btn-success btn-sm">{{ next_target_label }}</a>
+        </div>
+        {% elif module_completion|get_item:module.id and all_modules_complete %}
+        <div style="background:var(--teal-bg);border:1px solid var(--teal);border-radius:var(--r-md);padding:14px 16px;margin-bottom:14px;text-align:center">
+          <div style="font-size:2rem;margin-bottom:6px">🎉</div>
+          <div style="font-size:1rem;font-weight:700;color:var(--teal);margin-bottom:4px">Course Complete!</div>
+          <p style="font-size:.83rem;color:var(--muted);margin-bottom:12px">You have completed all modules. {% if course.exam %}The exam is now open for you.{% else %}Congratulations!{% endif %}</p>
+          {% if course.exam %}
+          <a href="{% url 'exams:exam_detail' course.exam.id %}" class="btn btn-gold">📝 Take Exam →</a>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+          {% if prev_lecture %}
+          <a href="{% url 'courses:lecture' course.slug prev_lecture %}" class="btn btn-ghost btn-sm">← Previous Lecture</a>
+          {% elif prev_module_lecture_id %}
+          <a href="{% url 'courses:lecture' course.slug prev_module_lecture_id %}" class="btn btn-ghost btn-sm">← Previous Module</a>
+          {% endif %}
+          {% if next_lecture %}
+          <a href="{% url 'courses:lecture' course.slug next_lecture %}" class="btn btn-teal btn-sm">Next Lecture →</a>
+          {% elif next_target_url %}
+          <a href="{{ next_target_url }}" class="btn btn-gold btn-sm">{{ next_target_label }}</a>
+          {% elif next_module_lecture_id %}
+          <a href="{% url 'courses:lecture' course.slug next_module_lecture_id %}" class="btn btn-gold btn-sm">Next Module →</a>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          {% if lecture.notes %}
+          <a href="{{ lecture.notes.url }}" class="btn btn-ghost btn-sm" download>📥 Download Notes</a>
+          {% endif %}
+          {% with module=lecture.module %}
+          {% if module.quiz %}
+          <a href="{% url 'quizzes:quiz_detail' module.quiz.id %}" class="btn btn-teal btn-sm">📝 Take Quiz</a>
+          {% endif %}
+          {% endwith %}
+        </div>
+      </div>
+
+      <!-- Right: course navigation sidebar -->
+      <aside class="lec-sidebar">
+        <div class="card cnav" style="position:sticky;top:calc(var(--nav-h) + 16px);max-height:80vh;overflow-y:auto">
+          <div class="cnav-h">{{ course.title }}</div>
+          {% for module in modules %}
+          <div style="padding:10px 16px;border-bottom:1px solid var(--line)">
+            <div style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">
+              Week {{ module.week_number }}: {{ module.title }}
+            </div>
+            {% for lec in module.lectures.all %}
+            <a href="{% if lecturer_preview %}{% url 'courses:lecturer_lecture_preview' course.slug lec.id %}{% else %}{% url 'courses:lecture' course.slug lec.id %}{% endif %}"
+               style="display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:.8rem;text-decoration:none;border-radius:4px;
+                      color:{% if lec.id == lecture.id %}var(--teal){% else %}var(--muted){% endif %};
+                      font-weight:{% if lec.id == lecture.id %}600{% else %}400{% endif %}">
+              <span style="flex-shrink:0">{% if lec.id == lecture.id %}▶{% else %}○{% endif %}</span>
+              {{ lec.title }}
+            </a>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+      </aside>
+
+    </div>
+  </div>
+</div>
+
+<style>
+/* Mobile: sidebar drops below the video */
+@media(max-width:700px){
+  div[style*="grid-template-columns:1fr 280px"]{
+    grid-template-columns:1fr !important;
+  }
+  .lec-sidebar{order:2}
+}
+</style>
+{% endblock %}

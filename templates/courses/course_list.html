@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}My Courses — Al-Hikma LMS{% endblock %}
+
+{% block content %}
+<div style="padding-top:calc(var(--nav-h) + 48px);padding-bottom:80px">
+  <div class="wrap">
+    <div class="sec-hd">
+      <div class="ey"><span class="t-label">{{ user.get_academic_level_display }} · {{ user.get_department_display }}</span></div>
+      <h2 class="t-heading" style="font-size:2rem;margin-bottom:10px">My Courses</h2>
+      <p class="t-body">Your courses for this semester. These are assigned automatically based on your department and level.</p>
+    </div>
+
+    <!-- Category Filter -->
+    {% if categories %}
+    <div class="filter-row">
+      <a href="{% url 'courses:course_list' %}" class="filter-chip {% if not active_cat %}active{% endif %}">All</a>
+      {% for cat in categories %}
+      <a href="?category={{ cat.slug }}" class="filter-chip {% if active_cat == cat.slug %}active{% endif %}">
+        {{ cat.icon }} {{ cat.name }}
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="g3">
+      {% for course in courses %}
+      <article class="card cc">
+        <a href="{% url 'courses:course_detail' course.slug %}">
+          <div class="cc-thumb" style="background:linear-gradient(135deg,{{ course.color_start }},{{ course.color_end }})">
+            {{ course.icon }}
+          </div>
+        </a>
+        <div class="cc-body">
+          <div style="margin-bottom:8px">
+            <span class="chip c-teal">{{ course.category.name|default:"General" }}</span>
+          </div>
+          <h4><a href="{% url 'courses:course_detail' course.slug %}" style="color:inherit">{{ course.title }}</a></h4>
+          <p>{{ course.description|truncatewords:18 }}</p>
+          <div class="cc-meta">
+            <span>📚 {{ course.total_modules }} Modules</span>
+            <span>⏱ {{ course.duration_hours }} hrs</span>
+            <span>👥 {{ course.enrolled_count }} students</span>
+          </div>
+        </div>
+        <div class="cc-foot">
+          <div class="instr">
+            <div class="iav">{{ course.instructor_initials }}</div>
+            <span>{{ course.instructor_name }}</span>
+          </div>
+          <span class="chip c-green">Sem {{ course.semester }}</span>
+        </div>
+      </article>
+      {% empty %}
+      <div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--muted)">
+        <div style="font-size:3rem;margin-bottom:16px">📚</div>
+        <h3>No courses found</h3>
+        <p>No courses have been published for your department and level this semester yet.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

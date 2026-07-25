@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}{{ exam.title|default:exam.course.title|add:" Exam" }} — Al-Hikma LMS{% endblock %}
+
+{% block content %}
+<div style="padding-top:calc(var(--nav-h) + 48px);padding-bottom:80px">
+  <div class="wrap" style="max-width:640px">
+    <div class="card cp" style="padding:28px 26px">
+
+      <div style="text-align:center;margin-bottom:20px">
+        <div class="t-label" style="margin-bottom:4px">{{ course.title }}</div>
+        <h2 class="t-heading" style="font-size:1.4rem">{{ exam.title|default:"Course Exam" }}</h2>
+      </div>
+
+      {% if status == 'scheduled' %}
+        <div class="exam-alert" style="background:var(--bg);border:1px solid var(--line)">
+          🗓️ <span>This exam opens on <strong>{{ exam.open_at|date:"d M Y, H:i" }}</strong> and closes on <strong>{{ exam.close_at|date:"d M Y, H:i" }}</strong>. Come back then.</span>
+        </div>
+
+      {% elif status == 'closed' %}
+        <div class="exam-alert">
+          🔒 <span>{% if attempt %}You did not complete this exam before the window closed.{% else %}This exam window has closed.{% endif %} Contact the admin office if you believe this is a mistake.</span>
+        </div>
+        {% if attempt and attempt.submitted_at %}
+        <div style="text-align:center;margin-top:16px">
+          <a href="{% url 'exams:exam_result' attempt.id %}" class="btn btn-teal">View My Result</a>
+        </div>
+        {% endif %}
+
+      {% elif attempt and attempt.submitted_at %}
+        <div class="exam-alert" style="background:var(--green-bg);border:1px solid var(--green)">
+          ✓ <span>You already submitted this exam {% if attempt.auto_submitted %}(auto-submitted when time ran out){% endif %}.</span>
+        </div>
+        <div style="text-align:center;margin-top:16px">
+          <a href="{% url 'exams:exam_result' attempt.id %}" class="btn btn-teal">View My Result</a>
+        </div>
+
+      {% elif attempt and not attempt.submitted_at %}
+        <div class="exam-alert" style="background:var(--gold-bg);border:1px solid var(--gold)">
+          ⏱️ <span>You already started this exam. Resume now — your timer has been running since you started.</span>
+        </div>
+        {% if not all_modules_complete %}
+        <div class="exam-alert" style="background:var(--rose-bg);border:1px solid var(--rose)">
+          🔒 <span>You must complete all course modules before you can resume this exam.</span>
+        </div>
+        {% else %}
+        <noscript>
+          <div class="exam-alert" style="background:var(--red-bg,#fee);border:1px solid var(--danger,#d33);margin-top:12px">
+            🚫 <span><strong>JavaScript is disabled in your browser.</strong> This exam requires JavaScript for timing and monitoring. Please enable it and reload this page.</span>
+          </div>
+        </noscript>
+        <form method="post" action="{% url 'exams:start_exam' exam.id %}" id="resume-exam-form" style="text-align:center;margin-top:16px">
+          {% csrf_token %}
+          <input type="hidden" name="js_check" id="js-check-input">
+          <button type="submit" class="btn btn-gold" id="btn-start-exam" disabled>Resume Exam →</button>
+          <p id="js-check-pending" style="font-size:.76rem;color:var(--muted);margin-top:8px">Checking your browser…</p>
+        </form>
+        <script>
+          document.getElementById('js-check-input').value = '1';
+          document.getElementById('btn-start-exam').disabled = false;
+          document.getElementById('js-check-pending').style.display = 'none';
+        </script>
+        {% endif %}
+
+      {% else %}
+        <div style="background:var(--bg);border-radius:var(--r-md);padding:16px 18px;margin-bottom:18px;font-size:.86rem;color:var(--muted)">
+          <div style="margin-bottom:6px"><strong style="color:var(--ink)">Questions:</strong> {{ exam.question_count }}</div>
+          <div style="margin-bottom:6px"><strong style="color:var(--ink)">Time Limit:</strong> {{ exam.time_limit_minutes }} minutes</div>
+          <div style="margin-bottom:6px"><strong style="color:var(--ink)">Pass Mark:</strong> {{ exam.pass_mark }}%</div>
+          <div><strong style="color:var(--ink)">Attempts:</strong> 1 (no retakes)</div>
+        </div>
+
+        {% if exam.instructions %}
+        <div style="margin-bottom:18px">
+          <h4 style="font-size:.85rem;margin-bottom:6px">Instructions</h4>
+          <p style="font-size:.85rem;color:var(--muted);white-space:pre-line">{{ exam.instructions }}</p>
+        </div>
+        {% endif %}
+
+        <div class="exam-alert">
+          ⚠️ <span><strong>Once you start, the clock does not stop.</strong> You get exactly one attempt and the exam closes at {{ exam.close_at|date:"d M Y, H:i" }} regardless of when you start.</span>
+        </div>
+
+        <noscript>
+          <div class="exam-alert" style="background:var(--red-bg,#fee);border:1px solid var(--danger,#d33);margin-top:12px">
+            🚫 <span><strong>JavaScript is disabled in your browser.</strong> This exam requires JavaScript for timing and monitoring — please enable it and reload this page to continue.</span>
+          </div>
+        </noscript>
+
+        {% if not all_modules_complete %}
+        <div class="exam-alert" style="background:var(--rose-bg);border:1px solid var(--rose);margin-top:12px">
+          🔒 <span>You must complete <strong>all course modules</strong> (watch every lecture) before you can take this exam. Go back to the course page to continue learning.</span>
+        </div>
+        <div style="text-align:center;margin-top:16px">
+          <a href="{% url 'courses:course_detail' course.slug %}" class="btn btn-gold">📚 Go to Course Modules</a>
+        </div>
+        {% else %}
+        <form method="post" action="{% url 'exams:start_exam' exam.id %}" id="start-exam-form" style="text-align:center;margin-top:18px">
+          {% csrf_token %}
+          <input type="hidden" name="js_check" id="js-check-input">
+          <button type="submit" class="btn btn-gold btn-lg" id="btn-start-exam" disabled
+                  data-confirm="Start the exam now? The timer begins immediately and you will not be able to retake it.">
+            Start Exam →
+          </button>
+          <p id="js-check-pending" style="font-size:.76rem;color:var(--muted);margin-top:8px">Checking your browser…</p>
+        </form>
+        <script>
+          document.getElementById('js-check-input').value = '1';
+          document.getElementById('btn-start-exam').disabled = false;
+          document.getElementById('js-check-pending').style.display = 'none';
+        </script>
+        {% endif %}
+      {% endif %}
+
+      <div style="text-align:center;margin-top:22px">
+        <a href="{% url 'courses:course_detail' course.slug %}" class="btn btn-ghost btn-sm">← Back to Course</a>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

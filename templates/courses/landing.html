@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Al-Hikma Polytechnic LMS — Innovation and Creativity{% endblock %}
+{% block nav_class %}dark{% endblock %}
+
+{% block content %}
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid-pat"></div>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="wrap hero-wrap">
+    <div class="hero-inner">
+      <div class="hero-text">
+        <div class="hero-seal">
+          <img src="{% static 'images/logo.png' %}" alt="Al-Hikma Polytechnic crest">
+          <div class="hero-seal-tx">
+            <b>Al-Hikma Polytechnic · Karu</b>
+            <span>Innovation and Creativity — To Build The Nation</span>
+          </div>
+        </div>
+        <h1 class="hero-h">
+          Built like a<br>
+          drafting table —<br>
+          <span class="hl-accent">everything at scale.</span>
+        </h1>
+        <p class="hero-sub">
+          Expert-led courses, weekly quizzes, proctored exams —
+          the digital campus for students building real, technical skill.
+        </p>
+        <div class="hero-cta">
+          <a href="{% url 'accounts:login' %}" class="btn btn-bp btn-xl">Sign In to Learn</a>
+          <a href="#courses-sec" class="btn btn-bp-outline btn-xl">View Courses</a>
+        </div>
+        <div class="hero-stats">
+          <div class="hs">
+            <div class="hs-n">2,400+</div>
+            <div class="hs-l">Active Students</div>
+          </div>
+          <div class="hs">
+            <div class="hs-n">48</div>
+            <div class="hs-l">Courses</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-panel bp-frame">
+        <span class="bf-tr"></span><span class="bf-br"></span>
+        <div class="hp-title">◇ Available Courses</div>
+        {% for course in courses %}
+        <a href="{% url 'courses:course_detail' course.slug %}" class="cr">
+          <div class="cr-ic" style="background:{{ course.color_start }}">{{ course.icon }}</div>
+          <div>
+            <div class="cr-n">{{ course.title }}</div>
+            <div class="cr-m">{{ course.total_modules }} modules · {{ course.enrolled_count }} students</div>
+          </div>
+          <div class="cr-p">Free</div>
+        </a>
+        {% endfor %}
+        <div class="hp-badge">
+          <div class="pdot"></div>
+          <span>Students active right now</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FEATURE BAND ── -->
+<div class="band">
+  <div class="wrap">
+    <div class="band-in">
+      <div class="bi">
+        <div class="bi-ic" style="background:var(--bp-primary-bg);color:var(--bp-primary)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M12 6l7 15-7-4-7 4z"/></svg>
+        </div>
+        <div><div class="bi-t">Video Lectures</div><div class="bi-s">Watch at your own pace</div></div>
+      </div>
+      <div class="bi">
+        <div class="bi-ic" style="background:var(--bp-accent-bg);color:var(--bp-accent-dark)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4h11l5 5v11H4z"/><path d="M15 4v5h5M8 12h8M8 16h5"/></svg>
+        </div>
+        <div><div class="bi-t">Weekly Quizzes</div><div class="bi-s">Test after each module</div></div>
+      </div>
+      <div class="bi">
+        <div class="bi-ic" style="background:var(--teal-bg);color:var(--teal)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M8 14h2"/></svg>
+        </div>
+        <div><div class="bi-t">Mobile Ready</div><div class="bi-s">Learn from any phone</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FEATURED COURSES ── -->
+<section class="section" id="courses-sec">
+  <div class="wrap">
+    <div class="sec-hd">
+      <div class="ey"><span class="ey-mono">Featured Courses</span></div>
+      <h2 class="t-heading-bp" style="font-size:2.1rem;margin-bottom:10px">Built for Polytechnic Students</h2>
+      <p class="t-body" style="max-width:480px">Crafted by experienced lecturers to align with national curricula and real-world industry needs.</p>
+    </div>
+    <div class="g3">
+      {% for course in courses %}
+      <article class="card cc">
+        <a href="{% url 'courses:course_detail' course.slug %}">
+          <div class="cc-thumb" style="background:linear-gradient(135deg,{{ course.color_start }},{{ course.color_end }})">
+            {{ course.icon }}
+          </div>
+        </a>
+        <div class="cc-body">
+          <div style="margin-bottom:8px">
+            <span class="chip c-teal">{{ course.category.name|default:"General" }}</span>
+          </div>
+          <h4><a href="{% url 'courses:course_detail' course.slug %}" style="color:inherit">{{ course.title }}</a></h4>
+          <p>{{ course.description|truncatewords:18 }}</p>
+          <div class="cc-meta">
+            <span>📚 {{ course.total_modules }} Modules</span>
+            <span>⏱ {{ course.duration_hours }} hrs</span>
+          </div>
+        </div>
+        <div class="cc-foot">
+          <div class="instr">
+            <div class="iav">{{ course.instructor_initials }}</div>
+            <span>{{ course.instructor_name }}</span>
+          </div>
+          <span class="chip c-green">Free</span>
+        </div>
+      </article>
+      {% empty %}
+      <p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px">
+        No courses published yet. Check back soon!
+      </p>
+      {% endfor %}
+    </div>
+    <div style="text-align:center;margin-top:32px">
+      <a href="{% url 'courses:course_list' %}" class="btn btn-ghost btn-lg">Browse All Courses →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section class="section-sm" style="background:var(--bp-paper);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <div style="text-align:center;margin-bottom:44px">
+      <p class="ey-mono" style="margin-bottom:8px">How It Works</p>
+      <h2 class="t-heading-bp" style="font-size:2rem">How Learning Works</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">01</div>
+        <h3>Enrol Free</h3>
+        <p>Create your account and enrol in any course instantly — no fees, no barriers.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">02</div>
+        <h3>Learn &amp; Quiz</h3>
+        <p>Watch video lectures at your own pace and take quizzes after each module to test retention.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="section">
+  <div class="wrap">
+    <div class="cta-b bp-frame">
+      <span class="bf-tr"></span><span class="bf-br"></span>
+      <img src="{% static 'images/logo.png' %}" alt="" class="cta-seal">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:13px">
+          <div style="width:18px;height:2px;background:#fff;opacity:.6"></div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#fff;opacity:.85">Online Students</span>
+        </div>
+        <h2>Ready to Start?</h2>
+        <p>Join students already learning on Al-Hikma LMS. Use the login details given to you by the school to get started.</p>
+      </div>
+      <div class="cta-acts">
+        <a href="{% url 'accounts:login' %}" class="btn btn-ink btn-lg">Sign In</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

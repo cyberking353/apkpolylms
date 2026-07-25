@@ -1,0 +1,56 @@
+{% extends 'portal/base.html' %}
+{% block title %}Announcements{% endblock %}
+{% block page_title %}Announcements{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'portal:announcement_create' %}" class="btn btn-teal btn-sm">+ New Announcement</a>
+{% endblock %}
+{% block content %}
+<div class="portal-card">
+  <div class="portal-card-head"><h3>{{ items.count }} announcement{{ items.count|pluralize }}</h3></div>
+  <div class="portal-card-body">
+    <table class="portal-table">
+      <thead><tr><th>Title</th><th>Audience</th><th>Priority</th><th>Posted</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for a in items %}
+        <tr>
+          <td>
+            <div style="font-weight:600">{{ a.title }}</div>
+            <div style="font-size:.75rem;color:var(--muted)">{{ a.body|truncatewords:12 }}</div>
+          </td>
+          <td style="font-size:.8rem">
+            {% if a.audience == 'all' %}Everyone
+            {% elif a.audience == 'dept' %}Dept: {{ a.departments }}
+            {% else %}Level: {{ a.levels }}{% endif %}
+          </td>
+          <td>
+            {% if a.priority == 'urgent' %}
+            <span class="chip c-rose">🔴 Urgent</span>
+            {% else %}
+            <span class="chip">Normal</span>
+            {% endif %}
+          </td>
+          <td style="font-size:.78rem">{{ a.created_at|date:"d M Y" }}</td>
+          <td style="font-size:.78rem">{{ a.expires_at|date:"d M Y"|default:"Never" }}</td>
+          <td>
+            {% if a.is_active %}<span class="chip c-green">Active</span>
+            {% else %}<span class="chip">Inactive</span>{% endif %}
+          </td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <form method="post" action="{% url 'portal:announcement_toggle' a.pk %}">{% csrf_token %}
+                <button class="btn btn-ghost btn-sm">{% if a.is_active %}Deactivate{% else %}Activate{% endif %}</button>
+              </form>
+              <form method="post" action="{% url 'portal:announcement_delete' a.pk %}">{% csrf_token %}
+                <button class="btn btn-danger btn-sm" data-confirm="Delete this announcement?">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">No announcements yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

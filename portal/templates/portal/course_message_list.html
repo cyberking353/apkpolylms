@@ -1,0 +1,35 @@
+{% extends 'portal/base.html' %}
+{% block title %}Course Messages{% endblock %}
+{% block page_title %}Course Messages{% endblock %}
+{% block content %}
+<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+  <a href="?" class="btn {% if status_filter == 'all' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">All</a>
+  <a href="?status=open" class="btn {% if status_filter == 'open' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">Open</a>
+  <a href="?status=resolved" class="btn {% if status_filter == 'resolved' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">Resolved</a>
+</div>
+<div class="portal-card">
+  <div class="portal-card-head"><h3>{{ threads.count }} thread{{ threads.count|pluralize }}</h3></div>
+  <div class="portal-card-body">
+    <table class="portal-table">
+      <thead><tr><th>Subject</th><th>Course</th><th>Student</th><th>Lecturer</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+      <tbody>
+        {% for t in threads %}
+        <tr>
+          <td style="font-weight:600">{{ t.subject }}</td>
+          <td>{{ t.course.title }}</td>
+          <td>{{ t.student.get_full_name|default:t.student.email }}</td>
+          <td>{{ t.course.lecturer.display_name|default:"— unassigned —" }}</td>
+          <td>
+            <span class="chip {% if t.status == 'open' %}c-gold{% else %}c-green{% endif %}">{{ t.get_status_display }}</span>
+          </td>
+          <td style="font-size:.78rem;color:var(--muted)">{{ t.updated_at|date:"d M, H:i" }}</td>
+          <td><a href="{% url 'courses:message_thread' t.id %}" class="btn btn-ghost btn-sm">View</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">No messages found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

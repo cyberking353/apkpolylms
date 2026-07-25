@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% load course_extras %}
+{% block title %}{{ course.title }} — Al-Hikma LMS{% endblock %}
+{% block nav_class %}dark{% endblock %}
+
+{% block content %}
+
+<!-- ── COURSE HERO ── -->
+<div class="ch">
+  <div class="wrap">
+    <nav class="breadcrumb">
+      <a href="{% url 'courses:landing' %}">Home</a> ›
+      {% if lecturer_preview %}
+      <a href="{% url 'courses:lecturer_course_edit' course.slug %}">My Courses</a> ›
+      <span style="color:var(--gold);font-weight:600">👁 Preview Mode</span> ›
+      {% else %}
+      <a href="{% url 'courses:course_list' %}">Courses</a> ›
+      {% endif %}
+      <span>{{ course.title }}</span>
+    </nav>
+    <div class="ch-grid">
+      <div>
+        <div style="margin-bottom:11px">
+          <span class="chip c-teal">{{ course.category.name|default:"General" }} · {{ course.get_level_display }}</span>
+        </div>
+        <h1>{{ course.title }}</h1>
+        <p class="desc">{{ course.description }}</p>
+        <div class="c-meta">
+          <span>📚 {{ course.total_modules }} Modules</span>
+          <span>⏱ {{ course.duration_hours }} hours</span>
+          <span>👥 {{ course.enrolled_count }} students</span>
+        </div>
+        <div class="c-instr">
+          <div class="iav2">{{ course.instructor_initials }}</div>
+          <div>
+            <div class="in">{{ course.instructor_name }}</div>
+            <div class="ir">{{ course.instructor_title }}</div>
+          </div>
+          {% if enrolled and not lecturer_preview %}
+          <a href="{% url 'courses:message_new' course.slug %}" class="btn btn-gw btn-sm" style="margin-left:auto">✉️ Message Instructor</a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Enrol Card -->
+      <div>
+        <div class="ec">
+          <div class="ec-th" style="background:linear-gradient(135deg,{{ course.color_start }},{{ course.color_end }})">
+            {{ course.icon }}
+          </div>
+          <div class="ec-bd">
+            <div class="ec-pr">{{ course.get_level_display }}</div>
+            <div class="ec-fr">✓ Assigned to your semester</div>
+            {% if enrolled %}
+              <a href="#modules" class="btn btn-success btn-full">✓ Continue Learning</a>
+            {% else %}
+              <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="btn btn-ink btn-full">Login to View</a>
+            {% endif %}
+            <div class="ec-inc">
+              <div class="ec-inc-t">What's Included</div>
+              <div class="inc"><span class="ck">✓</span> {{ course.duration_hours }} hours of video lectures</div>
+              <div class="inc"><span class="ck">✓</span> {{ course.total_modules }} weekly modules</div>
+              <div class="inc"><span class="ck">✓</span> Weekly quizzes</div>
+              <div class="inc"><span class="ck">✓</span> Final examination</div>
+              <div class="inc"><span class="ck">✓</span> Lifetime access</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── COURSE CONTENT ── -->
+<div style="padding:44px 0" id="modules">
+  <div class="wrap">
+    <div class="c-layout">
+
+      <!-- Modules -->
+      <div>
+        <h3 class="t-heading" style="font-size:1.25rem;margin-bottom:18px">Course Modules</h3>
+        {% for module in modules %}
+        <div class="mod">
+          <div class="mod-h" data-target="mod-{{ module.id }}">
+            <div class="mod-circ {% if module_completion|get_item:module.id %}done{% endif %}">
+              {% if module_completion|get_item:module.id %}✓{% else %}{{ module.week_number }}{% endif %}
+            </div>
+            <div class="mod-info">
+              <h4>Week {{ module.week_number }}: {{ module.title }}</h4>
+              <div class="sub">{{ module.lectures.count }} lecture{{ module.lectures.count|pluralize }} · {{ module.description|truncatewords:10 }}</div>
+              {% if enrolled and module_completion|get_item:module.id %}
+              <span style="font-size:.7rem;color:var(--green);font-weight:600;margin-top:3px;display:inline-block">✓ Complete</span>
+              {% endif %}
+            </div>
+            {% if module.quiz %}
+            <a href="{% url 'quizzes:quiz_detail' module.quiz.id %}" class="chip c-gold" style="flex-shrink:0" onclick="event.stopPropagation()">📝 Quiz</a>
+            {% endif %}
+            <span class="mod-arr">▾</span>
+          </div>
+          <div class="mod-body" id="mod-{{ module.id }}">
+            {% for lecture in module.lectures.all %}
+            <div class="lecture-item">
+              <span class="lec-icon">🎥</span>
+              <div class="lec-info">
+                <div class="lec-title">{{ lecture.title }}</div>
+                <div class="lec-meta">{{ lecture.duration_minutes }} min</div>
+              </div>
+              {% if enrolled %}
+                <a href="{% if lecturer_preview %}{% url 'courses:lecturer_lecture_preview' course.slug lecture.id %}{% else %}{% url 'courses:lecture' course.slug lecture.id %}{% endif %}" class="btn btn-teal btn-sm">Watch</a>
+              {% else %}
+                <span class="chip c-muted">🔒</span>
+              {% endif %}
+            </div>
+            {% endfor %}
+            {% if not module.lectures.all %}
+            <p style="color:var(--muted);font-size:.83rem;padding:12px 0">Lectures coming soon.</p>
+            {% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <div class="empty-state" style="padding:40px">
+          <p>No modules yet. Check back soon.</p>
+        </div>
+        {% endfor %}
+
+        <!-- Final Exam (weekly-quiz-type) -->
+        {% for quiz in course.quizzes.all %}
+          {% if quiz.quiz_type == 'final' %}
+          <div class="mod" style="border:2px solid var(--gold);margin-top:10px">
+            <div class="mod-h" style="background:var(--gold-bg)">
+              <div class="mod-circ" style="background:var(--gold);border-color:var(--gold);color:#fff">🏁</div>
+              <div class="mod-info">
+                <h4>{{ quiz.title }}</h4>
+                <div class="sub">{{ quiz.question_count }} questions · {{ quiz.time_limit_minutes }} minutes · Pass mark: {{ quiz.pass_mark }}%</div>
+              </div>
+              {% if enrolled %}
+              <a href="{% url 'quizzes:quiz_detail' quiz.id %}" class="btn btn-gold btn-sm" style="flex-shrink:0">Take Exam</a>
+              {% else %}
+              <span class="chip c-gold" style="flex-shrink:0">🔒 Locked</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+        {% endfor %}
+
+        <!-- Official Semester Exam (scheduled, single attempt, feeds into Result) -->
+        {% if course.exam %}
+        <div class="mod" style="border:2px solid var(--rose);margin-top:10px">
+          <div class="mod-h" style="background:var(--rose-bg)">
+            <div class="mod-circ" style="background:var(--rose);border-color:var(--rose);color:#fff">📝</div>
+            <div class="mod-info">
+              <h4>{{ course.exam.title|default:"Official Semester Exam" }}</h4>
+              <div class="sub">
+                {{ course.exam.question_count }} questions · {{ course.exam.time_limit_minutes }} minutes ·
+                {% if course.exam.status == 'open' %}Open until {{ course.exam.close_at|date:"d M, H:i" }}
+                {% elif course.exam.status == 'scheduled' %}Opens {{ course.exam.open_at|date:"d M, H:i" }}
+                {% else %}Closed{% endif %}
+              </div>
+            </div>
+            {% if enrolled %}
+              {% if all_modules_complete %}
+              <a href="{% url 'exams:exam_detail' course.exam.id %}" class="btn btn-danger btn-sm" style="flex-shrink:0">View Exam</a>
+              {% else %}
+              <span class="chip c-rose" style="flex-shrink:0;cursor:pointer" title="Complete all modules to unlock the exam">🔒 Complete Modules First</span>
+              {% endif %}
+            {% else %}
+            <span class="chip" style="flex-shrink:0">🔒 Locked</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Sidebar -->
+      <aside>
+        <div class="card cnav">
+          <div class="cnav-h">Quick Navigation</div>
+          {% for module in modules %}
+          <a href="#mod-{{ module.id }}" class="cnl">
+            Week {{ module.week_number }}: {{ module.title }}
+          </a>
+          {% endfor %}
+          <div style="padding:13px 17px;border-top:1px solid var(--line)">
+            {% if enrolled %}
+            <a href="{% if lecturer_preview %}{% url 'courses:lecturer_course_edit' course.slug %}{% else %}{% url 'courses:course_list' %}{% endif %}" class="btn btn-ghost btn-full btn-sm">← {% if lecturer_preview %}Back to Edit{% else %}My Courses{% endif %}</a>
+            {% if not lecturer_preview %}
+            <a href="{% url 'courses:message_new' course.slug %}" class="btn btn-ghost btn-full btn-sm" style="margin-top:8px">✉️ Report a Problem</a>
+            {% endif %}
+            {% else %}
+            <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="btn btn-teal btn-full btn-sm">Login to View</a>
+            {% endif %}
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Module accordion
+document.querySelectorAll('.mod-h').forEach(h => {
+  h.addEventListener('click', function(e) {
+    if (e.target.closest('a') || e.target.closest('.chip')) return;
+    const targetId = this.dataset.target;
+    const body  = document.getElementById(targetId);
+    const arrow = this.querySelector('.mod-arr');
+    if (!body) return;
+    const isOpen = body.classList.contains('open');
+    document.querySelectorAll('.mod-body').forEach(b => b.classList.remove('open'));
+    document.querySelectorAll('.mod-arr').forEach(a => a.classList.remove('open'));
+    if (!isOpen) { body.classList.add('open'); arrow?.classList.add('open'); }
+  });
+});
+// Open first by default
+const first = document.querySelector('.mod-body');
+const firstArr = document.querySelector('.mod-arr');
+if (first) { first.classList.add('open'); firstArr?.classList.add('open'); }
+</script>
+{% endblock %}

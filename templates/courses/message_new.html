@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Message Instructor — {{ course.title }}{% endblock %}
+{% block nav_class %}dark{% endblock %}
+
+{% block content %}
+<div style="padding-top:calc(var(--nav-h) + 48px);padding-bottom:80px">
+  <div class="wrap" style="max-width:640px">
+    <nav class="breadcrumb" style="margin-bottom:18px">
+      <a href="{% url 'courses:course_detail' course.slug %}">{{ course.title }}</a> › <span>Message Instructor</span>
+    </nav>
+
+    <div class="sec-hd">
+      <div class="ey"><span class="t-label">Report a Problem</span></div>
+      <h2 class="t-heading" style="font-size:1.7rem;margin-bottom:8px">Message the Course Instructor</h2>
+      <p class="t-body">
+        {% if course.lecturer %}
+          Your message goes directly to {{ course.instructor_name }}, the instructor for {{ course.title }}.
+        {% else %}
+          This course doesn't have an assigned instructor yet — your message will be visible to the admin team instead.
+        {% endif %}
+      </p>
+    </div>
+
+    <form method="post" class="card cp-lg">
+      {% csrf_token %}
+      <div class="field">
+        <label>Subject</label>
+        <input type="text" name="subject" value="{{ subject }}" placeholder="e.g. Week 3 video won't play" required maxlength="150">
+      </div>
+      <div class="field">
+        <label>Message</label>
+        <textarea name="body" rows="6" placeholder="Describe the problem or question in detail...">{{ body }}</textarea>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <a href="{% url 'courses:course_detail' course.slug %}" class="btn btn-ghost">Cancel</a>
+        <button type="submit" class="btn btn-teal">Send Message</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

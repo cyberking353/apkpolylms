@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Quiz Questions — {{ quiz.title }}{% endblock %}
+{% block nav_class %}dark{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="dash-shell">
+  <aside class="sb" id="sidebar">
+    <div class="sb-u">
+      <div class="sb-av">{{ user.initials }}</div>
+      <div class="sb-name">{{ user.display_name }}</div>
+      <div class="sb-role">Lecturer</div>
+    </div>
+    <div class="sb-sec-lbl">Lecturer</div>
+    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl"><span class="ic">🏠</span> My Courses</a>
+    <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="sbl on"><span class="ic">✏️</span> {{ course.title }}</a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic">🚪</span> Sign Out</a>
+  </aside>
+
+  <main class="dmain">
+    <div class="dsh" style="margin-bottom:16px">
+      <h2 style="font-size:1.1rem;margin:0">📝 {{ quiz.title }}</h2>
+      <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="btn btn-ghost btn-sm">← Back to Course</a>
+    </div>
+
+    <div class="exam-alert" style="margin-bottom:18px">
+      ℹ️ <span>Each question saves on its own — no need to resave everything when you add or edit one.</span>
+    </div>
+
+    <div class="card" style="padding:12px 16px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-weight:600;font-size:.88rem">Show correct answers after submission</div>
+        <div style="font-size:.78rem;color:var(--muted)">Students will see which answers were right/wrong on the result page</div>
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <label class="toggle" style="cursor:pointer">
+          <input type="checkbox" name="show_correct_answers" value="1"
+                 {% if quiz.show_correct_answers %}checked{% endif %}
+                 onchange="this.form.submit()">
+          <span class="tog-slider"></span>
+        </label>
+      </form>
+    </div>
+
+    {% include 'courses/_quiz_questions.html' %}
+  </main>
+</div>
+{% endblock %}

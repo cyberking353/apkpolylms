@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Admin Portal{% endblock %} — Al-Hikma</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <style>
+    .portal-shell { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+    .portal-sb { background:var(--ink); color:#fff; padding:0; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; overflow-y:auto; }
+    .portal-brand { padding:22px 20px 14px; border-bottom:1px solid rgba(255,255,255,.1); }
+    .portal-brand .logo-text { font-size:1rem; font-weight:800; color:#fff; letter-spacing:.02em; }
+    .portal-brand .logo-sub { font-size:.7rem; color:rgba(255,255,255,.5); margin-top:2px; }
+    .portal-nav { padding:12px 0; flex:1; }
+    .pnl { display:block; padding:9px 20px; font-size:.82rem; color:rgba(255,255,255,.7); text-decoration:none; display:flex; align-items:center; gap:9px; transition:all .15s; border-left:3px solid transparent; }
+    .pnl:hover { background:rgba(255,255,255,.07); color:#fff; }
+    .pnl.on { background:rgba(255,255,255,.1); color:#fff; border-left-color:var(--gold); }
+    .pnl .ic { width:18px; text-align:center; font-size:.95rem; }
+    .pnl .bge { margin-left:auto; background:var(--rose); color:#fff; border-radius:999px; font-size:.65rem; font-weight:700; padding:1px 6px; min-width:18px; text-align:center; }
+    .pnl-section { padding:14px 20px 4px; font-size:.62rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.35); }
+    .portal-main { background:var(--surface); overflow-y:auto; }
+    .portal-topbar { background:#fff; border-bottom:1px solid var(--line); padding:14px 28px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:10; }
+    .portal-topbar h1 { font-size:1.05rem; font-weight:700; margin:0; }
+    .portal-content { padding:24px 28px; }
+    .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:24px; }
+    .stat-card { background:#fff; border-radius:var(--r-md); padding:18px 20px; border:1px solid var(--line); }
+    .stat-card .sv { font-size:2rem; font-weight:800; color:var(--ink); line-height:1; }
+    .stat-card .sl { font-size:.75rem; color:var(--muted); margin-top:4px; font-weight:500; }
+    .stat-card.accent-gold .sv { color:var(--gold); }
+    .stat-card.accent-teal .sv { color:var(--teal); }
+    .stat-card.accent-rose .sv { color:var(--rose); }
+    .stat-card.accent-green .sv { color:var(--green); }
+    .portal-table { width:100%; border-collapse:collapse; font-size:.83rem; }
+    .portal-table th { background:var(--bg); padding:9px 13px; text-align:left; font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); border-bottom:2px solid var(--line); }
+    .portal-table td { padding:10px 13px; border-bottom:1px solid var(--line); vertical-align:middle; }
+    .portal-table tr:hover td { background:var(--bg); }
+    .portal-card { background:#fff; border-radius:var(--r-md); border:1px solid var(--line); overflow:hidden; margin-bottom:20px; }
+    .portal-card-head { padding:14px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; }
+    .portal-card-head h3 { font-size:.9rem; font-weight:700; margin:0; }
+    .portal-card-body { padding:0; }
+    .pending-badge { background:var(--rose-bg); color:var(--rose); border-radius:999px; font-size:.68rem; font-weight:700; padding:2px 9px; }
+  
+    /* ── Portal Mobile ── */
+    @media(max-width:900px){
+      .portal-shell{grid-template-columns:1fr}
+      .portal-sb{position:fixed;left:-280px;width:260px;height:100vh;top:0;z-index:500;transition:left .28s ease;overflow-y:auto}
+      .portal-sb.mob-open{left:0}
+      .portal-main{grid-column:1}
+      .portal-topbar{padding:12px 16px;flex-wrap:wrap;gap:8px}
+      .portal-topbar h1{font-size:.95rem}
+      .portal-content{padding:14px 16px}
+      .stat-grid{grid-template-columns:1fr 1fr}
+      div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+      .mob-portal-toggle{display:flex!important}
+      .mob-portal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:499}
+      .mob-portal-overlay.open{display:block}
+    }
+    @media(max-width:600px){
+      .stat-grid{grid-template-columns:1fr 1fr}
+      .portal-table{font-size:.75rem}
+      .portal-table th,.portal-table td{padding:6px 8px}
+      .portal-card-head{flex-wrap:wrap;gap:8px}
+      .portal-topbar{gap:6px}
+      .portal-topbar .btn{font-size:.78rem;padding:6px 12px}
+    }
+    @media(max-width:480px){
+      .stat-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+<div class="portal-shell">
+
+  <!-- Sidebar -->
+  <aside class="portal-sb">
+    <div class="portal-brand">
+      <div class="logo-text">🏫 Al-Hikma</div>
+      <div class="logo-sub">Admin Portal</div>
+    </div>
+    <nav class="portal-nav">
+      <div class="pnl-section">Overview</div>
+      <a href="{% url 'portal:dashboard' %}" class="pnl {% if request.resolver_match.url_name == 'dashboard' %}on{% endif %}">
+        <span class="ic">🏠</span> Dashboard
+      </a>
+
+      <div class="pnl-section">People</div>
+      <a href="{% url 'portal:student_list' %}" class="pnl {% if 'student' in request.resolver_match.url_name %}on{% endif %}">
+        <span class="ic">👨‍🎓</span> Students
+      </a>
+      <a href="{% url 'portal:lecturer_list' %}" class="pnl {% if 'lecturer' in request.resolver_match.url_name %}on{% endif %}">
+        <span class="ic">👨‍🏫</span> Lecturers
+      </a>
+
+      <div class="pnl-section">Academic</div>
+      <a href="{% url 'portal:course_list' %}" class="pnl {% if 'course' in request.resolver_match.url_name %}on{% endif %}">
+        <span class="ic">📚</span> Courses
+        {% if pending_courses_count %}<span class="bge">{{ pending_courses_count }}</span>{% endif %}
+      </a>
+      <a href="{% url 'portal:exam_list' %}" class="pnl {% if 'exam' in request.resolver_match.url_name %}on{% endif %}">
+        <span class="ic">📝</span> Exams
+        {% if pending_exams_count %}<span class="bge">{{ pending_exams_count }}</span>{% endif %}
+      </a>
+      <a href="{% url 'portal:result_list' %}" class="pnl {% if 'result' in request.resolver_match.url_name %}on{% endif %}">
+        <span class="ic">📊</span> Results
+      </a>
+      <a href="{% url 'portal:course_message_list' %}" class="pnl {% if 'message' in request.resolver_match.url_name %}on{% endif %}">
+        <span class="ic">✉️</span> Course Messages
+        {% if open_messages_count %}<span class="bge">{{ open_messages_count }}</span>{% endif %}
+      </a>
+
+      <div class="pnl-section">System</div>
+      <a href="{% url 'portal:announcement_list' %}" class="pnl {% if 'announcement' in request.resolver_match.url_name %}on{% endif %}">
+        <span class="ic">📢</span> Announcements
+      </a>
+      <a href="{% url 'portal:academic_settings' %}" class="pnl {% if 'academic' in request.resolver_match.url_name %}on{% endif %}">
+        <span class="ic">⚙️</span> Academic Settings
+      </a>
+      <a href="{% url 'portal:department_list' %}" class="pnl {% if 'department' in request.resolver_match.url_name %}on{% endif %}">
+        <span class="ic">🏛️</span> Departments
+      </a>
+      <!-- <a href="/admin/" class="pnl" target="_blank">
+        <span class="ic">🔧</span> Django Admin
+      </a> -->
+    </nav>
+    <div style="padding:14px 20px;border-top:1px solid rgba(255,255,255,.1)">
+      <div style="font-size:.75rem;color:rgba(255,255,255,.5);margin-bottom:6px">{{ request.user.get_full_name }}</div>
+      <a href="{% url 'portal:logout' %}" class="pnl" style="padding:6px 0;border:none">
+        <span class="ic">🚪</span> Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="portal-main">
+    <div class="portal-topbar">
+      <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+      <div style="display:flex;gap:8px;align-items:center">
+        {% block topbar_actions %}{% endblock %}
+      </div>
+    </div>
+
+    {% if messages %}
+    <div style="padding:0 28px;margin-top:14px">
+      {% for msg in messages %}
+      <div class="flash flash-{{ msg.tags }}" style="margin-bottom:8px">
+        {{ msg }} <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="portal-content">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+
+<!-- Mobile portal sidebar toggle -->
+<button class="mob-portal-toggle" id="portalSbBtn"
+  style="display:none;position:fixed;bottom:20px;right:20px;width:50px;height:50px;border-radius:50%;background:var(--gold);color:#fff;font-size:1.3rem;border:none;cursor:pointer;z-index:600;box-shadow:0 4px 20px rgba(0,0,0,.3);align-items:center;justify-content:center">
+  ☰
+</button>
+<div class="mob-portal-overlay" id="portalOverlay"></div>
+
+<script src="{% static 'js/main.js' %}"></script>
+
+<script>
+(function(){
+  var sb = document.querySelector('.portal-sb');
+  var btn = document.getElementById('portalSbBtn');
+  var overlay = document.getElementById('portalOverlay');
+  if(!sb||!btn||!overlay) return;
+  function openSb(){ sb.classList.add('mob-open'); overlay.classList.add('open'); btn.innerHTML='✕'; }
+  function closeSb(){ sb.classList.remove('mob-open'); overlay.classList.remove('open'); btn.innerHTML='☰'; }
+  btn.addEventListener('click', function(){ sb.classList.contains('mob-open') ? closeSb() : openSb(); });
+  overlay.addEventListener('click', closeSb);
+  sb.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', function(){ if(window.innerWidth<=900) closeSb(); }); });
+})();
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

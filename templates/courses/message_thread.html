@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}{{ thread.subject }} — Al-Hikma LMS{% endblock %}
+{% block nav_class %}dark{% endblock %}
+
+{% block content %}
+<div style="padding-top:calc(var(--nav-h) + 48px);padding-bottom:80px">
+  <div class="wrap" style="max-width:680px">
+    <nav class="breadcrumb" style="margin-bottom:18px">
+      {% if is_student %}
+        <a href="{% url 'courses:message_list' %}">My Messages</a>
+      {% elif user.role == 'lecturer' %}
+        <a href="{% url 'courses:lecturer_message_list' %}">Course Messages</a>
+      {% else %}
+        <a href="{% url 'portal:dashboard' %}">Portal</a>
+      {% endif %}
+      › <span>{{ thread.subject }}</span>
+    </nav>
+
+    <div class="sec-hd" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+      <div>
+        <div class="ey"><span class="t-label">{{ thread.course.title }}</span></div>
+        <h2 class="t-heading" style="font-size:1.5rem">{{ thread.subject }}</h2>
+      </div>
+      <span class="chip {% if thread.status == 'open' %}c-gold{% else %}c-green{% endif %}" style="flex-shrink:0">{{ thread.get_status_display }}</span>
+    </div>
+
+    <div class="card cp-lg" style="margin-bottom:20px">
+      {% for r in replies %}
+      <div style="display:flex;gap:12px;{% if not forloop.last %}margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--line);{% endif %}">
+        <div class="iav" style="width:34px;height:34px;border-radius:50%;background:{% if r.sender_id == thread.student_id %}var(--teal){% else %}var(--gold){% endif %};color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0">
+          {{ r.sender.initials }}
+        </div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+            <span style="font-weight:600;font-size:.86rem;color:var(--ink)">{{ r.sender.get_full_name|default:r.sender.email }}</span>
+            {% if r.sender_id == thread.student_id %}<span class="chip c-teal" style="font-size:.62rem">Student</span>{% else %}<span class="chip c-gold" style="font-size:.62rem">Instructor</span>{% endif %}
+            <span style="font-size:.72rem;color:var(--faint)">{{ r.created_at|date:"d M, H:i" }}</span>
+          </div>
+          <p style="font-size:.88rem;color:var(--ink-3);line-height:1.7;white-space:pre-line">{{ r.body }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <form method="post" class="card cp-lg">
+      {% csrf_token %}
+      <div class="field">
+        <label>{% if is_student %}Add to the conversation{% else %}Reply to {{ thread.student.get_full_name|default:thread.student.email }}{% endif %}</label>
+        <textarea name="body" rows="4" placeholder="Type your message..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;align-items:center;flex-wrap:wrap">
+        {% if not is_student %}
+          {% if thread.status == 'open' %}
+          <button type="submit" name="status" value="resolved" class="btn btn-ghost">Reply &amp; Mark Resolved</button>
+          {% else %}
+          <button type="submit" name="status" value="open" class="btn btn-ghost">Reply &amp; Reopen</button>
+          {% endif %}
+        {% endif %}
+        <button type="submit" class="btn btn-teal">Send Reply</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

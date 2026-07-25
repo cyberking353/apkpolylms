@@ -1,0 +1,373 @@
+{% extends 'base.html' %}
+{% block title %}{{ exam.title|default:"Exam" }} — Al-Hikma LMS{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="qshell no-copy">
+  {% if exam.enable_proctoring %}
+  <div id="proctor-gate" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px">
+    <div class="card cp" style="max-width:480px;padding:28px 26px;text-align:center">
+      <div style="font-size:2rem;margin-bottom:8px">🖥️</div>
+      <h3 style="margin-bottom:10px">Proctored Exam</h3>
+      <p style="font-size:.86rem;color:var(--muted);margin-bottom:16px">
+        This exam is monitored. Stay in fullscreen and on this tab for the entire exam —
+        exiting fullscreen or switching tabs is logged as a violation. After
+        {{ exam.max_violations }} violation{{ exam.max_violations|pluralize }}, your exam will auto-submit.
+        Also, this exam can only be open in one tab/window at a time.
+      </p>
+      <p id="fullscreen-unsupported-note" style="display:none;font-size:.78rem;color:var(--muted);margin-top:-8px;margin-bottom:16px">
+        ℹ️ Fullscreen isn't available on this browser — tab-switching and session checks are still active.
+      </p>
+      <button type="button" class="btn btn-gold btn-lg" id="btn-enter-fullscreen">Enter Fullscreen &amp; Begin →</button>
+    </div>
+  </div>
+  <div id="session-lost-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;display:none;align-items:center;justify-content:center;padding:24px">
+    <div class="card cp" style="max-width:440px;padding:28px 26px;text-align:center">
+      <div style="font-size:2rem;margin-bottom:8px">🚫</div>
+      <h3 style="margin-bottom:10px">Session Ended</h3>
+      <p style="font-size:.86rem;color:var(--muted)">This exam was opened in another tab or window, so this session has been closed. Return to the active tab to continue.</p>
+    </div>
+  </div>
+  <div id="fullscreen-lock-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9998;display:none;align-items:center;justify-content:center;padding:24px">
+    <div class="card cp" style="max-width:440px;padding:28px 26px;text-align:center">
+      <div style="font-size:2rem;margin-bottom:8px">⚠️</div>
+      <h3 style="margin-bottom:10px">Return to Fullscreen</h3>
+      <p style="font-size:.86rem;color:var(--muted);margin-bottom:16px" id="fullscreen-lock-msg">
+        You exited fullscreen mode. This has been logged as a violation.
+      </p>
+      <button type="button" class="btn btn-gold btn-lg" id="btn-return-fullscreen">Return to Fullscreen →</button>
+    </div>
+  </div>
+  {% endif %}
+  <div class="wrap">
+
+    <!-- Top bar -->
+    <div class="qtop">
+      <div>
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:3px">
+          <h1>{{ exam.title|default:"Course Exam" }}</h1>
+          <span class="chip c-rose">🏁 Official Exam</span>
+        </div>
+        <p class="sub">{{ course.title }} · {{ questions|length }} Questions · One attempt only</p>
+      </div>
+      <div class="tbox tbox-gold">
+        <span style="font-size:1.1rem">⏱</span>
+        <div>
+          <div class="t-lbl" style="color:var(--gold)">Time Remaining</div>
+          <div class="t-val" id="timer" style="color:var(--gold)">--:--</div>
+        </div>
+      </div>
+      {% if exam.enable_proctoring %}
+      <div class="tbox" id="violation-box" style="{% if attempt.violation_count == 0 %}display:none{% endif %}">
+        <span style="font-size:1.1rem">⚠️</span>
+        <div>
+          <div class="t-lbl">Violations</div>
+          <div class="t-val" id="violation-count">{{ attempt.violation_count }}/{{ exam.max_violations }}</div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="exam-alert">⚠️ <span><strong>This is your only attempt.</strong> Pass mark: {{ exam.pass_mark }}%. Do not refresh or close this tab.</span></div>
+
+    <div class="mob-qdots" id="mob-qdots">
+      {% for question in questions %}
+      <div class="qdot" id="mob-dot-{{ forloop.counter }}" onclick="goToQ({{ forloop.counter }})">{{ forloop.counter }}</div>
+      {% endfor %}
+    </div>
+
+    <form method="post" action="{% url 'exams:submit_exam' exam.id %}" id="quiz-form">
+      {% csrf_token %}
+      <input type="hidden" name="terminated_reason" id="terminated-reason" value="">
+      <div class="qlayout">
+        <!-- Questions -->
+        <div>
+          <div class="qpr">
+            <div class="qpw"><div class="qpf" id="q-fill" style="width:0%"></div></div>
+            <span class="qcnt" id="q-count">0 / {{ questions|length }}</span>
+          </div>
+
+          {% for question in questions %}
+          <div class="qcard question-slide" id="q-{{ forloop.counter }}" {% if not forloop.first %}style="display:none"{% endif %}>
+            <div class="qlbl">Question {{ forloop.counter }} of {{ questions|length }}</div>
+            <div class="qtext">{{ question.text }}</div>
+            <div class="opts">
+              {% for choice in question.shuffled_choices %}
+              <label class="opt" id="opt-{{ choice.id }}">
+                <input type="radio" name="question_{{ question.id }}" value="{{ choice.id }}"
+                       onchange="selectOpt(this, {{ forloop.counter0 }})">
+                <span class="opt-lt">{% if forloop.counter0 == 0 %}A{% elif forloop.counter0 == 1 %}B{% elif forloop.counter0 == 2 %}C{% else %}D{% endif %}</span>
+                <span class="opt-tx">{{ choice.text }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+
+          <div class="qnav">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-prev" onclick="prevQ()" disabled>← Prev</button>
+            <span style="font-size:.76rem;color:var(--muted)" id="nav-hint">Select an answer to continue</span>
+            <div style="display:flex;gap:7px">
+              <button type="button" class="btn btn-teal btn-sm" id="btn-next" onclick="nextQ()">Next →</button>
+              <button type="submit" class="btn btn-gold btn-sm" id="btn-submit" style="display:none"
+                      data-confirm="Submit exam now? You cannot change answers after submitting, and there are no retakes.">
+                Submit ✓
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="qsb card cp">
+          <h5>Question Map</h5>
+          <div class="qdots" id="q-dots">
+            {% for question in questions %}
+            <div class="qdot" id="dot-{{ forloop.counter }}" onclick="goToQ({{ forloop.counter }})">{{ forloop.counter }}</div>
+            {% endfor %}
+          </div>
+          <div style="height:1px;background:var(--line);margin:13px 0"></div>
+          <div class="qleg">
+            <div class="ql-item"><div class="ql-dot" style="background:var(--teal)"></div> Answered</div>
+            <div class="ql-item"><div class="ql-dot" style="border:2px solid var(--gold)"></div> Current</div>
+            <div class="ql-item"><div class="ql-dot" style="background:var(--surface-2);border:1px solid var(--line)"></div> Unanswered</div>
+          </div>
+          <div style="height:1px;background:var(--line);margin:13px 0"></div>
+          <div style="background:var(--bg);border-radius:var(--r-sm);padding:10px 12px;font-size:.76rem;color:var(--muted)">
+            <div style="margin-bottom:3px"><strong>Pass Mark:</strong> {{ exam.pass_mark }}%</div>
+            <div><strong>Attempts:</strong> 1 of 1 — no retakes</div>
+          </div>
+          <div style="margin-top:11px">
+            <button type="submit" class="btn btn-danger btn-full btn-sm"
+                    data-confirm="Submit exam now? This cannot be undone.">
+              🏁 Submit Now
+            </button>
+          </div>
+        </aside>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Exam copy-protection: block right-click context menu and common copy shortcuts
+// within the exam area. This deters casual copying but is not foolproof (devtools,
+// disabling JS, or a second device can bypass it) — a deterrent, not real security.
+const examShell = document.querySelector('.qshell');
+if (examShell) {
+  examShell.addEventListener('contextmenu', e => e.preventDefault());
+  examShell.addEventListener('copy', e => e.preventDefault());
+  examShell.addEventListener('cut', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
+    const blocked = (e.ctrlKey || e.metaKey) && ['c','x','u','s','p'].includes(e.key.toLowerCase());
+    if (blocked) e.preventDefault();
+  });
+}
+
+const TOTAL = {{ questions|length }};
+let current = 1;
+// Server-calculated remaining time (so refreshing/resuming does NOT reset the clock —
+// the deadline is anchored to when the attempt was first started, not page load).
+let timeLeft = {{ seconds_remaining }};
+
+const timerEl = document.getElementById('timer');
+
+function renderTimer() {
+  const m = String(Math.floor(timeLeft / 60)).padStart(2,'0');
+  const s = String(timeLeft % 60).padStart(2,'0');
+  timerEl.textContent = `${m}:${s}`;
+  if (timeLeft <= 60)       timerEl.className = 't-val danger';
+  else if (timeLeft <= 300) timerEl.className = 't-val warn';
+}
+renderTimer();
+
+const interval = setInterval(() => {
+  timeLeft--;
+  renderTimer();
+  if (timeLeft <= 0) {
+    clearInterval(interval);
+    document.getElementById('quiz-form').submit();
+  }
+}, 1000);
+
+function showQ(n) {
+  document.querySelectorAll('.question-slide').forEach(el => el.style.display = 'none');
+  document.getElementById(`q-${n}`).style.display = 'block';
+  const pct = ((n - 1) / TOTAL) * 100;
+  document.getElementById('q-fill').style.width = pct + '%';
+  document.getElementById('q-count').textContent = `${n} / ${TOTAL}`;
+  document.getElementById('btn-prev').disabled = (n === 1);
+  const isLast = (n === TOTAL);
+  document.getElementById('btn-next').style.display  = isLast ? 'none' : 'inline-flex';
+  document.getElementById('btn-submit').style.display = isLast ? 'inline-flex' : 'none';
+  document.querySelectorAll('.qdot').forEach(d => d.classList.remove('cur'));
+  const dot = document.getElementById(`dot-${n}`);
+  if (dot) dot.classList.add('cur');
+  const mobDot = document.getElementById(`mob-dot-${n}`);
+  if (mobDot) mobDot.classList.add('cur');
+  const mobStrip = document.getElementById('mob-qdots');
+  if (mobStrip && mobDot) mobDot.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  current = n;
+}
+
+function nextQ() { if (current < TOTAL) showQ(current + 1); }
+function prevQ() { if (current > 1) showQ(current - 1); }
+function goToQ(n) { showQ(n); }
+
+function selectOpt(input, idx) {
+  const dot = document.getElementById(`dot-${current}`);
+  if (dot) { dot.classList.remove('cur'); dot.classList.add('ans'); }
+  const mobDot = document.getElementById(`mob-dot-${current}`);
+  if (mobDot) { mobDot.classList.remove('cur'); mobDot.classList.add('ans'); }
+  const slide = document.getElementById(`q-${current}`);
+  slide.querySelectorAll('.opt').forEach(o => o.classList.remove('sel'));
+  input.closest('.opt').classList.add('sel');
+}
+
+showQ(1);
+
+{% if exam.enable_proctoring %}
+const EXAM_ID = {{ exam.id }};
+const SESSION_TOKEN = "{{ session_token }}";
+const MAX_VIOLATIONS = {{ exam.max_violations }};
+let violationCount = {{ attempt.violation_count }};
+let examLive = false;   // true once the student has passed the fullscreen gate
+let sessionLost = false;
+
+function csrfToken() {
+  return document.querySelector('#quiz-form [name=csrfmiddlewaretoken]').value;
+}
+
+function postJSON(url, data) {
+  return fetch(url, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrfToken(), 'Content-Type': 'application/x-www-form-urlencoded'},
+    body: new URLSearchParams(data),
+  }).then(r => r.json());
+}
+
+function updateViolationBadge() {
+  const box = document.getElementById('violation-box');
+  const cnt = document.getElementById('violation-count');
+  if (box && cnt) {
+    cnt.textContent = `${violationCount}/${MAX_VIOLATIONS}`;
+    box.style.display = violationCount > 0 ? 'flex' : 'none';
+  }
+}
+
+function autoSubmitForViolations() {
+  document.getElementById('terminated-reason').value = 'violations';
+  document.getElementById('quiz-form').submit();
+}
+
+function reportViolation(type, warningText) {
+  if (!examLive || sessionLost) return;
+  postJSON(`/exams/${EXAM_ID}/log-violation/`, {token: SESSION_TOKEN, type: type})
+    .then(data => {
+      if (data.status !== 'ok') return;
+      violationCount = data.violation_count;
+      updateViolationBadge();
+      if (data.exceeded) {
+        alert('You have reached the maximum number of proctoring violations. Your exam is being submitted now.');
+        autoSubmitForViolations();
+      } else {
+        alert(`${warningText}\n\nViolation ${violationCount} of ${MAX_VIOLATIONS}. Reaching ${MAX_VIOLATIONS} will auto-submit your exam.`);
+      }
+    })
+    .catch(() => {});
+}
+
+// --- Fullscreen gate ---
+function getFullscreenRequestFn() {
+  const el = document.documentElement;
+  return el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen || null;
+}
+// Common on older iPhones and non-Safari iOS browsers, which don't implement
+// the Fullscreen API at all — detect this up front rather than silently no-op.
+let fullscreenSupported = !!getFullscreenRequestFn();
+
+const gate = document.getElementById('proctor-gate');
+const btnEnterFullscreen = document.getElementById('btn-enter-fullscreen');
+if (!fullscreenSupported) {
+  document.getElementById('fullscreen-unsupported-note').style.display = 'block';
+  btnEnterFullscreen.textContent = 'Begin Exam →';
+}
+btnEnterFullscreen.addEventListener('click', () => {
+  const req = getFullscreenRequestFn();
+  if (req) {
+    Promise.resolve(req.call(document.documentElement)).catch(() => {
+      // API existed but the request itself failed (e.g. permission denied) —
+      // fall back the same way as if it were never supported.
+      fullscreenSupported = false;
+    });
+  }
+  gate.style.display = 'none';
+  examLive = true;
+});
+
+// --- Fullscreen monitoring (forced return) ---
+const fsLockOverlay = document.getElementById('fullscreen-lock-overlay');
+const fsLockMsg = document.getElementById('fullscreen-lock-msg');
+const btnReturnFullscreen = document.getElementById('btn-return-fullscreen');
+
+function lockForFullscreenExit() {
+  fsLockOverlay.style.display = 'flex';
+  postJSON(`/exams/${EXAM_ID}/log-violation/`, {token: SESSION_TOKEN, type: 'fullscreen_exit'})
+    .then(data => {
+      if (data.status !== 'ok') return;
+      violationCount = data.violation_count;
+      updateViolationBadge();
+      if (data.exceeded) {
+        fsLockMsg.textContent = 'You have reached the maximum number of proctoring violations. Submitting your exam now...';
+        btnReturnFullscreen.style.display = 'none';
+        autoSubmitForViolations();
+      } else {
+        fsLockMsg.textContent = `You exited fullscreen mode. Violation ${violationCount} of ${MAX_VIOLATIONS}. `
+          + `Click below to return and continue — reaching ${MAX_VIOLATIONS} will auto-submit your exam.`;
+      }
+    })
+    .catch(() => {});
+}
+
+btnReturnFullscreen.addEventListener('click', () => {
+  const req = getFullscreenRequestFn();
+  if (req) req.call(document.documentElement).catch(() => {});
+});
+
+document.addEventListener('fullscreenchange', () => {
+  if (!examLive || sessionLost || !fullscreenSupported) return;
+  if (!document.fullscreenElement) {
+    lockForFullscreenExit();
+  } else {
+    // back in fullscreen — unlock
+    fsLockOverlay.style.display = 'none';
+  }
+});
+
+// --- Tab-switch detection ---
+document.addEventListener('visibilitychange', () => {
+  if (examLive && document.hidden) {
+    reportViolation('tab_switch', 'You switched away from the exam tab.');
+  }
+});
+
+// --- Single active session enforcement (heartbeat) ---
+setInterval(() => {
+  if (sessionLost) return;
+  postJSON(`/exams/${EXAM_ID}/heartbeat/`, {token: SESSION_TOKEN})
+    .then(data => {
+      if (data.status === 'invalid_session') {
+        sessionLost = true;
+        clearInterval(interval);
+        document.getElementById('session-lost-overlay').style.display = 'flex';
+        document.querySelectorAll('#quiz-form input, #quiz-form button').forEach(el => el.disabled = true);
+      } else if (data.status === 'submitted' && data.redirect) {
+        window.location.href = data.redirect;
+      }
+    })
+    .catch(() => {});
+}, 8000);
+{% endif %}
+</script>
+{% endblock %}

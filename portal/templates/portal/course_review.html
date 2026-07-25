@@ -1,0 +1,82 @@
+{% extends 'portal/base.html' %}
+{% block title %}Review: {{ course.title }}{% endblock %}
+{% block page_title %}Course Review{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start">
+
+  <!-- Left: course detail -->
+  <div>
+    <div class="portal-card" style="margin-bottom:16px">
+      <div class="portal-card-head">
+        <h3>{{ course.title }}</h3>
+        <span class="chip {% if course.status == 'published' %}c-green{% elif course.status == 'pending' %}c-gold{% else %}c-rose{% endif %}">{{ course.get_status_display }}</span>
+      </div>
+      <div class="portal-card-body" style="padding:16px">
+        <table class="portal-table">
+          <tr><td style="color:var(--muted);width:130px">Lecturer</td><td style="font-weight:600">{{ course.lecturer.display_name|default:"(admin created)" }}</td></tr>
+          <tr><td style="color:var(--muted)">Level</td><td>{{ course.get_level_display }}</td></tr>
+          <tr><td style="color:var(--muted)">Semester</td><td>{{ course.semester }}</td></tr>
+          <tr><td style="color:var(--muted)">Departments</td><td>{% for d in selected_depts %}{{ d }}{% if not forloop.last %}, {% endif %}{% empty %}All departments{% endfor %}</td></tr>
+          <tr><td style="color:var(--muted)">Modules</td><td>{{ modules.count }}</td></tr>
+          <tr><td style="color:var(--muted)">Description</td><td>{{ course.description }}</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="portal-card">
+      <div class="portal-card-head"><h3>Modules & Lectures</h3></div>
+      <div class="portal-card-body">
+        {% for module in modules %}
+        <div style="padding:10px 16px;border-bottom:1px solid var(--line)">
+          <div style="font-weight:600;font-size:.85rem">Week {{ module.week_number }}: {{ module.title }}</div>
+          {% for lec in module.lectures.all %}
+          <div style="font-size:.76rem;color:var(--muted);padding:2px 0 0 10px">🎬 {{ lec.title }}</div>
+          {% endfor %}
+        </div>
+        {% empty %}
+        <div style="padding:16px;color:var(--muted);font-size:.83rem">No modules yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: approve/reject -->
+  <div>
+    <div class="portal-card">
+      <div class="portal-card-head"><h3>Admin Decision</h3></div>
+      <div class="portal-card-body" style="padding:16px">
+        <form method="post">
+          {% csrf_token %}
+
+          <div class="field">
+            <label>Departments (adjust if needed)</label>
+            <div class="dept-pills-wrap" style="margin-top:6px">
+            {% for code,label in dept_choices %}
+            <label class="dept-pill {% if code in selected_depts %}selected{% endif %}">
+              <input type="checkbox" name="departments" value="{{ code }}" {% if code in selected_depts %}checked{% endif %}>
+              <span>{{ label }}</span>
+            </label>
+            {% endfor %}
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Note to Lecturer (optional)</label>
+            <textarea name="review_note" rows="3" placeholder="Feedback, corrections needed…">{{ course.review_note }}</textarea>
+          </div>
+
+          <button type="submit" name="action" value="publish" class="btn btn-teal btn-full" style="margin-bottom:8px"
+            data-confirm="Publish this course? Students will see it immediately.">
+            ✓ Publish Course
+          </button>
+          <button type="submit" name="action" value="reject" class="btn btn-danger btn-full"
+            data-confirm="Reject and send back to lecturer?">
+            ✗ Reject
+          </button>
+        </form>
+        <a href="{% url 'portal:course_list' %}" class="btn btn-ghost btn-full" style="margin-top:8px">← Back</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}My Profile — Al-Hikma LMS{% endblock %}
+{% block content %}
+<div style="padding-top:calc(var(--nav-h)+48px);padding-bottom:80px">
+  <div class="wrap" style="max-width:680px">
+    <div class="sec-hd"><h2 class="t-heading" style="font-size:1.8rem">My Profile</h2></div>
+    <div class="card cp-lg">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="field-row">
+          <div class="field"><label>First Name</label><input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}"></div>
+          <div class="field"><label>Last Name</label><input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}"></div>
+        </div>
+        <div class="field"><label>Matric Number</label><input type="text" name="matric_number" value="{{ form.matric_number.value|default:'' }}"></div>
+        <div class="field-row">
+          <div class="field">
+            <label>Department</label>
+            <input type="text" value="{{ user.get_department_display|default:'Not assigned yet' }}" disabled style="background:var(--bg-soft, #f3f4f6);color:var(--muted)">
+          </div>
+          <div class="field">
+            <label>Academic Level</label>
+            <input type="text" value="{{ user.get_academic_level_display|default:'Not assigned yet' }}" disabled style="background:var(--bg-soft, #f3f4f6);color:var(--muted)">
+          </div>
+        </div>
+        <p style="font-size:.78rem;color:var(--muted);margin:-8px 0 16px">Department and level are set by the admin office. Contact them if either needs to change.</p>
+        <div class="field"><label>Bio</label><textarea name="bio" rows="3" style="width:100%;padding:11px 14px;border:1.5px solid var(--line);border-radius:var(--r-md);font-size:.92rem;resize:vertical">{{ form.bio.value|default:'' }}</textarea></div>
+        <div class="field"><label>Profile Photo</label><input type="file" name="avatar" accept="image/*"></div>
+        <button type="submit" class="btn btn-teal">Save Changes</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

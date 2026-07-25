@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Notifications — Al-Hikma LMS{% endblock %}
+{% block nav_class %}dark{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="dash-shell">
+  <aside class="sb" id="sidebar">
+    <div class="sb-u">
+      <div class="sb-av">{{ user.initials }}</div>
+      <div class="sb-name">{{ user.display_name }}</div>
+      <div class="sb-role">Lecturer</div>
+    </div>
+    <div class="sb-sec-lbl">Lecturer</div>
+    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl"><span class="ic">🏠</span> My Courses</a>
+    <a href="{% url 'courses:lecturer_course_create' %}" class="sbl"><span class="ic">➕</span> New Course</a>
+    <a href="{% url 'courses:lecturer_message_list' %}" class="sbl"><span class="ic">✉️</span> Course Messages</a>
+    <a href="{% url 'courses:lecturer_notifications' %}" class="sbl on"><span class="ic">🔔</span> Notifications</a>
+    <div class="sb-sec-lbl" style="margin-top:8px">Account</div>
+    <a href="{% url 'accounts:profile' %}" class="sbl"><span class="ic">👤</span> Profile</a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic">🚪</span> Sign Out</a>
+  </aside>
+
+  <main class="dmain">
+    <div class="dsh">
+      <h2>🔔 Notifications</h2>
+    </div>
+
+    <div class="card" style="overflow:hidden">
+      {% for n in notifications %}
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 18px;{% if not forloop.last %}border-bottom:1px solid var(--line){% endif %}">
+        <span style="font-size:1.2rem;flex-shrink:0;margin-top:1px">📌</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.88rem;color:var(--ink)">{{ n.message }}</div>
+          <div style="display:flex;gap:10px;margin-top:5px;font-size:.74rem;color:var(--faint)">
+            <span>{{ n.created_at|date:"d M Y, H:i" }}</span>
+            {% if n.link %}
+            <a href="{{ n.link }}" style="color:var(--teal)">View →</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div style="padding:44px 20px;text-align:center;color:var(--muted)">
+        <div style="font-size:2rem;margin-bottom:10px">🔔</div>
+        <p>No notifications yet.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </main>
+</div>
+{% endblock %}

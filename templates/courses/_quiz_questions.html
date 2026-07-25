@@ -1,0 +1,98 @@
+<div id="questions-list">
+  {% if feedback %}
+  <div style="padding:9px 14px;border-radius:var(--r-sm);margin-bottom:10px;font-size:.8rem;font-weight:600;
+              background:{% if feedback.0 == 'success' %}var(--green-bg){% else %}var(--rose-bg){% endif %};
+              color:{% if feedback.0 == 'success' %}var(--green){% else %}var(--rose){% endif %}">
+    {% if feedback.0 == 'success' %}✓{% else %}✗{% endif %} {{ feedback.1 }}
+  </div>
+  {% endif %}
+  <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px;text-align:right">
+    {{ questions|length }} question{{ questions|length|pluralize }}
+  </div>
+
+  {% for question in questions %}
+  <div class="card cp-lg" style="margin-bottom:12px" id="qrow-{{ question.id }}">
+
+    <!-- View mode -->
+    <div id="q-view-{{ question.id }}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:10px">
+        <strong style="font-size:.85rem">Question {{ forloop.counter }}: {{ question.text }}</strong>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button type="button" class="btn btn-ghost btn-sm" style="padding:3px 9px;font-size:.72rem"
+            onclick="document.getElementById('q-view-{{ question.id }}').style.display='none';document.getElementById('q-edit-{{ question.id }}').style.display='block'">
+            ✎ Edit
+          </button>
+          <form method="post" action="{% url 'courses:lecturer_quiz_question_delete' course.slug quiz.id question.id %}"
+                hx-post="{% url 'courses:lecturer_quiz_question_delete' course.slug quiz.id question.id %}"
+                hx-target="#questions-list" hx-swap="outerHTML" style="display:inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-sm" style="padding:3px 9px;font-size:.72rem"
+              data-confirm="Delete this question?">🗑 Delete</button>
+          </form>
+        </div>
+      </div>
+      {% for choice in question.padded_choices %}
+      <div style="font-size:.8rem;padding:3px 0;color:{% if choice.is_correct %}var(--green){% else %}var(--muted){% endif %}">
+        {% if choice.is_correct %}✓{% else %}○{% endif %}
+        {% if forloop.counter0 == 0 %}A{% elif forloop.counter0 == 1 %}B{% elif forloop.counter0 == 2 %}C{% else %}D{% endif %}.
+        {{ choice.text|default:"—" }}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Edit mode (hidden by default) -->
+    <form method="post" action="{% url 'courses:lecturer_quiz_question_edit' course.slug quiz.id question.id %}"
+          hx-post="{% url 'courses:lecturer_quiz_question_edit' course.slug quiz.id question.id %}"
+          hx-target="#questions-list" hx-swap="outerHTML"
+          id="q-edit-{{ question.id }}" style="display:none">
+      {% csrf_token %}
+      <div class="field">
+        <textarea name="text" rows="2" placeholder="Question text…">{{ question.text }}</textarea>
+      </div>
+      {% for choice in question.padded_choices %}
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+        <span style="width:18px;font-weight:700;font-size:.8rem;color:var(--muted)">{% if forloop.counter0 == 0 %}A{% elif forloop.counter0 == 1 %}B{% elif forloop.counter0 == 2 %}C{% else %}D{% endif %}</span>
+        <input type="radio" name="correct" value="{{ forloop.counter0 }}" {% if choice.is_correct %}checked{% endif %} style="width:14px;height:14px;accent-color:var(--teal)">
+        <input type="text" name="choice_{{ forloop.counter0 }}" value="{{ choice.text|default:'' }}" placeholder="Answer choice…" style="flex:1;font-size:.83rem">
+      </div>
+      {% endfor %}
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button type="submit" class="btn btn-teal btn-sm">Save</button>
+        <button type="button" class="btn btn-ghost btn-sm"
+          onclick="document.getElementById('q-edit-{{ question.id }}').style.display='none';document.getElementById('q-view-{{ question.id }}').style.display='block'">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+  {% empty %}
+  <div style="font-size:.84rem;color:var(--muted);padding:8px 0 12px;font-style:italic">
+    No questions yet — add your first one below.
+  </div>
+  {% endfor %}
+
+  <!-- Add new question -->
+  <div class="card cp-lg" style="border-style:dashed">
+    <strong style="font-size:.85rem;display:block;margin-bottom:10px">Add Question</strong>
+    <form method="post" action="{% url 'courses:lecturer_quiz_question_add' course.slug quiz.id %}"
+          hx-post="{% url 'courses:lecturer_quiz_question_add' course.slug quiz.id %}"
+          hx-target="#questions-list" hx-swap="outerHTML"
+          hx-indicator="#add-q-spinner" id="add-question-form">
+      {% csrf_token %}
+      <div class="field">
+        <textarea name="text" rows="2" placeholder="Type your question here…"></textarea>
+      </div>
+      {% for i in "0123" %}
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+        <span style="width:18px;font-weight:700;font-size:.8rem;color:var(--muted)">{% if forloop.counter0 == 0 %}A{% elif forloop.counter0 == 1 %}B{% elif forloop.counter0 == 2 %}C{% else %}D{% endif %}</span>
+        <input type="radio" name="correct" value="{{ forloop.counter0 }}" style="width:14px;height:14px;accent-color:var(--teal)">
+        <input type="text" name="choice_{{ forloop.counter0 }}" placeholder="Answer choice…" style="flex:1;font-size:.83rem">
+      </div>
+      {% endfor %}
+      <button type="submit" class="btn btn-ink btn-sm">
+        + Add Question
+        <span id="add-q-spinner" class="htmx-indicator" style="margin-left:6px">⏳</span>
+      </button>
+    </form>
+  </div>
+</div>

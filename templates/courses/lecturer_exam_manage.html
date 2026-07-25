@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}Exam — {{ course.title }}{% endblock %}
+{% block nav_class %}dark{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="dash-shell">
+  <aside class="sb" id="sidebar">
+    <div class="sb-u">
+      <div class="sb-av">{{ user.initials }}</div>
+      <div class="sb-name">{{ user.display_name }}</div>
+      <div class="sb-role">Lecturer</div>
+    </div>
+    <div class="sb-sec-lbl">Lecturer</div>
+    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl"><span class="ic">🏠</span> My Courses</a>
+    <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="sbl on"><span class="ic">✏️</span> {{ course.title }}</a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic">🚪</span> Sign Out</a>
+  </aside>
+
+  <main class="dmain">
+    <div class="dsh" style="margin-bottom:16px">
+      <div>
+        <h2 style="font-size:1.1rem;margin:0">🎓 {{ exam.title }}</h2>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:3px">
+          {{ course.title }} ·
+          <span class="chip {% if exam.exam_status == 'approved' %}c-green{% elif exam.exam_status == 'pending' %}c-gold{% else %}{% endif %}" style="font-size:.72rem">
+            {% if exam.exam_status == 'approved' %}✓ Approved
+            {% elif exam.exam_status == 'pending' %}⏳ Pending Approval
+            {% else %}✏️ Draft{% endif %}
+          </span>
+        </div>
+      </div>
+      <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="btn btn-ghost btn-sm">← Back to Course</a>
+    </div>
+
+    {% if exam.exam_status == 'pending' %}
+    <div class="exam-alert" style="background:var(--gold-bg);border:1px solid var(--gold);margin-bottom:18px">
+      ⏳ <span>This exam is under admin review. You cannot edit questions until admin approves or sends it back.</span>
+    </div>
+    {% elif exam.exam_status == 'approved' %}
+    <div class="exam-alert" style="background:var(--green-bg);border:1px solid var(--green);margin-bottom:18px">
+      ✓ <span>Approved by admin.{% if exam.open_at %} Exam runs {{ exam.open_at|date:"d M Y H:i" }} → {{ exam.close_at|date:"d M Y H:i" }}.{% else %} Admin will set the schedule soon.{% endif %}</span>
+    </div>
+    {% endif %}
+
+    {% if exam.review_note and exam.exam_status == 'draft' %}
+    <div class="exam-alert" style="background:var(--rose-bg);border:1px solid var(--rose);margin-bottom:18px">
+      ✗ <strong>Admin note:</strong> {{ exam.review_note }}
+    </div>
+    {% endif %}
+
+    <form method="post" id="exam-form">
+      {% csrf_token %}
+
+      <!-- Exam settings -->
+      {% if can_edit %}
+      <div class="card cp-lg" style="margin-bottom:16px">
+        <h4 style="font-size:.88rem;font-weight:700;margin-bottom:12px">Exam Settings</h4>
+        <div class="field-row">
+          <div class="field">
+            <label>Exam Title</label>
+            <input type="text" name="title" value="{{ exam.title }}">
+          </div>
+          <div class="field">
+            <label>Time Limit (minutes)</label>
+            <input type="number" name="time_limit_minutes" value="{{ exam.time_limit_minutes }}" min="10">
+          </div>
+          <div class="field">
+            <label>Pass Mark (%)</label>
+            <input type="number" name="pass_mark" value="{{ exam.pass_mark }}" min="1" max="100">
+          </div>
+        </div>
+        <div class="field">
+          <label>Instructions (shown to students before they start)</label>
+          <textarea name="instructions" rows="2" placeholder="e.g. Answer all questions. No retakes allowed.">{{ exam.instructions }}</textarea>
+        </div>
+        <div class="field-row" style="margin-top:10px">
+          <div class="field" style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+            <input type="checkbox" name="enable_proctoring" id="enable_proctoring" style="width:auto"
+                   {% if exam.enable_proctoring %}checked{% endif %}>
+            <label for="enable_proctoring" style="margin:0">Enable proctoring (fullscreen + tab-switch monitoring)</label>
+          </div>
+          <div class="field">
+            <label>Auto-submit after (violations)</label>
+            <input type="number" name="max_violations" value="{{ exam.max_violations }}" min="0">
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Questions -->
+      <div class="exam-alert" style="margin-bottom:14px">
+        ℹ️ <span>{{ exam.question_count }} question{{ exam.question_count|pluralize }} saved.{% if can_edit %} Fill in a question + 4 choices, mark the correct answer, then click <strong>Save Questions</strong>.{% endif %}</span>
+      </div>
+
+      {% for question in questions %}
+      <div class="card cp-lg" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <strong style="font-size:.85rem">Question {{ forloop.counter }}</strong>
+          {% if can_edit %}
+          <label style="font-size:.76rem;color:var(--rose);cursor:pointer">
+            <input type="checkbox" name="delete_question" value="{{ question.id }}"> Delete
+          </label>
+          {% endif %}
+        </div>
+        <div class="field">
+          <textarea name="question_{{ question.id }}" rows="2" {% if not can_edit %}readonly{% endif %}>{{ question.text }}</textarea>
+        </div>
+        {% for choice in question.padded_choices %}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+          <span style="width:18px;font-weight:700;font-size:.8rem;color:var(--muted)">{% if forloop.counter0 == 0 %}A{% elif forloop.counter0 == 1 %}B{% elif forloop.counter0 == 2 %}C{% else %}D{% endif %}</span>
+          <input type="radio" name="correct_{{ question.id }}" value="{{ forloop.counter0 }}"
+            {% if choice.is_correct %}checked{% endif %}
+            {% if not can_edit %}disabled{% endif %}
+            style="width:14px;height:14px;accent-color:var(--teal)">
+          <input type="text" name="choice_{{ question.id }}_{{ forloop.counter0 }}"
+            value="{{ choice.text|default:'' }}" placeholder="Answer choice…"
+            {% if not can_edit %}readonly{% endif %}
+            style="flex:1;font-size:.83rem">
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+
+      <!-- New question rows (JS-added) -->
+      {% if can_edit %}
+      <div id="new-questions-container"></div>
+
+      <!-- Sticky action bar -->
+      <div style="position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:12px 0;display:flex;gap:10px;flex-wrap:wrap">
+        <button type="button" class="btn btn-ink btn-sm" onclick="addQuestion()">+ Add Question</button>
+        <button type="submit" name="action" value="save" class="btn btn-teal">Save Questions</button>
+        <button type="submit" name="action" value="submit"
+          class="btn btn-gold"
+          data-confirm="Submit for admin approval? You won't be able to edit questions until admin responds.">
+          Submit for Approval →
+        </button>
+        <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="btn btn-ghost">← Back</a>
+      </div>
+      {% endif %}
+    </form>
+
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if can_edit %}
+<script>
+var newCount = 0;
+function addQuestion() {
+  var idx = newCount++;
+  var letters = ['A','B','C','D'];
+  var choices = '';
+  for (var i = 0; i < 4; i++) {
+    choices += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">' +
+      '<span style="width:18px;font-weight:700;font-size:.8rem;color:var(--muted)">' + letters[i] + '</span>' +
+      '<input type="radio" name="correct_new' + idx + '" value="' + i + '" style="width:14px;height:14px;accent-color:var(--teal)">' +
+      '<input type="text" name="choice_new' + idx + '_' + i + '" placeholder="Answer choice…" style="flex:1;font-size:.83rem">' +
+      '</div>';
+  }
+  var html = '<div class="card cp-lg" style="margin-bottom:12px;border-style:dashed">' +
+    '<strong style="font-size:.85rem;display:block;margin-bottom:10px">New Question</strong>' +
+    '<div class="field"><textarea name="question_new' + idx + '" rows="2" placeholder="Type your question here…"></textarea></div>' +
+    choices + '</div>';
+  var container = document.getElementById('new-questions-container');
+  container.insertAdjacentHTML('beforeend', html);
+  container.lastElementChild.scrollIntoView({behavior:'smooth', block:'center'});
+}
+{% if not questions %}addQuestion();{% endif %}
+</script>
+{% endif %}
+{% endblock %}

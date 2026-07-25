@@ -1,0 +1,37 @@
+{% extends 'portal/base.html' %}
+{% block title %}Export Students{% endblock %}
+{% block page_title %}Export Students{% endblock %}
+
+{% block content %}
+<div class="portal-card" style="max-width:520px">
+  <div class="portal-card-head">
+    <h3>Choose export options</h3>
+  </div>
+  <div class="portal-card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-weight:600;font-size:.85rem;margin-bottom:5px">Department</label>
+        <select name="dept" style="width:100%">
+          {% for code,label in dept_choices %}
+          <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:4px">Select a specific department or leave as "All Departments"</div>
+      </div>
+      <div style="margin-bottom:22px">
+        <label style="display:block;font-weight:600;font-size:.85rem;margin-bottom:5px">Academic Level</label>
+        <select name="level" style="width:100%">
+          {% for code,label in level_choices %}
+          <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button type="submit" class="btn btn-teal">📥 Download Excel</button>
+        <a href="{% url 'portal:student_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

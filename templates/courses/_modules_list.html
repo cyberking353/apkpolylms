@@ -1,0 +1,176 @@
+{% load static %}
+<div id="modules-list">
+  {% if feedback %}
+  <div style="padding:9px 14px;border-radius:var(--r-sm);margin-bottom:10px;font-size:.8rem;font-weight:600;
+              background:{% if feedback.0 == 'success' %}var(--green-bg){% else %}var(--rose-bg){% endif %};
+              color:{% if feedback.0 == 'success' %}var(--green){% else %}var(--rose){% endif %}">
+    {% if feedback.0 == 'success' %}✓{% else %}✗{% endif %} {{ feedback.1 }}
+  </div>
+  {% endif %}
+  <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px;text-align:right">
+    {{ modules.count }} module{{ modules.count|pluralize }}
+  </div>
+
+  {% for module in modules %}
+  <div style="border:1px solid var(--line);border-radius:var(--r-md);margin-bottom:12px;overflow:hidden">
+
+    <!-- Module header: view mode -->
+    <div style="background:var(--bg);padding:10px 15px;display:flex;align-items:center;gap:10px" id="module-view-{{ module.id }}">
+      <span style="background:var(--teal);color:#fff;border-radius:50%;width:24px;height:24px;
+                   display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;flex-shrink:0;font-weight:700">
+        {{ module.week_number }}
+      </span>
+      <span style="font-weight:600;font-size:.88rem">{{ module.title }}</span>
+      {% if module.description %}<span style="font-size:.76rem;color:var(--muted)">— {{ module.description }}</span>{% endif %}
+      {% if course.status != 'pending' %}
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button type="button" class="btn btn-ghost btn-sm" style="padding:3px 9px;font-size:.72rem"
+          onclick="document.getElementById('module-view-{{ module.id }}').style.display='none';document.getElementById('module-edit-{{ module.id }}').style.display='flex'">
+          ✎ Edit
+        </button>
+        <form method="post" action="{% url 'courses:lecturer_module_delete' course.slug module.id %}"
+              hx-post="{% url 'courses:lecturer_module_delete' course.slug module.id %}"
+              hx-target="#modules-list" hx-swap="outerHTML" style="display:inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm" style="padding:3px 9px;font-size:.72rem"
+            data-confirm="Delete &quot;{{ module.title }}&quot; and all its lectures? This cannot be undone.">
+            🗑 Delete
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Module header: edit mode (hidden by default) -->
+    {% if course.status != 'pending' %}
+    <form method="post" action="{% url 'courses:lecturer_module_edit' course.slug module.id %}"
+          hx-post="{% url 'courses:lecturer_module_edit' course.slug module.id %}"
+          hx-target="#modules-list" hx-swap="outerHTML"
+          id="module-edit-{{ module.id }}" style="display:none;background:var(--gold-bg);padding:10px 15px;gap:8px;flex-wrap:wrap;align-items:center">
+      {% csrf_token %}
+      <input type="text" name="title" value="{{ module.title }}" required style="flex:2;min-width:150px;font-size:.83rem">
+      <input type="text" name="description" value="{{ module.description }}" placeholder="Description (optional)" style="flex:3;min-width:150px;font-size:.83rem">
+      <button type="submit" class="btn btn-teal btn-sm">Save</button>
+      <button type="button" class="btn btn-ghost btn-sm"
+        onclick="document.getElementById('module-edit-{{ module.id }}').style.display='none';document.getElementById('module-view-{{ module.id }}').style.display='flex'">
+        Cancel
+      </button>
+    </form>
+    {% endif %}
+
+    <div style="padding:10px 15px">
+      <div id="lectures-{{ module.id }}">
+        {% for lecture in module.lectures.all %}
+        <div style="padding:6px 0;font-size:.82rem;color:var(--ink);display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)"
+             id="lecture-view-{{ lecture.id }}">
+          <span>🎬</span>
+          <span>{{ lecture.title }}</span>
+          {% if lecture.duration_minutes %}<span style="color:var(--muted)">{{ lecture.duration_minutes }}min</span>{% endif %}
+          {% if lecture.notes %}<span title="Has notes attached">📎</span>{% endif %}
+          {% if course.status != 'pending' %}
+          <div style="margin-left:auto;display:flex;gap:5px">
+            <button type="button" class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:.68rem"
+              onclick="document.getElementById('lecture-view-{{ lecture.id }}').style.display='none';document.getElementById('lecture-edit-{{ lecture.id }}').style.display='flex'">
+              ✎
+            </button>
+            <form method="post" action="{% url 'courses:lecturer_lecture_delete' course.slug lecture.id %}"
+                  hx-post="{% url 'courses:lecturer_lecture_delete' course.slug lecture.id %}"
+                  hx-target="#modules-list" hx-swap="outerHTML" style="display:inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:.68rem"
+                data-confirm="Delete &quot;{{ lecture.title }}&quot;?">
+                🗑
+              </button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Lecture edit form (hidden by default) -->
+        {% if course.status != 'pending' %}
+        <form method="post" action="{% url 'courses:lecturer_lecture_edit' course.slug lecture.id %}"
+              hx-post="{% url 'courses:lecturer_lecture_edit' course.slug lecture.id %}"
+              hx-target="#modules-list" hx-swap="outerHTML"
+              enctype="multipart/form-data"
+              id="lecture-edit-{{ lecture.id }}" style="display:none;background:var(--gold-bg);padding:8px 10px;border-radius:var(--r-sm);margin:4px 0;flex-wrap:wrap;gap:6px;align-items:center">
+          {% csrf_token %}
+          <input type="text" name="title" value="{{ lecture.title }}" required style="flex:2;min-width:130px;font-size:.8rem">
+          <input type="text" name="video_url" value="{{ lecture.video_url }}" placeholder="YouTube URL" style="flex:2;min-width:130px;font-size:.8rem">
+          <input type="number" name="duration_minutes" value="{{ lecture.duration_minutes }}" placeholder="Min" style="width:60px;font-size:.8rem">
+          <input type="file" name="notes" accept=".pdf,.doc,.docx,.ppt,.pptx" style="font-size:.74rem">
+          <button type="submit" class="btn btn-teal btn-sm" style="padding:3px 10px">Save</button>
+          <button type="button" class="btn btn-ghost btn-sm" style="padding:3px 10px"
+            onclick="document.getElementById('lecture-edit-{{ lecture.id }}').style.display='none';document.getElementById('lecture-view-{{ lecture.id }}').style.display='flex'">
+            Cancel
+          </button>
+        </form>
+        {% endif %}
+
+        {% empty %}
+        <div style="font-size:.78rem;color:var(--muted);padding:4px 0;font-style:italic">No lectures yet — add one below.</div>
+        {% endfor %}
+      </div>
+
+      {% if course.status != 'pending' %}
+      <form hx-post="{% url 'courses:lecturer_lecture_create' course.slug module.id %}"
+            hx-target="#modules-list" hx-swap="outerHTML"
+            hx-indicator="#htmx-spinner-{{ module.id }}"
+            method="post" action="{% url 'courses:lecturer_lecture_create' course.slug module.id %}"
+            enctype="multipart/form-data" style="margin-top:10px">
+        {% csrf_token %}
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:7px">
+          <input type="text" name="title" placeholder="Lecture title *" style="flex:2;min-width:150px;font-size:.82rem">
+          <input type="text" name="video_url" placeholder="YouTube URL (optional)" style="flex:2;min-width:150px;font-size:.82rem">
+          <input type="number" name="duration_minutes" placeholder="Min" style="width:68px;font-size:.82rem">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+          <label style="font-size:.78rem;color:var(--muted);font-weight:600">📎 Attach Notes (PDF/PPT/DOC):</label>
+          <input type="file" name="notes" accept=".pdf,.doc,.docx,.ppt,.pptx" style="font-size:.78rem">
+        </div>
+        <button type="submit" class="btn btn-ghost btn-sm">
+          + Add Lecture
+          <span id="htmx-spinner-{{ module.id }}" class="htmx-indicator" style="margin-left:6px">⏳</span>
+        </button>
+      </form>
+      {% endif %}
+    </div>
+
+    <!-- Week quiz — one per module, shown as a footer of the module card -->
+    {% if course.status != 'pending' %}
+    <div style="padding:10px 15px;border-top:1px dashed var(--line);background:var(--bg)">
+      {% if module.quiz %}
+      <a href="{% url 'courses:lecturer_quiz_manage' course.slug module.quiz.id %}" class="btn btn-gold btn-sm">
+        📝 Week {{ module.week_number }} Quiz — {{ module.quiz.questions.count }} question{{ module.quiz.questions.count|pluralize }}
+      </a>
+      {% else %}
+      <form method="post" action="{% url 'courses:lecturer_quiz_create' course.slug module.id %}">
+        {% csrf_token %}
+        <button class="btn btn-ghost btn-sm">+ Add Week {{ module.week_number }} Quiz</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% empty %}
+  <div style="font-size:.84rem;color:var(--muted);padding:8px 0 12px;font-style:italic">
+    No modules yet — add your first one below.
+  </div>
+  {% endfor %}
+
+  {% if course.status != 'pending' %}
+  <form hx-post="{% url 'courses:lecturer_module_create' course.slug %}"
+        hx-target="#modules-list" hx-swap="outerHTML"
+        hx-indicator="#htmx-spinner-newmodule"
+        method="post" action="{% url 'courses:lecturer_module_create' course.slug %}"
+        style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;padding-top:12px;border-top:1px solid var(--line)"
+        id="add-module-form">
+    {% csrf_token %}
+    <input type="text" name="title" placeholder="New module title *" style="flex:2;min-width:180px">
+    <input type="text" name="description" placeholder="Brief description (optional)" style="flex:3;min-width:180px">
+    <button type="submit" class="btn btn-teal btn-sm">
+      + Add Module
+      <span id="htmx-spinner-newmodule" class="htmx-indicator" style="margin-left:6px">⏳</span>
+    </button>
+  </form>
+  {% endif %}
+</div>

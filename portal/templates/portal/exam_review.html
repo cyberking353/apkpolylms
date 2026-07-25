@@ -1,0 +1,91 @@
+{% extends 'portal/base.html' %}
+{% block title %}Exam Review — {{ exam.title }}{% endblock %}
+{% block page_title %}Exam Review{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start">
+
+  <!-- Left: questions preview -->
+  <div>
+    <div class="portal-card" style="margin-bottom:16px">
+      <div class="portal-card-head">
+        <h3>{{ exam.title }}</h3>
+        <span class="chip {% if exam.exam_status == 'approved' %}c-green{% elif exam.exam_status == 'pending' %}c-gold{% else %}{% endif %}">{{ exam.get_exam_status_display }}</span>
+      </div>
+      <div class="portal-card-body" style="padding:16px">
+        <table class="portal-table">
+          <tr><td style="color:var(--muted);width:140px">Course</td><td style="font-weight:600">{{ exam.course.title }}</td></tr>
+          <tr><td style="color:var(--muted)">Lecturer</td><td>{{ exam.course.lecturer.display_name|default:"—" }}</td></tr>
+          <tr><td style="color:var(--muted)">Questions</td><td>{{ exam.question_count }}</td></tr>
+          <tr><td style="color:var(--muted)">Time Limit</td><td>{{ exam.time_limit_minutes }} minutes</td></tr>
+          <tr><td style="color:var(--muted)">Pass Mark</td><td>{{ exam.pass_mark }}%</td></tr>
+          {% if exam.instructions %}<tr><td style="color:var(--muted)">Instructions</td><td>{{ exam.instructions }}</td></tr>{% endif %}
+        </table>
+      </div>
+    </div>
+
+    <div class="portal-card">
+      <div class="portal-card-head"><h3>Questions Preview</h3></div>
+      <div class="portal-card-body" style="padding:16px">
+        {% for q in questions %}
+        <div style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--line)">
+          <div style="font-weight:600;font-size:.86rem;margin-bottom:8px">Q{{ forloop.counter }}: {{ q.text }}</div>
+          {% for c in q.choices.all %}
+          <div style="font-size:.8rem;padding:4px 0;color:{% if c.is_correct %}var(--green){% else %}var(--muted){% endif %}">
+            {% if c.is_correct %}✓{% else %}○{% endif %}
+            {% if forloop.counter0 == 0 %}A{% elif forloop.counter0 == 1 %}B{% elif forloop.counter0 == 2 %}C{% else %}D{% endif %}.
+            {{ c.text }}
+          </div>
+          {% endfor %}
+        </div>
+        {% empty %}
+        <div style="color:var(--muted);font-size:.83rem">No questions added yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: approve/reject -->
+  <div class="portal-card">
+    <div class="portal-card-head"><h3>Admin Decision</h3></div>
+    <div class="portal-card-body" style="padding:16px">
+      {% if exam.exam_status == 'approved' %}
+      <div class="exam-alert" style="background:var(--green-bg);border:1px solid var(--green);margin-bottom:12px">
+        ✓ Already approved. Edit schedule below if needed.
+      </div>
+      {% endif %}
+      <form method="post">
+        {% csrf_token %}
+        <div class="field">
+          <label>Time Limit (minutes)</label>
+          <input type="number" name="time_limit_minutes" value="{{ exam.time_limit_minutes }}" min="10">
+        </div>
+        <div class="field">
+          <label>Pass Mark (%)</label>
+          <input type="number" name="pass_mark" value="{{ exam.pass_mark }}" min="1" max="100">
+        </div>
+        <div class="field">
+          <label>Exam Opens (date & time) *</label>
+          <input type="datetime-local" name="open_at" value="{{ exam.open_at|date:'Y-m-d\TH:i'|default:'' }}" required>
+        </div>
+        <div class="field">
+          <label>Exam Closes (date & time) *</label>
+          <input type="datetime-local" name="close_at" value="{{ exam.close_at|date:'Y-m-d\TH:i'|default:'' }}" required>
+        </div>
+        <div class="field">
+          <label>Note to Lecturer (optional)</label>
+          <textarea name="review_note" rows="2" placeholder="Any feedback…">{{ exam.review_note }}</textarea>
+        </div>
+        <button type="submit" name="action" value="approve" class="btn btn-teal btn-full" style="margin-bottom:8px"
+          data-confirm="Approve and schedule this exam?">
+          ✓ Approve & Schedule
+        </button>
+        <button type="submit" name="action" value="reject" class="btn btn-danger btn-full"
+          data-confirm="Send back to lecturer?">
+          ✗ Send Back to Lecturer
+        </button>
+      </form>
+      <a href="{% url 'portal:exam_list' %}" class="btn btn-ghost btn-full" style="margin-top:8px">← Back</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

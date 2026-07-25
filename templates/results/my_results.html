@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block title %}My Results — Al-Hikma LMS{% endblock %}
+{% block nav_class %}dark{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="dash-shell">
+  <aside class="sb" id="sidebar">
+    <div class="sb-u">
+      <div class="sb-av">{{ user.initials }}</div>
+      <div class="sb-name">{{ user.get_full_name|default:user.username }}</div>
+      <div class="sb-role">{{ user.get_department_display }} · {{ user.get_academic_level_display }}</div>
+    </div>
+    <div class="sb-sec-lbl">Student</div>
+    <a href="{% url 'courses:dashboard' %}" class="sbl"><span class="ic">🏠</span> Dashboard</a>
+    <a href="{% url 'courses:course_list' %}" class="sbl"><span class="ic">📚</span> My Courses</a>
+    <a href="{% url 'results:my_results' %}" class="sbl on"><span class="ic">📊</span> My Results</a>
+    <a href="{% url 'accounts:profile' %}" class="sbl"><span class="ic">👤</span> Profile</a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic">🚪</span> Sign Out</a>
+  </aside>
+
+  <main class="dmain">
+    <div class="wlc">
+      <div>
+        <h2>My Results 📊</h2>
+        <p>{{ settings.academic_year }} — Semester {{ settings.current_semester }} · {{ user.get_department_display }}</p>
+      </div>
+      <div class="wlc-em">📋</div>
+    </div>
+
+    <!-- Current semester results table -->
+    {% if current_results %}
+    <div class="card cp-lg" style="margin-bottom:24px">
+      <h3 style="font-size:.95rem;font-weight:700;margin-bottom:14px">
+        Current Semester — {{ current_key }}
+      </h3>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+          <thead>
+            <tr style="background:var(--bg);text-align:left">
+              <th style="padding:10px 12px;border-bottom:2px solid var(--line)">Course</th>
+              <th style="padding:10px 12px;border-bottom:2px solid var(--line);text-align:center">CA<br><span style="font-weight:400;font-size:.72rem;color:var(--muted)">/40</span></th>
+              <th style="padding:10px 12px;border-bottom:2px solid var(--line);text-align:center">Exam<br><span style="font-weight:400;font-size:.72rem;color:var(--muted)">/60</span></th>
+              <th style="padding:10px 12px;border-bottom:2px solid var(--line);text-align:center">Total<br><span style="font-weight:400;font-size:.72rem;color:var(--muted)">/100</span></th>
+              <th style="padding:10px 12px;border-bottom:2px solid var(--line);text-align:center">Grade</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for result in current_results %}
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:10px 12px;font-weight:500">{{ result.course.title }}</td>
+              <td style="padding:10px 12px;text-align:center">{{ result.ca_score|floatformat:1 }}</td>
+              <td style="padding:10px 12px;text-align:center">{{ result.exam_score|floatformat:1 }}</td>
+              <td style="padding:10px 12px;text-align:center;font-weight:700">{{ result.total|floatformat:1 }}</td>
+              <td style="padding:10px 12px;text-align:center">
+                <span class="chip {% if result.grade == 'A' or result.grade == 'B' %}c-green{% elif result.grade == 'F' %}c-rose{% else %}c-gold{% endif %}"
+                      style="font-weight:700;font-size:.9rem">{{ result.grade }}</span>
+              </td>
+            </tr>
+            {% if result.remark %}
+            <tr style="background:var(--bg)">
+              <td colspan="5" style="padding:5px 12px;font-size:.76rem;color:var(--muted);font-style:italic">
+                📝 Admin note: {{ result.remark }}
+              </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Grade key -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+        <span style="font-size:.72rem;color:var(--muted);font-weight:600">GRADE KEY:</span>
+        {% for code, label in result.get_grade_display|default:'' %}{% endfor %}
+        <span style="font-size:.72rem;color:var(--muted)">A=70–100</span>
+        <span style="font-size:.72rem;color:var(--muted)">B=60–69</span>
+        <span style="font-size:.72rem;color:var(--muted)">C=50–59</span>
+        <span style="font-size:.72rem;color:var(--muted)">D=45–49</span>
+        <span style="font-size:.72rem;color:var(--muted)">E=40–44</span>
+        <span style="font-size:.72rem;color:var(--muted);color:var(--rose)">F=0–39 (Fail)</span>
+      </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <h3>No results yet</h3>
+      <p>Results will appear here once you have completed quizzes or exams this semester.</p>
+    </div>
+    {% endif %}
+
+    <!-- Past semesters -->
+    {% for key, semester_results in grouped.items %}
+      {% if key != current_key %}
+      <div class="card cp-lg" style="margin-bottom:16px">
+        <h4 style="font-size:.88rem;font-weight:700;margin-bottom:12px;color:var(--muted)">{{ key }}</h4>
+        <table style="width:100%;border-collapse:collapse;font-size:.83rem">
+          <thead>
+            <tr style="background:var(--bg)">
+              <th style="padding:8px 12px;border-bottom:1px solid var(--line);text-align:left">Course</th>
+              <th style="padding:8px 12px;border-bottom:1px solid var(--line);text-align:center">CA</th>
+              <th style="padding:8px 12px;border-bottom:1px solid var(--line);text-align:center">Exam</th>
+              <th style="padding:8px 12px;border-bottom:1px solid var(--line);text-align:center">Total</th>
+              <th style="padding:8px 12px;border-bottom:1px solid var(--line);text-align:center">Grade</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for result in semester_results %}
+            <tr style="border-bottom:1px solid var(--line)">
+              <td style="padding:8px 12px">{{ result.course.title }}</td>
+              <td style="padding:8px 12px;text-align:center">{{ result.ca_score|floatformat:1 }}</td>
+              <td style="padding:8px 12px;text-align:center">{{ result.exam_score|floatformat:1 }}</td>
+              <td style="padding:8px 12px;text-align:center;font-weight:700">{{ result.total|floatformat:1 }}</td>
+              <td style="padding:8px 12px;text-align:center">
+                <span class="chip {% if result.grade == 'A' or result.grade == 'B' %}c-green{% elif result.grade == 'F' %}c-rose{% else %}c-gold{% endif %}">{{ result.grade }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    {% endfor %}
+
+  </main>
+</div>
+{% endblock %}

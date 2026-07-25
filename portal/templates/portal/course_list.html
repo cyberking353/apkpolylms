@@ -1,0 +1,46 @@
+{% extends 'portal/base.html' %}
+{% block title %}Courses{% endblock %}
+{% block page_title %}Courses{% endblock %}
+{% block content %}
+<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+  {% for val,label in status_choices %}
+  <a href="?status={{ val }}" class="btn {% if active_status == val %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">{{ label }}</a>
+  {% endfor %}
+  <a href="?" class="btn {% if not active_status %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">All</a>
+</div>
+<div class="portal-card">
+  <div class="portal-card-head"><h3>{{ courses.count }} course{{ courses.count|pluralize }}</h3></div>
+  <div class="portal-card-body">
+    <table class="portal-table">
+      <thead><tr><th>Course</th><th>Lecturer</th><th>Level</th><th>Sem</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for c in courses %}
+        <tr>
+          <td>
+            <div style="font-weight:600">{{ c.title }}</div>
+            <div style="font-size:.72rem;color:var(--muted)">{{ c.category.name|default:"—" }}</div>
+          </td>
+          <td>{{ c.lecturer.display_name|default:"—" }}</td>
+          <td>{{ c.get_level_display }}</td>
+          <td>{{ c.semester }}</td>
+          <td>
+            <span class="chip {% if c.status == 'published' %}c-green{% elif c.status == 'pending' %}c-gold{% elif c.status == 'rejected' %}c-rose{% else %}{% endif %}">
+              {{ c.get_status_display }}
+            </span>
+          </td>
+          <td>
+            {% if c.status == 'pending' %}
+            <a href="{% url 'portal:course_review' c.pk %}" class="btn btn-teal btn-sm">Review</a>
+            {% else %}
+            <a href="{% url 'portal:course_review' c.pk %}" class="btn btn-ghost btn-sm">View</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No courses found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

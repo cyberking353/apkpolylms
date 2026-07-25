@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}My Messages — Al-Hikma LMS{% endblock %}
+{% block nav_class %}dark{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="dash-shell">
+  <aside class="sb" id="sidebar">
+    <div class="sb-u">
+      <div class="sb-av">{{ user.initials }}</div>
+      <div class="sb-name">{{ user.get_full_name|default:user.username }}</div>
+      <div class="sb-role">{{ user.get_department_display }} · {{ user.get_academic_level_display }}</div>
+    </div>
+    <div class="sb-sec-lbl">Student</div>
+    <a href="{% url 'courses:dashboard' %}" class="sbl"><span class="ic">🏠</span> Dashboard</a>
+    <a href="{% url 'courses:course_list' %}" class="sbl"><span class="ic">📚</span> My Courses</a>
+    <a href="{% url 'results:my_results' %}" class="sbl"><span class="ic">📊</span> My Results</a>
+    <a href="{% url 'courses:message_list' %}" class="sbl on"><span class="ic">✉️</span> My Messages</a>
+    <a href="{% url 'accounts:profile' %}" class="sbl"><span class="ic">👤</span> Profile</a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic">🚪</span> Sign Out</a>
+  </aside>
+
+  <main class="dmain">
+    <div class="dsh">
+      <h3 class="t-heading">My Messages</h3>
+    </div>
+
+    <div class="card" style="overflow:hidden">
+      {% for t in threads %}
+      <a href="{% url 'courses:message_thread' t.id %}"
+         style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 19px;{% if not forloop.last %}border-bottom:1px solid var(--line);{% endif %}text-decoration:none;color:inherit">
+        <div>
+          <div style="font-weight:600;font-size:.9rem;color:var(--ink)">
+            {{ t.subject }}
+            {% if t.student_unread %}<span class="chip c-rose" style="margin-left:8px">New Reply</span>{% endif %}
+          </div>
+          <div style="font-size:.78rem;color:var(--muted);margin-top:2px">{{ t.course.title }} · {{ t.updated_at|date:"d M, H:i" }}</div>
+        </div>
+        <span class="chip {% if t.status == 'open' %}c-gold{% else %}c-green{% endif %}" style="flex-shrink:0">{{ t.get_status_display }}</span>
+      </a>
+      {% empty %}
+      <div style="padding:44px 20px;text-align:center;color:var(--muted)">
+        <div style="font-size:2rem;margin-bottom:10px">✉️</div>
+        <p>You haven't messaged any course instructors yet.</p>
+        <p style="font-size:.82rem;margin-top:6px">Open a course you're enrolled in and use "Message Instructor" if you run into a problem.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </main>
+</div>
+{% endblock %}

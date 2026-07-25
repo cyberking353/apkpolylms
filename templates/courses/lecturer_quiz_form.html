@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Quiz Settings — {{ module.title }}{% endblock %}
+{% block nav_class %}dark{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+<div class="dash-shell">
+  <aside class="sb" id="sidebar">
+    <div class="sb-u">
+      <div class="sb-av">{{ user.initials }}</div>
+      <div class="sb-name">{{ user.display_name }}</div>
+      <div class="sb-role">Lecturer</div>
+    </div>
+    <div class="sb-sec-lbl">Lecturer</div>
+    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl"><span class="ic">🏠</span> My Courses</a>
+    <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="sbl on"><span class="ic">✏️</span> {{ course.title }}</a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic">🚪</span> Sign Out</a>
+  </aside>
+  <main class="dmain">
+    <div class="dsh" style="margin-bottom:20px">
+      <h2 style="font-size:1.1rem;margin:0">Quiz — {{ module.title }}</h2>
+      <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="btn btn-ghost btn-sm">← Back to Course</a>
+    </div>
+    <div class="card cp-lg">
+      <h4 style="font-size:.9rem;font-weight:700;margin-bottom:16px">Quiz Settings</h4>
+      <form method="post">
+        {% csrf_token %}
+        <div class="field">
+          <label>Quiz Title</label>
+          <input type="text" name="title" value="{{ quiz.title|default:module.title|add:' — Quiz' }}" required>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Time Limit (minutes)</label>
+            <input type="number" name="time_limit_minutes" value="{{ quiz.time_limit_minutes|default:10 }}" min="1">
+          </div>
+          <div class="field">
+            <label>Pass Mark (%)</label>
+            <input type="number" name="pass_mark" value="{{ quiz.pass_mark|default:50 }}" min="1" max="100">
+          </div>
+          <div class="field">
+            <label>Max Attempts</label>
+            <input type="number" name="max_attempts" value="{{ quiz.max_attempts|default:3 }}" min="1">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-teal">Save & Add Questions →</button>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

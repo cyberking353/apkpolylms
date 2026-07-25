@@ -1,0 +1,111 @@
+{% extends 'portal/base.html' %}
+{% block title %}Bulk Student Upload{% endblock %}
+{% block page_title %}Bulk Student Upload{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'portal:student_list' %}" class="btn btn-ghost btn-sm">← Students</a>
+{% endblock %}
+
+{% block content %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+
+  <!-- Upload form -->
+  <div class="portal-card">
+    <div class="portal-card-head"><h3>📤 Upload CSV File</h3></div>
+    <div class="portal-card-body" style="padding:20px">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="field">
+          <label>CSV File *</label>
+          <input type="file" name="csv_file" accept=".csv" required>
+        </div>
+        <button type="submit" class="btn btn-teal">Upload & Create Accounts</button>
+      </form>
+
+      <!-- Results -->
+      {% if results %}
+      <div style="margin-top:20px;border-top:1px solid var(--line);padding-top:16px">
+
+        {% if results.created %}
+        <div style="margin-bottom:12px">
+          <div style="font-weight:700;font-size:.85rem;color:var(--green);margin-bottom:6px">
+            ✓ {{ results.created|length }} account{{ results.created|length|pluralize }} created
+          </div>
+          {% for msg in results.created %}
+          <div style="font-size:.78rem;color:var(--muted);padding:2px 0">{{ msg }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if results.skipped %}
+        <div style="margin-bottom:12px">
+          <div style="font-weight:700;font-size:.85rem;color:var(--gold);margin-bottom:6px">
+            ⚠ {{ results.skipped|length }} skipped (already exist)
+          </div>
+          {% for msg in results.skipped %}
+          <div style="font-size:.78rem;color:var(--muted);padding:2px 0">{{ msg }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if results.errors %}
+        <div>
+          <div style="font-weight:700;font-size:.85rem;color:var(--rose);margin-bottom:6px">
+            ✗ {{ results.errors|length }} error{{ results.errors|length|pluralize }}
+          </div>
+          {% for msg in results.errors %}
+          <div style="font-size:.78rem;color:var(--rose);padding:2px 0">{{ msg }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Instructions -->
+  <div>
+    <div class="portal-card" style="margin-bottom:16px">
+      <div class="portal-card-head"><h3>📋 CSV Format</h3></div>
+      <div class="portal-card-body" style="padding:16px">
+        <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px">
+          First row must be the header. Column names are case-insensitive. Extra columns are ignored.
+        </p>
+        <div style="background:var(--bg);border-radius:var(--r-sm);padding:12px;font-family:monospace;font-size:.76rem;overflow-x:auto;white-space:nowrap">
+          first_name,last_name,email,matric_number,department,academic_level<br>
+          Amina,Bello,a.bello@alhikma.edu.ng,CS/ND1/001,CS,ND1<br>
+          Yusuf,Sani,y.sani@alhikma.edu.ng,EE/ND1/002,EE,ND1<br>
+          Hauwa,Idris,h.idris@alhikma.edu.ng,BA/ND2/001,BA,ND2
+        </div>
+      </div>
+    </div>
+
+    <div class="portal-card" style="margin-bottom:16px">
+      <div class="portal-card-head"><h3>⚠️ Rules</h3></div>
+      <div class="portal-card-body" style="padding:16px">
+        <ul style="font-size:.82rem;color:var(--muted);padding-left:18px;line-height:1.9;margin:0">
+          <li><strong>first_name, last_name, email</strong> are required — rows missing these are skipped.</li>
+          <li>If an account with the same email already exists it is skipped (not overwritten).</li>
+          <li>Password is set to the <strong>matric_number</strong> value. If blank, defaults to <code>alhikma2026</code>.</li>
+          <li>Students are auto-enrolled in matching courses immediately on creation.</li>
+          <li>department must be one of: <strong>CS, EE, ME, BA, SLT, ACC, MC, OTH</strong></li>
+          <li>academic_level must be one of: <strong>ND1, ND2, HND1, HND2</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Download sample CSV -->
+    <div class="portal-card">
+      <div class="portal-card-head"><h3>📥 Sample CSV</h3></div>
+      <div class="portal-card-body" style="padding:16px">
+        <p style="font-size:.82rem;color:var(--muted);margin-bottom:10px">Copy this into a spreadsheet, fill in your students, save as CSV.</p>
+        <textarea readonly rows="5" style="width:100%;font-family:monospace;font-size:.75rem;resize:none;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px">first_name,last_name,email,matric_number,department,academic_level
+Amina,Bello,a.bello@alhikma.edu.ng,CS/ND1/001,CS,ND1
+Yusuf,Sani,y.sani@alhikma.edu.ng,EE/ND1/002,EE,ND1
+Hauwa,Idris,h.idris@alhikma.edu.ng,BA/ND2/001,BA,ND2</textarea>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

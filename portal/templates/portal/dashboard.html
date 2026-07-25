@@ -1,0 +1,134 @@
+{% extends 'portal/base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stats -->
+<div class="stat-grid">
+  <div class="stat-card accent-teal">
+    <div class="sv">{{ stats.students }}</div>
+    <div class="sl">👨‍🎓 Total Students</div>
+  </div>
+  <div class="stat-card accent-gold">
+    <div class="sv">{{ stats.lecturers }}</div>
+    <div class="sl">👨‍🏫 Lecturers</div>
+  </div>
+  <div class="stat-card accent-green">
+    <div class="sv">{{ stats.courses_live }}</div>
+    <div class="sl">📚 Live Courses</div>
+  </div>
+  <div class="stat-card accent-rose">
+    <div class="sv">{{ stats.courses_pending }}</div>
+    <div class="sl">⏳ Pending Review</div>
+  </div>
+  <div class="stat-card accent-rose">
+    <div class="sv">{{ stats.exams_pending }}</div>
+    <div class="sl">📝 Exams Pending</div>
+  </div>
+  <div class="stat-card">
+    <div class="sv">{{ stats.enrollments }}</div>
+    <div class="sl">📋 Enrollments</div>
+  </div>
+</div>
+
+<!-- Current semester -->
+<div style="margin-bottom:20px;padding:12px 16px;background:#fff;border-radius:var(--r-md);border:1px solid var(--line);display:flex;align-items:center;justify-content:space-between">
+  <div>
+    <span style="font-size:.75rem;color:var(--muted);font-weight:600">CURRENT SEMESTER</span>
+    <div style="font-weight:700;font-size:1rem;margin-top:2px">{{ settings.academic_year }} — Semester {{ settings.current_semester }}</div>
+  </div>
+  <a href="{% url 'portal:academic_settings' %}" class="btn btn-ghost btn-sm">Change →</a>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+  <!-- Pending courses -->
+  <div class="portal-card">
+    <div class="portal-card-head">
+      <h3>⏳ Courses Pending Review</h3>
+      <a href="{% url 'portal:course_list' %}?status=pending" class="btn btn-ghost btn-sm">View all</a>
+    </div>
+    <div class="portal-card-body">
+      {% if pending_courses %}
+      <table class="portal-table">
+        {% for c in pending_courses %}
+        <tr>
+          <td>
+            <div style="font-weight:600">{{ c.title }}</div>
+            <div style="font-size:.72rem;color:var(--muted)">{{ c.get_level_display }} · Sem {{ c.semester }} · {{ c.lecturer.display_name|default:"—" }}</div>
+          </td>
+          <td style="text-align:right">
+            <a href="{% url 'portal:course_review' c.pk %}" class="btn btn-teal btn-sm">Review</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <div style="padding:20px;text-align:center;color:var(--muted);font-size:.83rem">All clear ✓</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Pending exams -->
+  <div class="portal-card">
+    <div class="portal-card-head">
+      <h3>📝 Exams Pending Approval</h3>
+      <a href="{% url 'portal:exam_list' %}?status=pending" class="btn btn-ghost btn-sm">View all</a>
+    </div>
+    <div class="portal-card-body">
+      {% if pending_exams %}
+      <table class="portal-table">
+        {% for e in pending_exams %}
+        <tr>
+          <td>
+            <div style="font-weight:600">{{ e.title }}</div>
+            <div style="font-size:.72rem;color:var(--muted)">{{ e.course.title }} · {{ e.question_count }} questions</div>
+          </td>
+          <td style="text-align:right">
+            <a href="{% url 'portal:exam_review' e.pk %}" class="btn btn-gold btn-sm">Schedule</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <div style="padding:20px;text-align:center;color:var(--muted);font-size:.83rem">All clear ✓</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Students by dept -->
+  <div class="portal-card">
+    <div class="portal-card-head"><h3>Students by Department</h3></div>
+    <div class="portal-card-body">
+      <table class="portal-table">
+        {% for d in dept_breakdown %}
+        <tr>
+          <td>{{ d.department|default:"Unassigned" }}</td>
+          <td style="text-align:right;font-weight:700">{{ d.count }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="2" style="color:var(--muted)">No students yet</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+
+  <!-- Students by level -->
+  <div class="portal-card">
+    <div class="portal-card-head"><h3>Students by Level</h3></div>
+    <div class="portal-card-body">
+      <table class="portal-table">
+        {% for l in level_breakdown %}
+        <tr>
+          <td>{{ l.academic_level|default:"Unassigned" }}</td>
+          <td style="text-align:right;font-weight:700">{{ l.count }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="2" style="color:var(--muted)">No students yet</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
