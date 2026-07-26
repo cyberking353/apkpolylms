@@ -32,7 +32,7 @@ Thumbs.db
 .claude*
 
 # Generated reports / stats
-*.html
+report.html
 stats_*.csv
 load_tests/results/
 load_tests/students.csv
