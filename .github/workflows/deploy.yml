@@ -1,9 +1,0 @@
-name: Deploy to PythonAnywhere
-on: [push]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger PA webhook
-        run: curl -s -X POST "${{ secrets.PA_WEBHOOK_URL }}" || true
