@@ -1,4 +1,5 @@
 import os
+import subprocess
 from functools import wraps
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -750,6 +751,27 @@ def department_edit(request, pk):
         return redirect('portal:department_list')
     return render(request, 'portal/department_form.html', {'is_new': False, 'dept': dept})
 
+
+from django.http import HttpResponse, HttpResponseForbidden
+from django.views.decorators.csrf import csrf_exempt
+import hmac, hashlib
+
+@csrf_exempt
+def git_webhook(request):
+    if request.method != 'POST':
+        return HttpResponseForbidden()
+    secret = os.environ.get('GITHUB_WEBHOOK_SECRET', '')
+    if secret:
+        sig = request.headers.get('X-Hub-Signature-256', '')
+        expected = 'sha256=' + hmac.new(secret.encode(), request.body, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            return HttpResponseForbidden()
+    repo_dir = os.environ.get('PROJECT_DIR', os.path.expanduser('~/apkpolylms'))
+    try:
+        subprocess.run(['git', '-C', repo_dir, 'pull'], capture_output=True, timeout=60)
+    except Exception:
+        pass
+    return HttpResponse('ok')
 
 @portal_required
 def course_message_list(request):
