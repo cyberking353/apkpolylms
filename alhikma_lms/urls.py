@@ -2,10 +2,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from portal.views import git_webhook
 
 urlpatterns = [
-    path('git-update/',    git_webhook),
     path('portal-admin/',  admin.site.urls),
     path('portal/',        include('portal.urls')),
     path('',               include('courses.urls')),
