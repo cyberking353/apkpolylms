@@ -170,8 +170,10 @@
       {% include 'courses/_modules_list.html' %}
 
       <div id="save-loader"
-           style="display:none;position:absolute;inset:0;background:rgba(255,255,255,.7);border-radius:var(--r-md);z-index:10;align-items:center;justify-content:center;font-size:.95rem;font-weight:600;color:var(--ink);gap:10px">
-        <span style="font-size:1.3rem">⏳</span> Saving…
+           style="display:none;position:fixed;inset:0;background:rgba(255,255,255,.6);z-index:9999;align-items:center;justify-content:center;font-size:1rem;font-weight:600;color:var(--ink);gap:10px">
+        <span style="display:inline-flex;align-items:center;gap:10px;background:var(--surface);padding:16px 28px;border-radius:var(--r-md);box-shadow:var(--sh-lg)">
+          <span style="font-size:1.4rem">⏳</span> Saving…
+        </span>
       </div>
     </div>
     {% endif %}
@@ -229,13 +231,11 @@
 (function(){
   var loader = document.getElementById('save-loader');
   if (!loader) return;
-  var card = loader.closest('.card');
-  card.style.position = 'relative';
-  card.addEventListener('htmx:beforeRequest', function(e){
-    loader.style.display = 'flex';
+  document.addEventListener('htmx:beforeRequest', function(e){
+    if (e.target.closest('#modules-list')) loader.style.display = 'flex';
   });
-  card.addEventListener('htmx:afterRequest', function(e){
-    loader.style.display = 'none';
+  document.addEventListener('htmx:afterRequest', function(e){
+    if (e.target.closest('#modules-list')) loader.style.display = 'none';
   });
 })();
 </script>
