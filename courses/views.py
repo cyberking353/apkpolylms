@@ -804,23 +804,24 @@ def lecturer_course_results(request, slug):
 
     best_quiz = {}
     if student_ids and quiz_ids:
-        qs = QuizAttempt.objects.filter(
+        for a in QuizAttempt.objects.filter(
             student_id__in=student_ids,
             quiz_id__in=quiz_ids,
             submitted_at__isnull=False
-        ).order_by('student_id', 'quiz_id', '-score').distinct('student_id', 'quiz_id')
-        for a in qs:
-            best_quiz[(a.student_id, a.quiz_id)] = a
+        ).order_by('-score'):
+            key = (a.student_id, a.quiz_id)
+            if key not in best_quiz:
+                best_quiz[key] = a
 
     best_exam = {}
     if student_ids and hasattr(course, 'exam') and course.exam:
-        qs = ExamAttempt.objects.filter(
+        for a in ExamAttempt.objects.filter(
             student_id__in=student_ids,
             exam=course.exam,
             submitted_at__isnull=False
-        ).order_by('student_id', '-score').distinct('student_id')
-        for a in qs:
-            best_exam[a.student_id] = a
+        ).order_by('-score'):
+            if a.student_id not in best_exam:
+                best_exam[a.student_id] = a
 
     rows = []
     for enr in enrollments:
