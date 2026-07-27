@@ -176,8 +176,12 @@ def lecturer_course_preview(request, slug):
     """
     course = get_object_or_404(Course, slug=slug, lecturer=request.user)
     modules = course.modules.prefetch_related('lectures')
+    module_completion = Module.bulk_completion(request.user, course)
+    all_modules_complete = all(module_completion.values())
     return render(request, 'courses/course_detail.html', {
         'course': course, 'modules': modules, 'enrolled': True,
+        'module_completion': module_completion,
+        'all_modules_complete': all_modules_complete,
         'lecturer_preview': True,
     })
 
@@ -187,11 +191,22 @@ def lecturer_lecture_preview(request, slug, lecture_id):
     """Lecturer preview of a single lecture's video/notes — same template as students see."""
     course = get_object_or_404(Course, slug=slug, lecturer=request.user)
     lecture = get_object_or_404(Lecture, id=lecture_id, module__course=course)
-    modules = course.modules.prefetch_related('lectures')
+    module_list = list(course.modules.all())
+    module_index = next((i for i, m in enumerate(module_list) if m.id == lecture.module.id), 0)
+    module_completion = Module.bulk_completion(request.user, course)
+    all_modules_complete = all(module_completion.values())
     return render(request, 'courses/lecture.html', {
-        'course': course, 'lecture': lecture, 'modules': modules,
+        'course': course, 'lecture': lecture, 'modules': course.modules.prefetch_related('lectures'),
         'embed_url': _youtube_embed_url(lecture.video_url),
         'lecturer_preview': True,
+        'module_completion': module_completion,
+        'all_modules_complete': all_modules_complete,
+        'module': lecture.module,
+        'module_lectures': list(lecture.module.lectures.all()),
+        'lecture_index': next((i for i, l in enumerate(lecture.module.lectures.all()) if l.id == lecture.id), 0),
+        'prev_lecture': None, 'next_lecture': None,
+        'prev_module_lecture_id': None, 'next_module_lecture_id': None,
+        'next_target_url': None, 'next_target_label': None,
     })
 
 
