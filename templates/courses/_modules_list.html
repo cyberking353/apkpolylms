@@ -46,6 +46,7 @@
     <form method="post" action="{% url 'courses:lecturer_module_edit' course.slug module.id %}"
           hx-post="{% url 'courses:lecturer_module_edit' course.slug module.id %}"
           hx-target="#modules-list" hx-swap="outerHTML"
+          hx-indicator="#modules-list"
           id="module-edit-{{ module.id }}" style="display:none;background:var(--gold-bg);padding:10px 15px;gap:8px;flex-wrap:wrap;align-items:center">
       {% csrf_token %}
       <input type="text" name="title" value="{{ module.title }}" required style="flex:2;min-width:150px;font-size:.83rem">
@@ -91,6 +92,7 @@
         <form method="post" action="{% url 'courses:lecturer_lecture_edit' course.slug lecture.id %}"
               hx-post="{% url 'courses:lecturer_lecture_edit' course.slug lecture.id %}"
               hx-target="#modules-list" hx-swap="outerHTML"
+              hx-indicator="#modules-list"
               enctype="multipart/form-data"
               id="lecture-edit-{{ lecture.id }}" style="display:none;background:var(--gold-bg);padding:8px 10px;border-radius:var(--r-sm);margin:4px 0;flex-wrap:wrap;gap:6px;align-items:center">
           {% csrf_token %}
@@ -114,7 +116,7 @@
       {% if course.status != 'pending' %}
       <form hx-post="{% url 'courses:lecturer_lecture_create' course.slug module.id %}"
             hx-target="#modules-list" hx-swap="outerHTML"
-            hx-indicator="#htmx-spinner-{{ module.id }}"
+            hx-indicator="#modules-list"
             method="post" action="{% url 'courses:lecturer_lecture_create' course.slug module.id %}"
             enctype="multipart/form-data" style="margin-top:10px">
         {% csrf_token %}
@@ -128,8 +130,7 @@
           <input type="file" name="notes" accept=".pdf,.doc,.docx,.ppt,.pptx" style="font-size:.78rem">
         </div>
         <button type="submit" class="btn btn-ghost btn-sm">
-          + Add Lecture
-          <span id="htmx-spinner-{{ module.id }}" class="htmx-indicator" style="margin-left:6px">⏳</span>
+          + Add Lecture ⏳
         </button>
       </form>
       {% endif %}
@@ -160,17 +161,14 @@
   {% if course.status != 'pending' %}
   <form hx-post="{% url 'courses:lecturer_module_create' course.slug %}"
         hx-target="#modules-list" hx-swap="outerHTML"
-        hx-indicator="#htmx-spinner-newmodule"
+        hx-indicator="#modules-list"
         method="post" action="{% url 'courses:lecturer_module_create' course.slug %}"
         style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;padding-top:12px;border-top:1px solid var(--line)"
         id="add-module-form">
     {% csrf_token %}
     <input type="text" name="title" placeholder="New module title *" style="flex:2;min-width:180px">
     <input type="text" name="description" placeholder="Brief description (optional)" style="flex:3;min-width:180px">
-    <button type="submit" class="btn btn-teal btn-sm">
-      + Add Module
-      <span id="htmx-spinner-newmodule" class="htmx-indicator" style="margin-left:6px">⏳</span>
-    </button>
+    <button type="submit" class="btn btn-teal btn-sm">+ Add Module ⏳</button>
   </form>
   {% endif %}
 </div>

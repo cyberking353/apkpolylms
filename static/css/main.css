@@ -618,3 +618,8 @@ button,input,select,textarea{font-family:inherit}
 .tog-slider::before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
 .toggle input:checked + .tog-slider{background:var(--teal)}
 .toggle input:checked + .tog-slider::before{transform:translateX(18px)}
+
+/* ── HTMX loading overlay ── */
+#modules-list{position:relative}
+#modules-list.htmx-request::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.65);border-radius:var(--r-md);z-index:5}
+#modules-list.htmx-request::before{content:'⏳ Saving…';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--surface);padding:12px 24px;border-radius:var(--r-sm);box-shadow:var(--sh);z-index:6;font-weight:600;font-size:.9rem;color:var(--ink)}

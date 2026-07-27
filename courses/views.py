@@ -275,9 +275,9 @@ def lecturer_course_edit(request, slug):
         course.level = request.POST.get('level', course.level)
         course.semester = request.POST.get('semester', course.semester)
         course.duration_hours = request.POST.get('duration_hours') or 0
-        # Editing always resets a rejected/published course back to draft — any change
-        # needs a fresh admin look rather than silently staying live or staying rejected.
-        if course.status in ('rejected', 'published'):
+        # Rejected courses go back to draft so the lecturer can fix and resubmit.
+        # Published courses stay published — minor edits don't need re-approval.
+        if course.status == 'rejected':
             course.status = 'draft'
         course.save()
         _save_departments(course, request.POST.getlist('departments'), request.user.department)
