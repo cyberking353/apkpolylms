@@ -25,7 +25,7 @@
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:16px;scroll-behavior:smooth}
-body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 a{color:var(--teal);text-decoration:none;transition:color .15s}
 a:hover{color:var(--teal-lt)}
 ul{list-style:none}
@@ -110,7 +110,7 @@ button,input,select,textarea{font-family:inherit}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
 .brand .logo{width:36px;height:36px;background:var(--ink);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Playfair Display',serif;font-weight:900;font-size:1rem;flex-shrink:0}
 .brand-logo{width:40px;height:40px;object-fit:contain;flex-shrink:0;display:block}
-.brand .name{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.1rem;color:var(--ink)}
+.brand .name{font-family:'Inter',sans-serif;font-weight:700;font-size:1.1rem;color:var(--ink)}
 .nav-links{display:flex;align-items:center;gap:26px}
 .nl{font-size:.88rem;font-weight:500;color:var(--muted);cursor:pointer;transition:color .15s;text-decoration:none}
 .nl:hover,.nl.active{color:var(--ink)}
