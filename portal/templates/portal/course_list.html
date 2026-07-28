@@ -1,6 +1,9 @@
 {% extends 'portal/base.html' %}
 {% block title %}Courses{% endblock %}
 {% block page_title %}Courses{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'portal:course_create' %}" class="btn btn-teal btn-sm">+ New Course</a>
+{% endblock %}
 {% block content %}
 <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
   {% for val,label in status_choices %}

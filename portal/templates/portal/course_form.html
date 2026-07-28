@@ -1,0 +1,131 @@
+{% extends 'portal/base.html' %}
+{% block title %}{% if is_new %}New Course{% else %}Edit: {{ course.title }}{% endif %}{% endblock %}
+{% block page_title %}{% if is_new %}New Course{% else %}Edit Course{% endif %}{% endblock %}
+
+{% block content %}
+<div class="portal-card" style="max-width:800px">
+  <div class="portal-card-head">
+    <h3>{% if is_new %}Create a new course{% else %}Editing: {{ course.title }}{% endif %}</h3>
+    {% if not is_new %}
+    <span class="chip {% if course.status == 'published' %}c-green{% elif course.status == 'pending' %}c-gold{% elif course.status == 'rejected' %}c-rose{% endif %}">{{ course.get_status_display }}</span>
+    {% endif %}
+  </div>
+  <div class="portal-card-body" style="padding:20px">
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="field">
+        <label>Course Title *</label>
+        <input type="text" name="title" value="{{ course.title|default:'' }}" required
+               placeholder="e.g. Power Electronics Fundamentals">
+      </div>
+
+      <div class="field">
+        <label>Description</label>
+        <textarea name="description" rows="3"
+                  placeholder="Briefly describe what this course covers.">{{ course.description|default:'' }}</textarea>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Level</label>
+          <select name="level">
+            {% for val, label in levels %}
+            <option value="{{ val }}" {% if val == course.level|default:'ND1' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label>Semester</label>
+          <select name="semester">
+            <option value="1" {% if course.semester|default:'1' == '1' %}selected{% endif %}>Semester 1</option>
+            <option value="2" {% if course.semester == '2' %}selected{% endif %}>Semester 2</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Category</label>
+          <select name="category">
+            <option value="">— None —</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if cat.id == course.category_id %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label>Duration (hours)</label>
+          <input type="number" name="duration_hours" value="{{ course.duration_hours|default:0 }}" min="0">
+        </div>
+        <div class="field">
+          <label>Icon (emoji)</label>
+          <input type="text" name="icon" value="{{ course.icon|default:'📚' }}" maxlength="4">
+        </div>
+      </div>
+
+      {% if not is_new %}
+      <div class="field">
+        <label>Status</label>
+        <select name="status">
+          {% for val, label in course.STATUS_CHOICES %}
+          <option value="{{ val }}" {% if val == course.status %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <div class="field-row">
+        <div class="field">
+          <label>Assign Lecturer (optional)</label>
+          <select name="lecturer">
+            <option value="">— No lecturer —</option>
+            {% for lec in lecturers %}
+            <option value="{{ lec.id }}" {% if lec.id == course.lecturer_id %}selected{% endif %}>
+              {{ lec.display_name }} — {{ lec.get_department_display|default:"—" }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label>Instructor Name Override</label>
+          <input type="text" name="instructor_name_override" value="{{ course.instructor_name_override|default:'' }}"
+                 placeholder="Show this name instead of lecturer">
+        </div>
+        <div class="field">
+          <label>Instructor Title Override</label>
+          <input type="text" name="instructor_title_override" value="{{ course.instructor_title_override|default:'' }}"
+                 placeholder="e.g. Dr., Engr.">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Which department(s) take this course?</label>
+        <p style="font-size:.78rem;color:var(--muted);margin:-4px 0 10px">
+          Tick departments that this course belongs to. Leave all unticked for all departments.
+          Use the radio to mark the home/owning department.
+        </p>
+        <div class="dept-pills-wrap">
+          {% for code, label in departments %}
+          <label class="dept-pill {% if code in selected_departments %}selected{% endif %}" style="gap:4px">
+            <input type="checkbox" name="departments" value="{{ code }}" {% if code in selected_departments %}checked{% endif %}>
+            {% if selected_departments|length > 1 %}
+            <input type="radio" name="home_department" value="{{ code }}"
+                   title="Set as home department"
+                   {% if code == selected_departments.0 or selected_departments|length == 1 %}checked{% endif %}
+                   style="accent-color:var(--teal);width:14px;height:14px;margin:0">
+            {% endif %}
+            <span>{{ label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="submit" class="btn btn-ink">{% if is_new %}Create &amp; Publish{% else %}Save Changes{% endif %}</button>
+        <a href="{% url 'portal:course_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -4,8 +4,9 @@
 {% block content %}
 <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start">
 
-  <!-- Left: course detail -->
+  <!-- Left: full course content -->
   <div>
+    <!-- Course info -->
     <div class="portal-card" style="margin-bottom:16px">
       <div class="portal-card-head">
         <h3>{{ course.title }}</h3>
@@ -13,35 +14,153 @@
       </div>
       <div class="portal-card-body" style="padding:16px">
         <table class="portal-table">
-          <tr><td style="color:var(--muted);width:130px">Lecturer</td><td style="font-weight:600">{{ course.lecturer.display_name|default:"(admin created)" }}</td></tr>
+          <tr><td style="color:var(--muted);width:140px">Lecturer</td>
+              <td style="font-weight:600">{{ course.lecturer.display_name|default:"—" }}
+                  {% if course.instructor_name_override %}<span style="font-size:.76rem;color:var(--muted)"> (showing: {{ course.instructor_name_override }})</span>{% endif %}</td></tr>
           <tr><td style="color:var(--muted)">Level</td><td>{{ course.get_level_display }}</td></tr>
           <tr><td style="color:var(--muted)">Semester</td><td>{{ course.semester }}</td></tr>
-          <tr><td style="color:var(--muted)">Departments</td><td>{% for d in selected_depts %}{{ d }}{% if not forloop.last %}, {% endif %}{% empty %}All departments{% endfor %}</td></tr>
-          <tr><td style="color:var(--muted)">Modules</td><td>{{ modules.count }}</td></tr>
-          <tr><td style="color:var(--muted)">Description</td><td>{{ course.description }}</td></tr>
+          <tr><td style="color:var(--muted)">Category</td><td>{{ course.category.name|default:"—" }}</td></tr>
+          <tr><td style="color:var(--muted)">Duration</td><td>{{ course.duration_hours }} hrs</td></tr>
+          <tr><td style="color:var(--muted)">Departments</td>
+              <td>{% for d in selected_depts %}<span class="chip c-teal" style="margin:1px 2px">{{ d }}</span>{% empty %}<span style="color:var(--muted)">All departments</span>{% endfor %}</td></tr>
+          <tr><td style="color:var(--muted)">Icon</td><td style="font-size:1.4rem">{{ course.icon }}</td></tr>
+          <tr><td style="color:var(--muted)">Color</td>
+              <td><span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:{{ course.color_start }};vertical-align:middle"></span>
+                  {{ course.color_start }} → {{ course.color_end }}</td></tr>
+          <tr><td style="color:var(--muted);vertical-align:top">Description</td><td>{{ course.description|linebreaks }}</td></tr>
+          {% if course.review_note %}
+          <tr><td style="color:var(--muted);vertical-align:top">Review Note</td><td style="color:var(--rose)">{{ course.review_note }}</td></tr>
+          {% endif %}
+          <tr><td style="color:var(--muted)">Created</td><td>{{ course.created_at|date:"d M Y, H:i" }}</td></tr>
+          {% if course.submitted_at %}<tr><td style="color:var(--muted)">Submitted</td><td>{{ course.submitted_at|date:"d M Y, H:i" }}</td></tr>{% endif %}
+          {% if course.published_at %}<tr><td style="color:var(--muted)">Published</td><td>{{ course.published_at|date:"d M Y, H:i" }}</td></tr>{% endif %}
         </table>
       </div>
     </div>
 
+    <!-- Modules & Lectures -->
     <div class="portal-card">
-      <div class="portal-card-head"><h3>Modules & Lectures</h3></div>
+      <div class="portal-card-head"><h3>Modules & Lectures ({{ modules.count }})</h3></div>
       <div class="portal-card-body">
         {% for module in modules %}
-        <div style="padding:10px 16px;border-bottom:1px solid var(--line)">
-          <div style="font-weight:600;font-size:.85rem">Week {{ module.week_number }}: {{ module.title }}</div>
+        <div style="border-bottom:1px solid var(--line)">
+          <div style="padding:12px 16px;background:var(--bg);font-weight:600;font-size:.85rem">
+            Week {{ module.week_number }}: {{ module.title }}
+            {% if module.description %}<span style="font-weight:400;color:var(--muted);font-size:.78rem"> — {{ module.description }}</span>{% endif %}
+          </div>
           {% for lec in module.lectures.all %}
-          <div style="font-size:.76rem;color:var(--muted);padding:2px 0 0 10px">🎬 {{ lec.title }}</div>
+          <div style="padding:8px 16px 8px 28px;border-bottom:1px solid var(--line);font-size:.82rem">
+            <div style="font-weight:500">{{ lec.title }}</div>
+            <div style="display:flex;gap:16px;font-size:.73rem;color:var(--muted);margin-top:3px">
+              {% if lec.duration_minutes %}<span>⏱ {{ lec.duration_minutes }} min</span>{% endif %}
+              {% if lec.video_url %}<span>🎬 <a href="{{ lec.video_url }}" target="_blank" style="color:var(--teal)">Video</a></span>{% endif %}
+              {% if lec.notes %}<span>📄 <a href="{{ lec.notes.url }}" target="_blank" style="color:var(--teal)">Notes</a></span>{% endif %}
+              {% if lec.is_free_preview %}<span class="chip c-green" style="font-size:.65rem">Preview</span>{% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <div style="padding:8px 16px 8px 28px;color:var(--muted);font-size:.78rem">No lectures in this module.</div>
           {% endfor %}
+          {% if module.quiz %}
+          <div style="padding:6px 16px 6px 28px;font-size:.78rem;color:var(--teal);font-weight:600">
+            📝 Quiz: {{ module.quiz.title }} ({{ module.quiz.questions.count }} questions, {{ module.quiz.time_limit_minutes }}min, pass mark {{ module.quiz.pass_mark }}%)
+          </div>
+          {% endif %}
         </div>
         {% empty %}
-        <div style="padding:16px;color:var(--muted);font-size:.83rem">No modules yet.</div>
+        <div style="padding:20px;text-align:center;color:var(--muted);font-size:.88rem">No modules yet.</div>
         {% endfor %}
       </div>
     </div>
+
+    <!-- Quizzes -->
+    {% if quizzes %}
+    <div class="portal-card" style="margin-top:16px">
+      <div class="portal-card-head"><h3>Quizzes ({{ quizzes.count }})</h3></div>
+      <div class="portal-card-body">
+        {% for quiz in quizzes %}
+        <div style="border-bottom:1px solid var(--line);padding:14px 16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div>
+              <strong style="font-size:.85rem">{{ quiz.title }}</strong>
+              {% if quiz.module %}<span style="font-size:.75rem;color:var(--muted)"> — Week {{ quiz.module.week_number }}</span>{% endif %}
+            </div>
+            <div style="display:flex;gap:10px;font-size:.73rem;color:var(--muted)">
+              <span>{{ quiz.quiz_type|title }}</span>
+              <span>⏱ {{ quiz.time_limit_minutes }}min</span>
+              <span>🎯 {{ quiz.pass_mark }}% to pass</span>
+              <span>🔄 {{ quiz.max_attempts }} attempts</span>
+            </div>
+          </div>
+          {% for question in quiz.questions.all %}
+          <div style="padding:8px 12px;margin-bottom:6px;border:1px solid var(--line);border-radius:6px;font-size:.8rem">
+            <div style="font-weight:600;margin-bottom:4px">Q{{ question.order }}. {{ question.text }} <span style="font-weight:400;color:var(--muted)">({{ question.marks }} mark{{ question.marks|pluralize }})</span></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
+              {% for choice in question.choices.all %}
+              <div style="padding:3px 8px;border-radius:4px;{% if choice.is_correct %}background:var(--green-bg);color:var(--green);font-weight:600{% else %}color:var(--ink-3){% endif %}">
+                {% if choice.is_correct %}✓ {% endif %}{{ choice.text }}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% empty %}
+          <div style="padding:8px 12px;color:var(--muted);font-size:.78rem">No questions in this quiz.</div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Exam -->
+    {% if exam %}
+    <div class="portal-card" style="margin-top:16px">
+      <div class="portal-card-head">
+        <h3>📝 Semester Exam</h3>
+        <span class="chip {% if exam.exam_status == 'approved' %}c-green{% elif exam.exam_status == 'pending' %}c-gold{% else %}c-muted{% endif %}">{{ exam.get_exam_status_display }}</span>
+      </div>
+      <div class="portal-card-body" style="padding:14px 16px">
+        <div style="display:flex;gap:16px;font-size:.82rem;margin-bottom:12px">
+          <span><strong>Time Limit:</strong> {{ exam.time_limit_minutes }} min</span>
+          <span><strong>Pass Mark:</strong> {{ exam.pass_mark }}%</span>
+          <span><strong>Proctoring:</strong> {% if exam.enable_proctoring %}Enabled ({{ exam.max_violations }} violations){% else %}Disabled{% endif %}</span>
+          {% if exam.open_at %}<span><strong>Window:</strong> {{ exam.open_at|date:"d M Y H:i" }} → {{ exam.close_at|date:"d M Y H:i" }}</span>{% endif %}
+        </div>
+        {% if exam.instructions %}
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px;padding:8px 12px;background:var(--bg);border-radius:6px">
+          <strong>Instructions:</strong> {{ exam.instructions }}
+        </div>
+        {% endif %}
+        <div style="font-weight:600;font-size:.83rem;margin-bottom:8px">{{ exam_questions|length }} question{{ exam_questions|pluralize }}</div>
+        {% for question in exam_questions %}
+        <div style="padding:8px 12px;margin-bottom:6px;border:1px solid var(--line);border-radius:6px;font-size:.8rem">
+          <div style="font-weight:600;margin-bottom:4px">Q{{ question.order }}. {{ question.text }} <span style="font-weight:400;color:var(--muted)">({{ question.marks }} mark{{ question.marks|pluralize }})</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
+            {% for choice in question.choices.all %}
+            <div style="padding:3px 8px;border-radius:4px;{% if choice.is_correct %}background:var(--green-bg);color:var(--green);font-weight:600{% else %}color:var(--ink-3){% endif %}">
+              {% if choice.is_correct %}✓ {% endif %}{{ choice.text }}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% empty %}
+        <div style="padding:8px 12px;color:var(--muted);font-size:.78rem">No questions in this exam.</div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
   </div>
 
-  <!-- Right: approve/reject -->
+  <!-- Right: approve/reject + edit -->
   <div>
+    <div class="portal-card" style="margin-bottom:12px">
+      <div class="portal-card-head"><h3>Actions</h3></div>
+      <div class="portal-card-body" style="padding:16px">
+        <a href="{% url 'portal:course_edit' course.pk %}" class="btn btn-ghost btn-full" style="margin-bottom:8px">✏️ Edit Course</a>
+        <a href="{% url 'portal:course_list' %}" class="btn btn-ghost btn-full">← Back to Courses</a>
+      </div>
+    </div>
+
     <div class="portal-card">
       <div class="portal-card-head"><h3>Admin Decision</h3></div>
       <div class="portal-card-body" style="padding:16px">
@@ -74,7 +193,6 @@
             ✗ Reject
           </button>
         </form>
-        <a href="{% url 'portal:course_list' %}" class="btn btn-ghost btn-full" style="margin-top:8px">← Back</a>
       </div>
     </div>
   </div>

@@ -20,6 +20,8 @@ urlpatterns = [
     path('lecturers/<int:pk>/reset-password/', views.lecturer_reset_password, name='lecturer_reset_password'),
     # Courses
     path('courses/',                views.course_list,       name='course_list'),
+    path('courses/new/',            views.course_create,     name='course_create'),
+    path('courses/<int:pk>/edit/',  views.course_edit,       name='course_edit'),
     path('courses/<int:pk>/review/', views.course_review,   name='course_review'),
     path('course-messages/',        views.course_message_list, name='course_message_list'),
     # Exams

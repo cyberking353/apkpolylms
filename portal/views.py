@@ -368,12 +368,12 @@ def course_list(request):
 def course_review(request, pk):
     from courses.models import Course, CourseDepartment, Notification
     from accounts.models import get_department_choices
+    from quizzes.models import Quiz
     course = get_object_or_404(Course, pk=pk)
     if request.method == 'POST':
         action = request.POST.get('action')
         note   = request.POST.get('review_note', '')
         if action == 'publish':
-            # Admin can also update departments when publishing
             depts = request.POST.getlist('departments')
             CourseDepartment.objects.filter(course=course).delete()
             for d in depts:
@@ -382,27 +382,140 @@ def course_review(request, pk):
                     is_home=(d == course.home_department or not course.home_department)
                 )
             course.publish(note=note)
-            Notification.objects.create(
-                recipient=course.lecturer,
-                message=f'"{course.title}" has been published and is now live for students.',
-                link='/lecturer/',
-            )
+            if course.lecturer:
+                Notification.objects.create(
+                    recipient=course.lecturer,
+                    message=f'"{course.title}" has been published and is now live for students.',
+                    link='/lecturer/',
+                )
             messages.success(request, f'"{course.title}" published.')
         elif action == 'reject':
             course.reject(note=note)
-            Notification.objects.create(
-                recipient=course.lecturer,
-                message=f'"{course.title}" was rejected. Review the admin note and resubmit.',
-                link=f'/lecturer/course/{course.slug}/edit/',
-            )
+            if course.lecturer:
+                Notification.objects.create(
+                    recipient=course.lecturer,
+                    message=f'"{course.title}" was rejected. Review the admin note and resubmit.',
+                    link=f'/lecturer/course/{course.slug}/edit/',
+                )
             messages.warning(request, f'"{course.title}" rejected with note sent to lecturer.')
         return redirect('portal:course_list')
     modules = course.modules.prefetch_related('lectures').all()
+    quizzes = Quiz.objects.filter(course=course).prefetch_related(
+        'questions__choices', 'module'
+    ).order_by('module__week_number')
+    exam = getattr(course, 'exam', None)
+    if exam:
+        from exams.models import ExamQuestion
+        exam_questions = ExamQuestion.objects.filter(exam=exam).prefetch_related('choices').order_by('order')
+    else:
+        exam_questions = []
     return render(request, 'portal/course_review.html', {
         'course': course, 'modules': modules,
+        'quizzes': quizzes, 'exam': exam, 'exam_questions': exam_questions,
         'dept_choices': get_department_choices(),
         'selected_depts': course.department_list,
     })
+
+
+@portal_required
+def course_create(request):
+    from courses.models import Course, CourseDepartment, Category
+    from accounts.models import Student, get_department_choices, ACADEMIC_LEVEL_CHOICES
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        if not title:
+            messages.error(request, 'Please give the course a title.')
+            return render(request, 'portal/course_form.html', {
+                'is_new': True, 'posted': request.POST,
+                'departments': get_department_choices(),
+                'selected_departments': request.POST.getlist('departments'),
+                'levels': Course.LEVEL_CHOICES,
+                'categories': Category.objects.all(),
+                'lecturers': Student.objects.filter(role='lecturer', is_active=True).order_by('last_name'),
+            })
+        slug = _unique_slug_for_course(title)
+        lecturer_id = request.POST.get('lecturer') or None
+        course = Course.objects.create(
+            title=title, slug=slug,
+            category_id=request.POST.get('category') or None,
+            description=request.POST.get('description', '').strip(),
+            icon=request.POST.get('icon', '📚').strip() or '📚',
+            level=request.POST.get('level', 'ND1'),
+            semester=request.POST.get('semester', '1'),
+            duration_hours=request.POST.get('duration_hours') or 0,
+            lecturer_id=lecturer_id,
+            status='published',
+            instructor_name_override=request.POST.get('instructor_name_override', '').strip(),
+            instructor_title_override=request.POST.get('instructor_title_override', '').strip(),
+        )
+        CourseDepartment.objects.filter(course=course).delete()
+        for dept in request.POST.getlist('departments'):
+            if dept:
+                CourseDepartment.objects.create(
+                    course=course, department=dept,
+                    is_home=(dept == request.POST.get('home_department', ''))
+                )
+        messages.success(request, f'"{course.title}" created and published.')
+        return redirect('portal:course_list')
+
+    return render(request, 'portal/course_form.html', {
+        'is_new': True,
+        'departments': get_department_choices(),
+        'selected_departments': [],
+        'levels': Course.LEVEL_CHOICES,
+        'categories': Category.objects.all(),
+        'lecturers': Student.objects.filter(role='lecturer', is_active=True).order_by('last_name'),
+    })
+
+
+@portal_required
+def course_edit(request, pk):
+    from courses.models import Course, CourseDepartment, Category
+    from accounts.models import Student, get_department_choices
+    course = get_object_or_404(Course, pk=pk)
+    if request.method == 'POST':
+        course.title = request.POST.get('title', '').strip() or course.title
+        course.category_id = request.POST.get('category') or None
+        course.description = request.POST.get('description', '').strip()
+        course.icon = request.POST.get('icon', course.icon).strip() or course.icon
+        course.level = request.POST.get('level', course.level)
+        course.semester = request.POST.get('semester', course.semester)
+        course.duration_hours = request.POST.get('duration_hours') or 0
+        course.lecturer_id = request.POST.get('lecturer') or None
+        course.instructor_name_override = request.POST.get('instructor_name_override', '').strip()
+        course.instructor_title_override = request.POST.get('instructor_title_override', '').strip()
+        if 'status' in request.POST:
+            course.status = request.POST['status']
+        course.save()
+        CourseDepartment.objects.filter(course=course).delete()
+        for dept in request.POST.getlist('departments'):
+            if dept:
+                CourseDepartment.objects.create(
+                    course=course, department=dept,
+                    is_home=(dept == request.POST.get('home_department', ''))
+                )
+        messages.success(request, f'"{course.title}" updated.')
+        return redirect('portal:course_list')
+    return render(request, 'portal/course_form.html', {
+        'is_new': False, 'course': course,
+        'departments': get_department_choices(),
+        'selected_departments': course.department_list,
+        'levels': Course.LEVEL_CHOICES,
+        'categories': Category.objects.all(),
+        'lecturers': Student.objects.filter(role='lecturer', is_active=True).order_by('last_name'),
+    })
+
+
+def _unique_slug_for_course(title):
+    from django.utils.text import slugify
+    from courses.models import Course
+    base = slugify(title)
+    slug = base
+    n = 1
+    while Course.objects.filter(slug=slug).exists():
+        n += 1
+        slug = f"{base}-{n}"
+    return slug
 
 
 # ── Exams ──────────────────────────────────────────────────────────────
