@@ -3,6 +3,16 @@
 {% block page_title %}{% if is_new %}New Course{% else %}Edit Course{% endif %}{% endblock %}
 
 {% block content %}
+
+{% if not is_new %}
+<div class="portal-card" style="margin-bottom:16px;background:var(--bp-primary-bg);border-color:var(--bp-primary)">
+  <div class="portal-card-body" style="padding:12px 16px;font-size:.83rem">
+    📝 <strong>Manage course content</strong> — Add modules, lectures, quizzes, and exams using the
+    <a href="{% url 'courses:lecturer_course_edit' course.slug %}" style="font-weight:600;color:var(--bp-primary)">full course editor →</a>
+  </div>
+</div>
+{% endif %}
+
 <div class="portal-card" style="max-width:800px">
   <div class="portal-card-head">
     <h3>{% if is_new %}Create a new course{% else %}Editing: {{ course.title }}{% endif %}</h3>

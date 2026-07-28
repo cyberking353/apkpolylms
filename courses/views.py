@@ -14,8 +14,29 @@ from quizzes.models import QuizAttempt
 from exams.models import ExamAttempt
 
 
+def lecturer_or_staff_required(view_func):
+    """Like @login_required, but requires role == 'lecturer' OR is_staff (portal admin)."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('accounts:login')
+        if getattr(request.user, 'role', 'student') != 'lecturer' and not request.user.is_staff:
+            messages.error(request, "That page is only available to lecturer accounts.")
+            return redirect('courses:dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def _course_for_user(slug, user):
+    """Return a course the given user is allowed to edit — lecturers by ownership, staff by role."""
+    from django.shortcuts import get_object_or_404
+    if user.is_staff:
+        return get_object_or_404(Course, slug=slug)
+    return get_object_or_404(Course, slug=slug, lecturer=user)
+
+
 def lecturer_required(view_func):
-    """Like @login_required, but also requires role == 'lecturer'."""
+    """Like @login_required, but also requires role == 'lecturer' (original, kept for compatibility)."""
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -167,14 +188,14 @@ def lecture_view(request, course_slug, lecture_id):
     })
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_course_preview(request, slug):
     """
     Lets a lecturer view their own course exactly as an enrolled student would see it —
     same template, but ownership-gated instead of enrollment-gated, and no progress
     records are created since the lecturer isn't actually a student taking the course.
     """
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     modules = course.modules.prefetch_related('lectures')
     module_completion = Module.bulk_completion(request.user, course)
     all_modules_complete = all(module_completion.values())
@@ -186,10 +207,10 @@ def lecturer_course_preview(request, slug):
     })
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_lecture_preview(request, slug, lecture_id):
     """Lecturer preview of a single lecture's video/notes — same template as students see."""
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     lecture = get_object_or_404(Lecture, id=lecture_id, module__course=course)
     modules = course.modules.prefetch_related('lectures')
     module_completion = Module.bulk_completion(request.user, course)
@@ -270,10 +291,10 @@ def lecturer_course_create(request):
     })
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_course_edit(request, slug):
-    """Edit a course's basic details and department assignment. Only the owning lecturer can access this."""
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    """Edit a course's basic details and department assignment. Only the owning lecturer (or staff) can access this."""
+    course = _course_for_user(slug, request.user)
 
     if request.method == 'POST':
         course.title = request.POST.get('title', '').strip() or course.title
@@ -303,10 +324,10 @@ def lecturer_course_edit(request, slug):
     })
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_course_submit(request, slug):
     """Submit a draft (or previously rejected) course for admin review."""
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     if request.method != 'POST':
         return redirect('courses:lecturer_course_edit', slug=slug)
 
@@ -320,10 +341,10 @@ def lecturer_course_submit(request, slug):
     return redirect('courses:lecturer_dashboard')
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_module_create(request, slug):
     """Quick add-a-module action from the course edit page."""
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     feedback = None
     if request.method == 'POST':
         title = request.POST.get('title', '').strip()
@@ -346,10 +367,10 @@ def lecturer_module_create(request, slug):
     return redirect('courses:lecturer_course_edit', slug=slug)
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_lecture_create(request, slug, module_id):
     """Quick add-a-lecture action from the course edit page."""
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     module = get_object_or_404(Module, id=module_id, course=course)
     feedback = None
     if request.method == 'POST':
@@ -376,10 +397,10 @@ def lecturer_lecture_create(request, slug, module_id):
     return redirect('courses:lecturer_course_edit', slug=slug)
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_module_edit(request, slug, module_id):
     """Edit a module's title/description. Same partial-swap pattern as create."""
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     module = get_object_or_404(Module, id=module_id, course=course)
     feedback = None
     if request.method == 'POST':
@@ -400,10 +421,10 @@ def lecturer_module_edit(request, slug, module_id):
     return redirect('courses:lecturer_course_edit', slug=slug)
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_module_delete(request, slug, module_id):
     """Delete a module and all its lectures."""
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     module = get_object_or_404(Module, id=module_id, course=course)
     feedback = None
     if request.method == 'POST':
@@ -418,10 +439,10 @@ def lecturer_module_delete(request, slug, module_id):
     return redirect('courses:lecturer_course_edit', slug=slug)
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_lecture_edit(request, slug, lecture_id):
     """Edit a lecture's title/video/notes. Same partial-swap pattern as create."""
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     lecture = get_object_or_404(Lecture, id=lecture_id, module__course=course)
     feedback = None
     if request.method == 'POST':
@@ -445,10 +466,10 @@ def lecturer_lecture_edit(request, slug, lecture_id):
     return redirect('courses:lecturer_course_edit', slug=slug)
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_lecture_delete(request, slug, lecture_id):
     """Delete a single lecture."""
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     lecture = get_object_or_404(Lecture, id=lecture_id, module__course=course)
     feedback = None
     if request.method == 'POST':
@@ -463,10 +484,10 @@ def lecturer_lecture_delete(request, slug, lecture_id):
     return redirect('courses:lecturer_course_edit', slug=slug)
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_quiz_create(request, slug, module_id):
     """Create a quiz for a module (or update if one already exists)."""
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     module = get_object_or_404(Module, id=module_id, course=course)
     from quizzes.models import Quiz
     if request.method == 'POST':
@@ -499,10 +520,10 @@ def _padded_quiz_questions(quiz):
     return questions
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_quiz_manage(request, slug, quiz_id):
     """Quiz question editor — each question is now its own independently-saved row."""
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     from quizzes.models import Quiz
     quiz = get_object_or_404(Quiz, id=quiz_id, course=course)
     if request.method == 'POST':
@@ -537,9 +558,9 @@ def _save_quiz_question(request, quiz, question=None):
     return question, None
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_quiz_question_add(request, slug, quiz_id):
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     from quizzes.models import Quiz
     quiz = get_object_or_404(Quiz, id=quiz_id, course=course)
     feedback = None
@@ -553,9 +574,9 @@ def lecturer_quiz_question_add(request, slug, quiz_id):
     return redirect('courses:lecturer_quiz_manage', slug=slug, quiz_id=quiz.id)
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_quiz_question_edit(request, slug, quiz_id, question_id):
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     from quizzes.models import Quiz, Question
     quiz = get_object_or_404(Quiz, id=quiz_id, course=course)
     question = get_object_or_404(Question, id=question_id, quiz=quiz)
@@ -570,9 +591,9 @@ def lecturer_quiz_question_edit(request, slug, quiz_id, question_id):
     return redirect('courses:lecturer_quiz_manage', slug=slug, quiz_id=quiz.id)
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_quiz_question_delete(request, slug, quiz_id, question_id):
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     from quizzes.models import Quiz, Question
     quiz = get_object_or_404(Quiz, id=quiz_id, course=course)
     question = get_object_or_404(Question, id=question_id, quiz=quiz)
@@ -586,9 +607,9 @@ def lecturer_quiz_question_delete(request, slug, quiz_id, question_id):
         })
     return redirect('courses:lecturer_quiz_manage', slug=slug, quiz_id=quiz.id)
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_exam_create(request, slug):
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     from exams.models import Exam
     exam, created = Exam.objects.get_or_create(
         course=course,
@@ -599,9 +620,9 @@ def lecturer_exam_create(request, slug):
     return redirect('courses:lecturer_exam_manage', slug=slug)
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_exam_manage(request, slug):
-    course = get_object_or_404(Course, slug=slug, lecturer=request.user)
+    course = _course_for_user(slug, request.user)
     from exams.models import Exam, ExamQuestion, ExamChoice
     exam = get_object_or_404(Exam, course=course)
 
@@ -779,10 +800,13 @@ def message_thread(request, pk):
     })
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_message_list(request):
-    """Every support thread raised against this lecturer's own courses."""
-    threads = CourseMessage.objects.filter(course__lecturer=request.user).select_related('course', 'student')
+    """Every support thread raised against this lecturer's own courses (or all threads for staff)."""
+    if request.user.is_staff:
+        threads = CourseMessage.objects.select_related('course', 'student')
+    else:
+        threads = CourseMessage.objects.filter(course__lecturer=request.user).select_related('course', 'student')
     status_filter = request.GET.get('status')
     if status_filter in ('open', 'resolved'):
         threads = threads.filter(status=status_filter)
@@ -791,9 +815,9 @@ def lecturer_message_list(request):
     })
 
 
-@lecturer_required
+@lecturer_or_staff_required
 def lecturer_course_results(request, slug):
-    course = get_object_or_404(Course.for_lecturer(request.user), slug=slug)
+    course = _course_for_user(slug, request.user)
     enrollments = Enrollment.objects.filter(course=course).select_related('student')
     student_ids = [e.student_id for e in enrollments]
     modules = list(course.modules.all())
