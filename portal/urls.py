@@ -30,6 +30,7 @@ urlpatterns = [
     path('exams/reschedule/<int:pk>/delete/',      views.exam_reschedule_delete, name='exam_reschedule_delete'),
     # Results
     path('results/',                views.result_list,       name='result_list'),
+    path('results/export/',          views.result_export,        name='result_export'),
     path('results/<int:pk>/edit/',  views.result_edit,       name='result_edit'),
     path('results/sync/',           views.result_sync_all,   name='result_sync'),
     # Settings

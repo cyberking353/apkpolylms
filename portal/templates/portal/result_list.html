@@ -2,7 +2,9 @@
 {% block title %}Results{% endblock %}
 {% block page_title %}Results{% endblock %}
 {% block topbar_actions %}
-<form method="post" action="{% url 'portal:result_sync' %}">{% csrf_token %}
+<a href="{% url 'portal:result_export' %}?all=1" class="btn btn-success btn-sm">📥 Download All</a>
+<a href="{% url 'portal:result_export' %}" class="btn btn-ghost btn-sm">🎯 Download Filtered</a>
+<form method="post" action="{% url 'portal:result_sync' %}" style="display:inline">{% csrf_token %}
   <button class="btn btn-ghost btn-sm" data-confirm="Sync all results from latest quiz/exam data?">🔄 Sync All</button>
 </form>
 {% endblock %}
@@ -16,6 +18,14 @@
     <select name="level">
       <option value="">All Levels</option>
       {% for code,label in level_choices %}<option value="{{ code }}" {% if level == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <select name="year">
+      <option value="">All Years</option>
+      {% for y in year_choices %}<option value="{{ y }}" {% if yr == y %}selected{% endif %}>{{ y }}</option>{% endfor %}
+    </select>
+    <select name="sem">
+      <option value="">All Semesters</option>
+      {% for code,label in semester_choices %}<option value="{{ code }}" {% if sem == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
     <button type="submit" class="btn btn-ink btn-sm">Filter</button>
     <a href="{% url 'portal:result_list' %}" class="btn btn-ghost btn-sm">Clear</a>

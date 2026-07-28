@@ -466,6 +466,7 @@ def exam_review(request, pk):
 def result_list(request):
     from results.models import Result
     from accounts.models import get_department_choices, ACADEMIC_LEVEL_CHOICES
+    from courses.models import SEMESTER_CHOICES
     qs = Result.objects.select_related('student', 'course').order_by('-academic_year', 'course__title')
     dept  = request.GET.get('dept', '')
     level = request.GET.get('level', '')
@@ -475,10 +476,117 @@ def result_list(request):
     if level: qs = qs.filter(student__academic_level=level)
     if yr:    qs = qs.filter(academic_year=yr)
     if sem:   qs = qs.filter(semester=sem)
+    year_choices = (Result.objects.values_list('academic_year', flat=True)
+                    .distinct().order_by('-academic_year'))
     return render(request, 'portal/result_list.html', {
         'results': qs, 'dept': dept, 'level': level,
+        'yr': yr, 'sem': sem,
         'dept_choices': get_department_choices(),
         'level_choices': ACADEMIC_LEVEL_CHOICES,
+        'year_choices': year_choices,
+        'semester_choices': SEMESTER_CHOICES,
+    })
+
+
+@portal_required
+def result_export(request):
+    from results.models import Result
+    from accounts.models import get_department_choices, ACADEMIC_LEVEL_CHOICES
+    from courses.models import SEMESTER_CHOICES
+
+    if request.method == 'POST' or 'all' in request.GET:
+        dept  = request.POST.get('dept', '') if request.method == 'POST' else ''
+        level = request.POST.get('level', '') if request.method == 'POST' else ''
+        yr    = request.POST.get('year', '') if request.method == 'POST' else ''
+        sem   = request.POST.get('sem', '') if request.method == 'POST' else ''
+
+        qs = Result.objects.select_related('student', 'course').order_by('student__department', 'student__last_name', 'course__title')
+        if dept:  qs = qs.filter(student__department=dept)
+        if level: qs = qs.filter(student__academic_level=level)
+        if yr:    qs = qs.filter(academic_year=yr)
+        if sem:   qs = qs.filter(semester=sem)
+
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from django.http import HttpResponse
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Results'
+        header_font = Font(bold=True, color='FFFFFF', size=11)
+        header_fill = PatternFill(start_color='1E4AAD', end_color='1E4AAD', fill_type='solid')
+        thin_border = Border(
+            left=Side(style='thin', color='D0D3E0'),
+            right=Side(style='thin', color='D0D3E0'),
+            top=Side(style='thin', color='D0D3E0'),
+            bottom=Side(style='thin', color='D0D3E0'),
+        )
+        headers = ['#', 'Surname', 'First Name', 'Matric No', 'Department', 'Level',
+                   'Course', 'Academic Year', 'Semester', 'CA /40', 'Exam /60', 'Total', 'Grade']
+        ws.append(headers)
+        for col_idx in range(1, len(headers) + 1):
+            cell = ws.cell(row=1, column=col_idx)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = thin_border
+
+        grade_fills = {
+            'A': PatternFill(start_color='D4EDDA', end_color='D4EDDA', fill_type='solid'),
+            'B': PatternFill(start_color='D4EDDA', end_color='D4EDDA', fill_type='solid'),
+            'C': PatternFill(start_color='FFF3CD', end_color='FFF3CD', fill_type='solid'),
+            'D': PatternFill(start_color='FFF3CD', end_color='FFF3CD', fill_type='solid'),
+            'E': PatternFill(start_color='FFF3CD', end_color='FFF3CD', fill_type='solid'),
+            'F': PatternFill(start_color='F8D7DA', end_color='F8D7DA', fill_type='solid'),
+        }
+
+        for i, r in enumerate(qs, start=1):
+            row_data = [
+                i,
+                r.student.last_name,
+                r.student.first_name,
+                r.student.matric_number or '',
+                r.student.get_department_display() or '',
+                r.student.get_academic_level_display() or '',
+                r.course.title,
+                r.academic_year,
+                f'Semester {r.semester}',
+                r.ca_score,
+                r.exam_score,
+                r.total,
+                r.grade,
+            ]
+            ws.append(row_data)
+            row_num = i + 1
+            grade_fill = grade_fills.get(r.grade)
+            for col_idx in range(1, len(headers) + 1):
+                cell = ws.cell(row=row_num, column=col_idx)
+                cell.border = thin_border
+                if grade_fill:
+                    cell.fill = grade_fill
+
+        for col in ws.columns:
+            max_len = max((len(str(c.value or '')) for c in col), default=0)
+            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 44)
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f'results_{timezone.now():%Y%m%d_%H%M%S}.xlsx'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        wb.save(response)
+        return response
+
+    dept_choices = [('', 'All Departments')] + list(get_department_choices())
+    level_choices = [('', 'All Levels')] + list(ACADEMIC_LEVEL_CHOICES)
+    semester_choices = [('', 'All Semesters')] + list(SEMESTER_CHOICES)
+    year_choices = [('', 'All Years')] + [(y, y) for y in
+                   Result.objects.values_list('academic_year', flat=True).distinct().order_by('-academic_year')]
+    return render(request, 'portal/result_export.html', {
+        'dept_choices': dept_choices,
+        'level_choices': level_choices,
+        'semester_choices': semester_choices,
+        'year_choices': year_choices,
     })
 
 
