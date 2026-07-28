@@ -231,11 +231,19 @@
 (function(){
   var loader = document.getElementById('save-loader');
   if (!loader) return;
+  var showing = false;
+  var timer;
   document.addEventListener('htmx:beforeRequest', function(e){
-    if (e.target.closest('#modules-list')) loader.style.display = 'flex';
+    if (!e.target.closest('#modules-list')) return;
+    showing = true;
+    clearTimeout(timer);
+    loader.style.display = 'flex';
   });
   document.addEventListener('htmx:afterRequest', function(e){
-    if (e.target.closest('#modules-list')) loader.style.display = 'none';
+    if (!showing) return;
+    // The trigger element is now detached after outerHTML swap,
+    // so we hide unconditionally via a short debounce.
+    timer = setTimeout(function(){ loader.style.display = 'none'; showing = false; }, 200);
   });
 })();
 </script>

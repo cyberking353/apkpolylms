@@ -455,8 +455,8 @@ def course_create(request):
                     course=course, department=dept,
                     is_home=(dept == request.POST.get('home_department', ''))
                 )
-        messages.success(request, f'"{course.title}" created and published. Add modules and lectures below.')
-        return redirect('courses:lecturer_course_edit', slug=course.slug)
+        messages.success(request, f'"{course.title}" created and published. You can review it and manage content from the course list.')
+        return redirect('portal:course_list')
 
     return render(request, 'portal/course_form.html', {
         'is_new': True,
