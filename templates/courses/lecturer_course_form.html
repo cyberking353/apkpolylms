@@ -169,8 +169,8 @@
 
       {% include 'courses/_modules_list.html' %}
 
-      <div id="save-loader"
-           style="display:none;position:fixed;inset:0;background:rgba(255,255,255,.6);z-index:9999;align-items:center;justify-content:center;font-size:1rem;font-weight:600;color:var(--ink);gap:10px">
+      <div id="save-loader" class="htmx-indicator"
+           style="position:fixed;inset:0;background:rgba(255,255,255,.6);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:600;color:var(--ink);gap:10px">
         <span style="display:inline-flex;align-items:center;gap:10px;background:var(--surface);padding:16px 28px;border-radius:var(--r-md);box-shadow:var(--sh-lg)">
           <span style="font-size:1.4rem">⏳</span> Saving…
         </span>
@@ -227,24 +227,4 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-(function(){
-  var loader = document.getElementById('save-loader');
-  if (!loader) return;
-  var showing = false;
-  var timer;
-  document.addEventListener('htmx:beforeRequest', function(e){
-    if (!e.target.closest('#modules-list')) return;
-    showing = true;
-    clearTimeout(timer);
-    loader.style.display = 'flex';
-  });
-  document.addEventListener('htmx:afterRequest', function(e){
-    if (!showing) return;
-    // The trigger element is now detached after outerHTML swap,
-    // so we hide unconditionally via a short debounce.
-    timer = setTimeout(function(){ loader.style.display = 'none'; showing = false; }, 200);
-  });
-})();
-</script>
 {% endblock %}

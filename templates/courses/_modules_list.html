@@ -46,7 +46,7 @@
     <form method="post" action="{% url 'courses:lecturer_module_edit' course.slug module.id %}"
           hx-post="{% url 'courses:lecturer_module_edit' course.slug module.id %}"
           hx-target="#modules-list" hx-swap="outerHTML"
-          hx-indicator="#modules-list"
+          hx-indicator="#save-loader"
           id="module-edit-{{ module.id }}" style="display:none;background:var(--gold-bg);padding:10px 15px;gap:8px;flex-wrap:wrap;align-items:center">
       {% csrf_token %}
       <input type="text" name="title" value="{{ module.title }}" required style="flex:2;min-width:150px;font-size:.83rem">
@@ -92,7 +92,7 @@
         <form method="post" action="{% url 'courses:lecturer_lecture_edit' course.slug lecture.id %}"
               hx-post="{% url 'courses:lecturer_lecture_edit' course.slug lecture.id %}"
               hx-target="#modules-list" hx-swap="outerHTML"
-              hx-indicator="#modules-list"
+              hx-indicator="#save-loader"
               enctype="multipart/form-data"
               id="lecture-edit-{{ lecture.id }}" style="display:none;background:var(--gold-bg);padding:8px 10px;border-radius:var(--r-sm);margin:4px 0;flex-wrap:wrap;gap:6px;align-items:center">
           {% csrf_token %}
@@ -116,7 +116,7 @@
       {% if course.status != 'pending' %}
       <form hx-post="{% url 'courses:lecturer_lecture_create' course.slug module.id %}"
             hx-target="#modules-list" hx-swap="outerHTML"
-            hx-indicator="#modules-list"
+            hx-indicator="#save-loader"
             method="post" action="{% url 'courses:lecturer_lecture_create' course.slug module.id %}"
             enctype="multipart/form-data" style="margin-top:10px">
         {% csrf_token %}
@@ -161,7 +161,7 @@
   {% if course.status != 'pending' %}
   <form hx-post="{% url 'courses:lecturer_module_create' course.slug %}"
         hx-target="#modules-list" hx-swap="outerHTML"
-        hx-indicator="#modules-list"
+        hx-indicator="#save-loader"
         method="post" action="{% url 'courses:lecturer_module_create' course.slug %}"
         style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;padding-top:12px;border-top:1px solid var(--line)"
         id="add-module-form">
