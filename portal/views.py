@@ -364,6 +364,20 @@ def course_list(request):
     })
 
 
+def _youtube_embed_url(url):
+    if not url:
+        return ''
+    import re
+    patterns = [
+        r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([a-zA-Z0-9_-]{11})',
+    ]
+    for p in patterns:
+        m = re.search(p, url)
+        if m:
+            return f'https://www.youtube.com/embed/{m.group(1)}?modestbranding=1'
+    return url
+
+
 @portal_required
 def course_review(request, pk):
     from courses.models import Course, CourseDepartment, Notification
@@ -400,6 +414,9 @@ def course_review(request, pk):
             messages.warning(request, f'"{course.title}" rejected with note sent to lecturer.')
         return redirect('portal:course_list')
     modules = course.modules.prefetch_related('lectures').all()
+    for m in modules:
+        for lec in m.lectures.all():
+            lec.embed_url = _youtube_embed_url(lec.video_url) if lec.video_url else ''
     quizzes = Quiz.objects.filter(course=course).prefetch_related(
         'questions__choices', 'module'
     ).order_by('module__week_number')

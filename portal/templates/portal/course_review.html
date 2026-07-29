@@ -1,6 +1,13 @@
 {% extends 'portal/base.html' %}
 {% block title %}Review: {{ course.title }}{% endblock %}
 {% block page_title %}Course Review{% endblock %}
+{% block extra_css %}
+<style>
+.lec-preview { display:none; margin-top:8px; }
+.lec-preview.open { display:block; }
+.preview-btn { cursor:pointer; }
+</style>
+{% endblock %}
 {% block content %}
 <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start">
 
@@ -49,13 +56,44 @@
             {% if module.description %}<span style="font-weight:400;color:var(--muted);font-size:.78rem"> — {{ module.description }}</span>{% endif %}
           </div>
           {% for lec in module.lectures.all %}
-          <div style="padding:8px 16px 8px 28px;border-bottom:1px solid var(--line);font-size:.82rem">
-            <div style="font-weight:500">{{ lec.title }}</div>
+          <div class="lec-item" style="padding:8px 16px 8px 28px;border-bottom:1px solid var(--line);font-size:.82rem">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="font-weight:500">{{ lec.title }}</div>
+              {% if lec.video_url or lec.notes %}
+              <span class="preview-btn chip c-teal" style="font-size:.65rem;cursor:pointer;user-select:none"
+                    onclick="this.closest('.lec-item').querySelector('.lec-preview').classList.toggle('open');this.textContent=this.textContent==='Preview'?'Close':'Preview'">Preview</span>
+              {% endif %}
+            </div>
             <div style="display:flex;gap:16px;font-size:.73rem;color:var(--muted);margin-top:3px">
               {% if lec.duration_minutes %}<span>⏱ {{ lec.duration_minutes }} min</span>{% endif %}
-              {% if lec.video_url %}<span>🎬 <a href="{{ lec.video_url }}" target="_blank" style="color:var(--teal)">Video</a></span>{% endif %}
-              {% if lec.notes %}<span>📄 <a href="{{ lec.notes.url }}" target="_blank" style="color:var(--teal)">Notes</a></span>{% endif %}
+              {% if lec.video_url %}<span>🎬 <a href="{{ lec.video_url }}" target="_blank" style="color:var(--teal)">Open Video</a></span>{% endif %}
+              {% if lec.notes %}<span>📄 <a href="{{ lec.notes.url }}" target="_blank" style="color:var(--teal)">Download Notes</a></span>{% endif %}
               {% if lec.is_free_preview %}<span class="chip c-green" style="font-size:.65rem">Preview</span>{% endif %}
+            </div>
+            <div class="lec-preview">
+              <div style="padding:8px 0;display:flex;flex-direction:column;gap:8px">
+                {% if lec.embed_url %}
+                <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:6px;background:#000">
+                  <iframe src="{{ lec.embed_url }}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allowfullscreen></iframe>
+                </div>
+                {% elif lec.video_file %}
+                <div style="padding:8px 0">
+                  <video controls style="max-width:100%;border-radius:6px">
+                    <source src="{{ lec.video_file.url }}" type="video/mp4">
+                  </video>
+                </div>
+                {% elif lec.video_url %}
+                <div style="padding:8px 0">
+                  <a href="{{ lec.video_url }}" target="_blank" class="btn btn-ghost" style="font-size:.8rem">▶ Open External Video</a>
+                </div>
+                {% endif %}
+                {% if lec.notes %}
+                <div style="font-size:.78rem">
+                  <strong>Notes file:</strong> <a href="{{ lec.notes.url }}" target="_blank" style="color:var(--teal)">{{ lec.notes.name|cut:'notes/' }}</a>
+                  <span style="color:var(--muted)">({{ lec.notes.size|filesizeformat }})</span>
+                </div>
+                {% endif %}
+              </div>
             </div>
           </div>
           {% empty %}
