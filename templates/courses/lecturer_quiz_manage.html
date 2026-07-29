@@ -20,7 +20,7 @@
   <main class="dmain">
     <div class="dsh" style="margin-bottom:16px">
       <h2 style="font-size:1.1rem;margin:0">📝 {{ quiz.title }}</h2>
-      <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="btn btn-ghost btn-sm">← Back to Course</a>
+      <a href="{% if request.user.is_staff %}{% url 'portal:course_edit' course.pk %}{% else %}{% url 'courses:lecturer_course_edit' course.slug %}{% endif %}" class="btn btn-ghost btn-sm">← Back to Course</a>
     </div>
 
     <div class="exam-alert" style="margin-bottom:18px">
