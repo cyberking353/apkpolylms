@@ -1,19 +1,11 @@
 {% extends 'portal/base.html' %}
+{% load static %}
 {% block title %}{% if is_new %}New Course{% else %}Edit: {{ course.title }}{% endif %}{% endblock %}
 {% block page_title %}{% if is_new %}New Course{% else %}Edit Course{% endif %}{% endblock %}
 
 {% block content %}
 
-{% if not is_new %}
-<div class="portal-card" style="margin-bottom:16px;background:var(--bp-primary-bg);border-color:var(--bp-primary)">
-  <div class="portal-card-body" style="padding:12px 16px;font-size:.83rem">
-    📝 <strong>Manage course content</strong> — Add modules, lectures, quizzes, and exams using the
-    <a href="{% url 'courses:lecturer_course_edit' course.slug %}" style="font-weight:600;color:var(--bp-primary)">full course editor →</a>
-  </div>
-</div>
-{% endif %}
-
-<div class="portal-card" style="max-width:800px">
+<div class="portal-card" style="max-width:1000px">
   <div class="portal-card-head">
     <h3>{% if is_new %}Create a new course{% else %}Editing: {{ course.title }}{% endif %}</h3>
     {% if not is_new %}
@@ -131,11 +123,63 @@
         </div>
       </div>
 
-      <div style="display:flex;gap:10px;margin-top:8px">
+      <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
         <button type="submit" class="btn btn-ink">{% if is_new %}Create &amp; Publish{% else %}Save Changes{% endif %}</button>
+        {% if not is_new %}
+        <a href="{% url 'portal:course_review' course.pk %}" class="btn btn-teal">🔍 Review Course</a>
+        {% endif %}
         <a href="{% url 'portal:course_list' %}" class="btn btn-ghost">Cancel</a>
       </div>
     </form>
   </div>
 </div>
+
+{% if not is_new %}
+<!-- Modules & Lectures -->
+<div class="portal-card" style="margin-top:20px">
+  <div class="portal-card-head"><h3>Modules & Lectures</h3></div>
+  <div class="portal-card-body" style="padding:20px">
+    {% include 'courses/_modules_list.html' %}
+  </div>
+</div>
+
+<!-- Official Exam -->
+<div class="portal-card" style="margin-top:20px">
+  <div class="portal-card-head"><h3>🎓 Official Semester Exam</h3></div>
+  <div class="portal-card-body" style="padding:20px">
+    {% if course.exam %}
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <span>Status: <strong>{{ course.exam.get_exam_status_display }}</strong> — {{ course.exam.question_count }} question{{ course.exam.question_count|pluralize }}</span>
+        <a href="{% url 'courses:lecturer_exam_manage' course.slug %}" class="btn btn-gold btn-sm">📝 Edit Exam Questions</a>
+      </div>
+      {% if course.exam.review_note %}
+      <div style="margin-top:10px;font-size:.83rem;padding:8px 12px;background:var(--rose-bg);border-radius:6px;color:var(--rose)">
+        <strong>Admin note:</strong> {{ course.exam.review_note }}
+      </div>
+      {% endif %}
+    {% else %}
+      <p style="font-size:.83rem;color:var(--muted);margin-bottom:12px">No exam created yet for this course.</p>
+      <form method="post" action="{% url 'courses:lecturer_exam_create' course.slug %}">
+        {% csrf_token %}
+        <button class="btn btn-gold btn-sm">+ Create Semester Exam</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Save loader overlay -->
+<div id="save-loader"
+     style="position:fixed;inset:0;background:rgba(255,255,255,.6);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:600;color:var(--ink);gap:10px;pointer-events:none;opacity:0;transition:opacity .15s ease">
+  <span style="display:inline-flex;align-items:center;gap:10px;background:var(--surface);padding:16px 28px;border-radius:var(--r-md);box-shadow:var(--sh-lg)">
+    <span style="font-size:1.4rem">⏳</span> Saving…
+  </span>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+#save-loader.htmx-request { opacity: 1 !important; pointer-events: auto !important; }
+</style>
 {% endblock %}

@@ -22,7 +22,7 @@
       </span>
       <span style="font-weight:600;font-size:.88rem">{{ module.title }}</span>
       {% if module.description %}<span style="font-size:.76rem;color:var(--muted)">— {{ module.description }}</span>{% endif %}
-      {% if course.status != 'pending' %}
+      {% if admin_mode or course.status != 'pending' %}
       <div style="margin-left:auto;display:flex;gap:6px">
         <button type="button" class="btn btn-ghost btn-sm" style="padding:3px 9px;font-size:.72rem"
           onclick="document.getElementById('module-view-{{ module.id }}').style.display='none';document.getElementById('module-edit-{{ module.id }}').style.display='flex'">
@@ -42,7 +42,7 @@
     </div>
 
     <!-- Module header: edit mode (hidden by default) -->
-    {% if course.status != 'pending' %}
+    {% if admin_mode or course.status != 'pending' %}
     <form method="post" action="{% url 'courses:lecturer_module_edit' course.slug module.id %}"
           hx-post="{% url 'courses:lecturer_module_edit' course.slug module.id %}"
           hx-target="#modules-list" hx-swap="outerHTML"
@@ -68,7 +68,7 @@
           <span>{{ lecture.title }}</span>
           {% if lecture.duration_minutes %}<span style="color:var(--muted)">{{ lecture.duration_minutes }}min</span>{% endif %}
           {% if lecture.notes %}<span title="Has notes attached">📎</span>{% endif %}
-          {% if course.status != 'pending' %}
+          {% if admin_mode or course.status != 'pending' %}
           <div style="margin-left:auto;display:flex;gap:5px">
             <button type="button" class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:.68rem"
               onclick="document.getElementById('lecture-view-{{ lecture.id }}').style.display='none';document.getElementById('lecture-edit-{{ lecture.id }}').style.display='flex'">
@@ -88,7 +88,7 @@
         </div>
 
         <!-- Lecture edit form (hidden by default) -->
-        {% if course.status != 'pending' %}
+        {% if admin_mode or course.status != 'pending' %}
         <form method="post" action="{% url 'courses:lecturer_lecture_edit' course.slug lecture.id %}"
               hx-post="{% url 'courses:lecturer_lecture_edit' course.slug lecture.id %}"
               hx-target="#modules-list" hx-swap="outerHTML"
@@ -113,7 +113,7 @@
         {% endfor %}
       </div>
 
-      {% if course.status != 'pending' %}
+      {% if admin_mode or course.status != 'pending' %}
       <form hx-post="{% url 'courses:lecturer_lecture_create' course.slug module.id %}"
             hx-target="#modules-list" hx-swap="outerHTML"
             hx-indicator="#save-loader"
@@ -137,7 +137,7 @@
     </div>
 
     <!-- Week quiz — one per module, shown as a footer of the module card -->
-    {% if course.status != 'pending' %}
+    {% if admin_mode or course.status != 'pending' %}
     <div style="padding:10px 15px;border-top:1px dashed var(--line);background:var(--bg)">
       {% if module.quiz %}
       <a href="{% url 'courses:lecturer_quiz_manage' course.slug module.quiz.id %}" class="btn btn-gold btn-sm">
@@ -158,7 +158,7 @@
   </div>
   {% endfor %}
 
-  {% if course.status != 'pending' %}
+  {% if admin_mode or course.status != 'pending' %}
   <form hx-post="{% url 'courses:lecturer_module_create' course.slug %}"
         hx-target="#modules-list" hx-swap="outerHTML"
         hx-indicator="#save-loader"

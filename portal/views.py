@@ -497,7 +497,7 @@ def course_create(request):
 
 @portal_required
 def course_edit(request, pk):
-    from courses.models import Course, CourseDepartment, Category
+    from courses.models import Course, CourseDepartment, Category, Module
     from accounts.models import Student, get_department_choices
     course = get_object_or_404(Course, pk=pk)
     if request.method == 'POST':
@@ -522,9 +522,11 @@ def course_edit(request, pk):
                     is_home=(dept == request.POST.get('home_department', ''))
                 )
         messages.success(request, f'"{course.title}" updated.')
-        return redirect('portal:course_list')
+        return redirect('portal:course_edit', pk=pk)
+    modules = Module.objects.filter(course=course).prefetch_related('lectures')
     return render(request, 'portal/course_form.html', {
-        'is_new': False, 'course': course,
+        'is_new': False, 'course': course, 'modules': modules,
+        'admin_mode': True,
         'departments': get_department_choices(),
         'selected_departments': course.department_list,
         'levels': Course.LEVEL_CHOICES,
