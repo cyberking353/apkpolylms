@@ -178,6 +178,10 @@
 
 {% endblock %}
 
+{% block extra_js %}
+<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+{% endblock %}
+
 {% block extra_css %}
 <style>
 #save-loader.htmx-request { opacity: 1 !important; pointer-events: auto !important; }
