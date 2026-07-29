@@ -338,6 +338,8 @@ def lecturer_course_submit(request, slug):
     else:
         course.submit_for_review()
         messages.success(request, f'"{course.title}" submitted for admin review.')
+    if request.user.is_staff:
+        return redirect('portal:course_list')
     return redirect('courses:lecturer_dashboard')
 
 
