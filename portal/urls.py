@@ -23,6 +23,7 @@ urlpatterns = [
     path('courses/new/',            views.course_create,     name='course_create'),
     path('courses/<int:pk>/edit/',  views.course_edit,       name='course_edit'),
     path('courses/<int:pk>/review/', views.course_review,   name='course_review'),
+    path('courses/<int:pk>/delete/', views.course_delete,   name='course_delete'),
     path('course-messages/',        views.course_message_list, name='course_message_list'),
     # Exams
     path('exams/',                  views.exam_list,         name='exam_list'),

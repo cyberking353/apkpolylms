@@ -435,6 +435,16 @@ def course_review(request, pk):
 
 
 @portal_required
+def course_delete(request, pk):
+    from courses.models import Course
+    course = get_object_or_404(Course, pk=pk)
+    title = course.title
+    course.delete()
+    messages.success(request, f'"{title}" has been permanently deleted.')
+    return redirect('portal:course_list')
+
+
+@portal_required
 def course_create(request):
     from courses.models import Course, CourseDepartment, Category
     from accounts.models import Student, get_department_choices, ACADEMIC_LEVEL_CHOICES
