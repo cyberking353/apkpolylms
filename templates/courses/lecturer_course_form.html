@@ -169,8 +169,8 @@
 
       {% include 'courses/_modules_list.html' %}
 
-      <div id="save-loader" class="htmx-indicator"
-           style="position:fixed;inset:0;background:rgba(255,255,255,.6);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:600;color:var(--ink);gap:10px">
+      <div id="save-loader"
+           style="position:fixed;inset:0;background:rgba(255,255,255,.6);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:600;color:var(--ink);gap:10px;pointer-events:none;opacity:0;transition:opacity .15s ease">
         <span style="display:inline-flex;align-items:center;gap:10px;background:var(--surface);padding:16px 28px;border-radius:var(--r-md);box-shadow:var(--sh-lg)">
           <span style="font-size:1.4rem">⏳</span> Saving…
         </span>
@@ -226,5 +226,10 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+#save-loader.htmx-request { opacity: 1 !important; pointer-events: auto !important; }
+</style>
+{% endblock %}
 {% block extra_js %}
 {% endblock %}
