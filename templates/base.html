@@ -6,8 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Al-Hikma LMS{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Inter:wght@300;400;500;600;700&family=Dancing+Script:wght@700&family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/main.css' %}?v=2">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}?v=4">
   <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
   {% block extra_css %}{% endblock %}
 </head>
@@ -93,7 +94,7 @@
             <img src="{% static 'images/logo.png' %}" alt="Al-Hikma Polytechnic" class="footer-logo-img">
             <span class="footer-logo-text">Al-Hikma Polytechnic<br>LMS</span>
           </div>
-          <p>Empowering polytechnic students with quality digital education. Learn anytime, anywhere.</p>
+          <p>Fully accredited by the National Board for Technical Education (NBTE), Nigeria. Empowering students with quality digital education, anytime, anywhere.</p>
         </div>
         <div class="footer-col">
           <h6>Courses</h6>
@@ -106,10 +107,12 @@
         <div class="footer-col">
           <h6>Platform</h6>
           <ul>
+            <li><a href="{% url 'courses:landing' %}">Homepage</a></li>
             {% if user.is_authenticated %}
             <li><a href="{% url 'courses:dashboard' %}">Dashboard</a></li>
+            <li><a href="{% url 'accounts:profile' %}">My Profile</a></li>
             {% else %}
-            <li><a href="{% url 'accounts:login' %}">Sign In</a></li>
+            <li><a href="{% url 'accounts:login' %}">Portal Login</a></li>
             {% endif %}
           </ul>
         </div>
@@ -123,8 +126,7 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <span>© 2025 Al-Hikma Polytechnic. All rights reserved.</span>
-        <span>Made with ❤️ for students</span>
+        <span>© 2026 Al-Hikma Polytechnic. All Rights Reserved.</span>
       </div>
     </div>
   </footer>

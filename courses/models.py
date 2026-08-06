@@ -86,6 +86,10 @@ class Course(models.Model):
     color_start = models.CharField(max_length=20, default='#0D1F3C')  # CSS gradient start
     color_end   = models.CharField(max_length=20, default='#1A3A6C')  # CSS gradient end
 
+    # --- Academic identifiers ---
+    code        = models.CharField(max_length=20, blank=True, help_text='e.g. COM101')
+    credit_unit = models.PositiveIntegerField(default=3, help_text='Credit units for this course')
+
     # --- Who this course is for ---
     # A course can serve more than one department at once (a "borrowed" course),
     # e.g. "Communication Skills" taken by both CS and EE. The set of departments

@@ -17,6 +17,7 @@ from accounts.models import Student
 SAMPLE_COURSES = [
     {
         'title': 'Introduction to Computer Science',
+        'code': 'COM101', 'credit_unit': 3,
         'icon': '💻', 'color_start': '#0D1F3C', 'color_end': '#1A3A6C',
         'category': 'Computer Science',
         'description': 'A comprehensive foundation course covering core computing concepts, algorithms, data structures, and introductory programming — designed for Al-Hikma Polytechnic students.',
@@ -72,6 +73,7 @@ SAMPLE_COURSES = [
     },
     {
         'title': 'Electrical Engineering Basics',
+        'code': 'EEC101', 'credit_unit': 3,
         'icon': '⚡', 'color_start': '#2A1400', 'color_end': '#5A3000',
         'category': 'Engineering',
         'description': 'Circuit analysis, Ohm\'s law, AC/DC fundamentals, and practical lab simulations for engineering students.',
@@ -87,6 +89,7 @@ SAMPLE_COURSES = [
     },
     {
         'title': 'Applied Mathematics I',
+        'code': 'MTH101', 'credit_unit': 2,
         'icon': '🔢', 'color_start': '#0A2A15', 'color_end': '#0F4025',
         'category': 'Mathematics',
         'description': 'Calculus, linear algebra, statistics, and real-world problem-solving techniques for polytechnic students.',
@@ -102,6 +105,7 @@ SAMPLE_COURSES = [
     },
     {
         'title': 'Business Communication',
+        'code': 'BUS101', 'credit_unit': 2,
         'icon': '💬', 'color_start': '#1A0A2A', 'color_end': '#350F58',
         'category': 'Business',
         'description': 'Professional writing, public speaking, report writing, and workplace communication. A Business Administration course also borrowed by Computer Science students.',
@@ -198,6 +202,8 @@ class Command(BaseCommand):
                 duration_hours=data['duration_hours'],
                 status='published',
                 published_at=timezone.now(),
+                code=data.get('code', ''),
+                credit_unit=data.get('credit_unit', 3),
             )
 
             # Departments taking this course (empty list = shared by all departments at this level)
@@ -297,6 +303,7 @@ class Command(BaseCommand):
                 lecturer=lecturers['ibrahim_musa'],
                 duration_hours=20,
                 status='pending', submitted_at=timezone.now(),
+                code='EEC201', credit_unit=3,
             )
             CourseDepartment.objects.create(course=draft_course, department='EE', is_home=True)
             self.stdout.write(f"  📝  Created a course pending admin review: {draft_course.title}")
