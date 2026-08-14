@@ -53,7 +53,7 @@ class Student(AbstractUser):
     )
 
     # --- Student fields ---
-    matric_number  = models.CharField(max_length=30, blank=True)
+    matric_number  = models.CharField(max_length=30, blank=True, null=True, unique=True)
     department     = models.CharField(
         max_length=10, choices=DEPARTMENT_CHOICES, blank=True,
         help_text='Student: their department. Lecturer: their home department.'
@@ -62,6 +62,27 @@ class Student(AbstractUser):
         max_length=10, choices=ACADEMIC_LEVEL_CHOICES, blank=True,
         help_text="Student's current study level (ND1, ND2, HND1, HND2). Assigned by admin — "
                    "this determines which courses appear on the student's dashboard. Not used for lecturers."
+    )
+
+    # --- SMS/Portal integration (single source of truth is the SMS) ---
+    portal_id = models.CharField(
+        max_length=64, blank=True, null=True, unique=True,
+        help_text="Portal's UUID for this account (the JWT 'sub' in SSO). "
+                  "Primary link key between Portal and LMS users."
+    )
+    current_session = models.CharField(
+        max_length=20, blank=True, default='',
+        help_text='School year e.g. 2025/2026, as set by the SMS/Portal.'
+    )
+    current_semester = models.CharField(
+        max_length=1, blank=True, default='',
+        help_text='Semester (1 or 2) as reported by the SMS/Portal.'
+    )
+    lms_access   = models.BooleanField(
+        default=True, help_text='Whether the SMS allows this student to use the LMS.'
+    )
+    is_sms_synced = models.BooleanField(
+        default=False, help_text='True when the account was created/updated by the SMS/Portal.'
     )
 
     # --- Lecturer fields ---

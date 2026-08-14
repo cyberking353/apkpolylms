@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LMS Integration Guide</title>
+    <!-- GitHub Markdown CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+    <!-- Highlight.js CSS for code blocks -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+    <style>
+        body {
+            box-sizing: border-box;
+            min-width: 200px;
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 45px;
+            background-color: #ffffff;
+        }
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #0d1117;
+            }
+        }
+        @media (max-width: 767px) {
+            body {
+                padding: 15px;
+            }
+        }
+        .markdown-body {
+            box-sizing: border-box;
+            min-width: 200px;
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 45px;
+        }
+        @media (max-width: 767px) {
+            .markdown-body {
+                padding: 15px;
+            }
+        }
+        /* Mermaid diagrams support placeholder */
+        pre code.language-mermaid {
+            background: none;
+            color: inherit;
+        }
+    </style>
+    <!-- Mermaid JS -->
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true, theme: 'default' });
+      
+      // Convert code blocks with language-mermaid to div class mermaid
+      document.addEventListener('DOMContentLoaded', () => {
+        const blocks = document.querySelectorAll('pre code.language-mermaid');
+        blocks.forEach(block => {
+          const div = document.createElement('div');
+          div.className = 'mermaid';
+          div.textContent = block.textContent;
+          block.parentNode.replaceWith(div);
+        });
+        mermaid.run();
+      });
+    </script>
+</head>
+<body class="markdown-body">
+    <h1>Al-Hikma Portal ↔ LMS Integration Guide</h1>
+<blockquote>
+<p><strong>Audience</strong>: The LMS developer. This document contains everything you need to integrate with the Al-Hikma SMS/Portal.</p>
+</blockquote>
+<hr>
+<h2>1. Architecture Overview</h2>
+<pre><code class="hljs language-mermaid">graph LR
+  subgraph Portal [&quot;SMS/Portal (System of Record)&quot;]
+    A[Student Portal&lt;br/&gt;:3001]
+    B[Admin Portal&lt;br/&gt;:3000]
+    C[Portal Backend&lt;br/&gt;:5000]
+  end
+
+  subgraph LMS [&quot;LMS (Your System)&quot;]
+    D[LMS Backend&lt;br/&gt;:4000]
+    E[LMS Frontend&lt;br/&gt;:4001]
+  end
+
+  A -- &quot;1. Student clicks &#x27;Open LMS&#x27;&quot; --&gt; C
+  B -- &quot;1. Staff clicks &#x27;Open LMS&#x27;&quot; --&gt; C
+  C -- &quot;2. 302 redirect with JWT assertion&quot; --&gt; E
+  E -- &quot;3. Sends JWT to backend for verification&quot; --&gt; D
+  D -- &quot;4. Verifies JWT, creates session&quot; --&gt; E
+
+  C -- &quot;Server-to-server sync (Bearer token)&quot; --&gt; D
+</code></pre><h3>Key Principles</h3>
+<table>
+<thead>
+<tr>
+<th>Principle</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Portal = Source of Truth</strong></td>
+<td>The Portal owns student identity, academic data, and official results. The LMS <strong>never</strong> creates or modifies this data.</td>
+</tr>
+<tr>
+<td><strong>LMS = Learning Delivery</strong></td>
+<td>The LMS consumes synced data and manages courses, content, submissions, and learning progress.</td>
+</tr>
+<tr>
+<td><strong>Async Sync</strong></td>
+<td>Student/course data is pushed from Portal → LMS via server-to-server API calls. The LMS must expose the endpoints described below.</td>
+</tr>
+<tr>
+<td><strong>SSO (Portal → LMS)</strong></td>
+<td>Students and staff authenticate through the Portal. The LMS receives a signed JWT assertion and creates its own session. <strong>The LMS must NOT maintain independent Portal passwords.</strong></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>2. Shared Secrets &amp; Configuration</h2>
+<p>You will receive two secrets from the Portal admin. <strong>Never expose these in frontend code or version control.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Purpose</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>PORTAL_SSO_SECRET</code></td>
+<td>HMAC-SHA256 shared secret for verifying SSO JWT assertions. Must match the Portal&#39;s <code>LMS_SSO_SECRET</code>.</td>
+<td><code>c7c5a0fd...</code> (256-char hex)</td>
+</tr>
+<tr>
+<td><code>LMS_API_TOKEN</code></td>
+<td>Bearer token the Portal uses when calling your sync endpoints. Your backend must validate this on every sync request. Must match the Portal&#39;s <code>LMS_API_TOKEN</code>.</td>
+<td><code>b2df3a34...</code> (128-char hex)</td>
+</tr>
+</tbody></table>
+<h3>Your Environment Variables</h3>
+<pre><code class="hljs language-env"># Shared secret for verifying Portal SSO assertions
+PORTAL_SSO_SECRET=&lt;value from Portal admin&gt;
+
+# Bearer token that the Portal will send on sync requests
+LMS_API_TOKEN=&lt;value from Portal admin&gt;
+
+# Your LMS URLs
+LMS_BACKEND_URL=http://localhost:4000
+LMS_FRONTEND_URL=http://localhost:4001
+</code></pre><hr>
+<h2>3. SSO Authentication Flow</h2>
+<h3>3.1 How It Works</h3>
+<pre><code class="hljs language-mermaid">sequenceDiagram
+  participant Browser
+  participant Portal as Portal Backend (:5000)
+  participant LmsFE as LMS Frontend (:4001)
+  participant LmsBE as LMS Backend (:4000)
+
+  Browser-&gt;&gt;Portal: GET /api/v1/lms/sso (with session cookie)
+  Portal-&gt;&gt;Portal: Verify session, check eligibility
+  Portal-&gt;&gt;Portal: Sign JWT with PORTAL_SSO_SECRET
+  Portal--&gt;&gt;Browser: 302 Redirect → LMS_FRONTEND_URL/sso/callback?assertion=&lt;jwt&gt;
+  Browser-&gt;&gt;LmsFE: GET /sso/callback?assertion=&lt;jwt&gt;
+  LmsFE-&gt;&gt;LmsBE: POST /api/v1/auth/sso { assertion: &quot;&lt;jwt&gt;&quot; }
+  LmsBE-&gt;&gt;LmsBE: Verify JWT signature &amp; expiry
+  LmsBE-&gt;&gt;LmsBE: Find-or-create user in LMS database
+  LmsBE--&gt;&gt;LmsFE: 200 OK { user, session_token }
+  LmsFE-&gt;&gt;LmsFE: Store session, redirect to dashboard
+</code></pre><h3>3.2 JWT Assertion Structure</h3>
+<p>The Portal signs a JWT using <strong>HMAC-SHA256</strong> (<code>HS256</code>) with the shared <code>PORTAL_SSO_SECRET</code>. The JWT has a <strong>60-second TTL</strong> (configurable).</p>
+<h4>Student Assertion Payload</h4>
+<pre><code class="hljs language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;sub&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;fbba8d1d-bd55-4ddc-b978-36ce979c841f&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;matric_number&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;AHP/ND/CSC/24/0042&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;email&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;student@example.com&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;first_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Amina&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;last_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Bello&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;user_type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;student&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;iat&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1723454400</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;exp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1723454460</span>
+<span class="hljs-punctuation">}</span>
+</code></pre><h4>Staff Assertion Payload</h4>
+<pre><code class="hljs language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;sub&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;a1b2c3d4-e5f6-7890-abcd-ef1234567890&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;staff_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;STAFF001&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;email&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;lecturer@example.com&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;first_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Dr. Ibrahim&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;last_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Musa&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;user_type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;staff&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;iat&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1723454400</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;exp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1723454460</span>
+<span class="hljs-punctuation">}</span>
+</code></pre><h4>Field Reference</h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Present In</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>sub</code></td>
+<td><code>string (UUID)</code></td>
+<td>Both</td>
+<td>Unique Portal ID for this student/staff record. <strong>Use this as the primary key to link Portal ↔ LMS users.</strong></td>
+</tr>
+<tr>
+<td><code>matric_number</code></td>
+<td><code>string</code></td>
+<td>Student only</td>
+<td>Official matriculation number (e.g. <code>AHP/ND/CSC/24/0042</code>).</td>
+</tr>
+<tr>
+<td><code>staff_id</code></td>
+<td><code>string</code></td>
+<td>Staff only</td>
+<td>Staff ID code.</td>
+</tr>
+<tr>
+<td><code>email</code></td>
+<td><code>string</code></td>
+<td>Both</td>
+<td>User&#39;s email address.</td>
+</tr>
+<tr>
+<td><code>first_name</code></td>
+<td><code>string</code></td>
+<td>Both</td>
+<td>First name.</td>
+</tr>
+<tr>
+<td><code>last_name</code></td>
+<td><code>string</code></td>
+<td>Both</td>
+<td>Last name.</td>
+</tr>
+<tr>
+<td><code>user_type</code></td>
+<td><code>&quot;student&quot; | &quot;staff&quot;</code></td>
+<td>Both</td>
+<td>Discriminator for the user type.</td>
+</tr>
+<tr>
+<td><code>iat</code></td>
+<td><code>number</code></td>
+<td>Both</td>
+<td>Issued-at timestamp (Unix epoch seconds).</td>
+</tr>
+<tr>
+<td><code>exp</code></td>
+<td><code>number</code></td>
+<td>Both</td>
+<td>Expiry timestamp (Unix epoch seconds). Default: <code>iat + 60</code>.</td>
+</tr>
+</tbody></table>
+<h3>3.3 What You Must Implement</h3>
+<p>Your <strong>LMS backend</strong> must expose an endpoint that:</p>
+<ol>
+<li>Receives the JWT assertion (from your frontend or directly).</li>
+<li>Verifies the JWT signature using <code>PORTAL_SSO_SECRET</code> with algorithm <code>HS256</code>.</li>
+<li>Checks <code>exp</code> has not passed (JWT is not expired).</li>
+<li>Uses <code>sub</code> to find-or-create a user in your LMS database.</li>
+<li>Creates an LMS session/token for the user.</li>
+<li>Returns the session to your frontend.</li>
+</ol>
+<blockquote>
+<p>[!WARNING]
+<strong>The JWT is single-use and short-lived (60 seconds).</strong> It is only for authentication. After verification, create your own LMS session. Do NOT use the JWT as a session token.</p>
+</blockquote>
+<h3>3.4 Endpoint Spec: SSO Verification (Hosted on your LMS)</h3>
+<pre><code>POST &lt;LMS_BACKEND_URL&gt;/api/v1/auth/sso
+Content-Type: application/json
+
+{
+  &quot;assertion&quot;: &quot;&lt;jwt_string&gt;&quot;
+}
+</code></pre><p><strong>Success Response (200):</strong></p>
+<pre><code class="hljs language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;user&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;local-lms-user-id&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;portal_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;fbba8d1d-bd55-4ddc-b978-36ce979c841f&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;email&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;student@example.com&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;first_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Amina&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;last_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Bello&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;user_type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;student&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;matric_number&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;AHP/ND/CSC/24/0042&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;token&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;&lt;your-lms-session-token&gt;&quot;</span>
+<span class="hljs-punctuation">}</span>
+</code></pre><p><strong>Error Response (401):</strong></p>
+<pre><code class="hljs language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Invalid or expired assertion&quot;</span>
+<span class="hljs-punctuation">}</span>
+</code></pre><hr>
+<h2>4. Server-to-Server Sync API</h2>
+<p>The Portal pushes data to the LMS asynchronously. Your backend must expose the following endpoints. All sync requests include a <code>Bearer</code> token in the <code>Authorization</code> header.</p>
+<h3>4.1 Authentication for Sync Endpoints</h3>
+<p>Every sync request from the Portal includes:</p>
+<pre><code>Authorization: Bearer &lt;LMS_API_TOKEN&gt;
+Content-Type: application/json
+</code></pre><p>Your middleware must validate this token on all <code>/api/v1/sync/*</code> endpoints. Reject with <code>401</code> if the token is missing or invalid.</p>
+<h3>4.2 Student Sync</h3>
+<pre><code>POST &lt;LMS_BACKEND_URL&gt;/api/v1/sync/students
+</code></pre><p><strong>When it fires:</strong> The Portal sends this when:</p>
+<ul>
+<li>A new student is enrolled (admission → student record)</li>
+<li>A student&#39;s matric number is assigned (matriculation)</li>
+<li>A student&#39;s profile is updated (name, phone, etc.)</li>
+<li>A student&#39;s status changes (active → suspended, etc.)</li>
+<li>A student is promoted to the next academic level</li>
+<li>Nightly reconciliation (all online students re-synced at 4:00 AM)</li>
+</ul>
+<p><strong>Request Body:</strong></p>
+<pre><code class="hljs language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;matric_number&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;AHP/ND/CSC/24/0042&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;first_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Amina&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;last_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Bello&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;email&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;student@example.com&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;department_code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;CSC&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;academic_level&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ND1&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;current_session&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2025/2026&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;semester&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;active&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;lms_access&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span>
+<span class="hljs-punctuation">}</span>
+</code></pre><p><strong>Field Reference:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>matric_number</code></td>
+<td><code>string | null</code></td>
+<td>Unique matric number. May be <code>null</code> if not yet assigned (newly enrolled).</td>
+</tr>
+<tr>
+<td><code>first_name</code></td>
+<td><code>string</code></td>
+<td>Student&#39;s first name.</td>
+</tr>
+<tr>
+<td><code>last_name</code></td>
+<td><code>string</code></td>
+<td>Student&#39;s last name.</td>
+</tr>
+<tr>
+<td><code>email</code></td>
+<td><code>string</code></td>
+<td>Student&#39;s email (also used in SSO).</td>
+</tr>
+<tr>
+<td><code>department_code</code></td>
+<td><code>string</code></td>
+<td>Short code for the department (e.g. <code>CSC</code>, <code>ACC</code>).</td>
+</tr>
+<tr>
+<td><code>academic_level</code></td>
+<td><code>string</code></td>
+<td>Derived level: <code>ND1</code>, <code>ND2</code>, <code>HND1</code>, <code>HND2</code>.</td>
+</tr>
+<tr>
+<td><code>current_session</code></td>
+<td><code>string</code></td>
+<td>Academic session name (e.g. <code>2025/2026</code>).</td>
+</tr>
+<tr>
+<td><code>semester</code></td>
+<td><code>&quot;1&quot; | &quot;2&quot;</code></td>
+<td>Current semester number.</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>string</code></td>
+<td>One of: <code>active</code>, <code>suspended</code>, <code>withdrawn</code>, <code>expelled</code>, <code>graduated</code>, <code>inactive</code>.</td>
+</tr>
+<tr>
+<td><code>lms_access</code></td>
+<td><code>boolean</code></td>
+<td>Whether this student should have LMS access. <code>false</code> = disable login.</td>
+</tr>
+</tbody></table>
+<p><strong>Expected Response (200):</strong></p>
+<pre><code class="hljs language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Student synced successfully&quot;</span>
+<span class="hljs-punctuation">}</span>
+</code></pre><p><strong>Your implementation should:</strong></p>
+<ul>
+<li>Use <code>email</code> or <code>matric_number</code> as the unique key to find-or-create the student.</li>
+<li>Update all fields on subsequent syncs (upsert behavior).</li>
+<li>When <code>lms_access</code> is <code>false</code> or <code>status</code> is not <code>active</code>, disable the student&#39;s LMS account.</li>
+</ul>
+<h3>4.3 Course Sync</h3>
+<pre><code>POST &lt;LMS_BACKEND_URL&gt;/api/v1/sync/courses
+</code></pre><p><strong>When it fires:</strong> When a course is created, updated, or a new course offering is added in the Portal.</p>
+<p><strong>Request Body:</strong></p>
+<pre><code class="hljs language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;course_code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;CSC101&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;title&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Introduction to Computer Science&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;credit_unit&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;An introductory course...&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;offerings&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;programme_code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;NDCSC&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;department_code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;CSC&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;level&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">100</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;semester&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;is_elective&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;lecturers&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;staff_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;STAFF001&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;first_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Dr. Ibrahim&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;last_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Musa&quot;</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span>
+</code></pre><p><strong>Field Reference:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>course_code</code></td>
+<td><code>string</code></td>
+<td>Unique course code (e.g. <code>CSC101</code>).</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td><code>string</code></td>
+<td>Course title.</td>
+</tr>
+<tr>
+<td><code>credit_unit</code></td>
+<td><code>number</code></td>
+<td>Credit units (1-6).</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td><code>string | null</code></td>
+<td>Course description.</td>
+</tr>
+<tr>
+<td><code>offerings</code></td>
+<td><code>array</code></td>
+<td>List of programme/level/semester combinations where this course is offered.</td>
+</tr>
+<tr>
+<td><code>offerings[].programme_code</code></td>
+<td><code>string</code></td>
+<td>Programme code (e.g. <code>NDCSC</code>).</td>
+</tr>
+<tr>
+<td><code>offerings[].department_code</code></td>
+<td><code>string</code></td>
+<td>Department code.</td>
+</tr>
+<tr>
+<td><code>offerings[].level</code></td>
+<td><code>number</code></td>
+<td>Numeric level (100, 200, etc.).</td>
+</tr>
+<tr>
+<td><code>offerings[].semester</code></td>
+<td><code>&quot;1&quot; | &quot;2&quot;</code></td>
+<td>Semester this offering is in.</td>
+</tr>
+<tr>
+<td><code>offerings[].is_elective</code></td>
+<td><code>boolean</code></td>
+<td>Whether this is an elective course.</td>
+</tr>
+<tr>
+<td><code>lecturers</code></td>
+<td><code>array</code></td>
+<td>Assigned lecturers.</td>
+</tr>
+<tr>
+<td><code>lecturers[].staff_id</code></td>
+<td><code>string</code></td>
+<td>Staff ID from the Portal.</td>
+</tr>
+<tr>
+<td><code>lecturers[].first_name</code></td>
+<td><code>string</code></td>
+<td>Lecturer&#39;s first name.</td>
+</tr>
+<tr>
+<td><code>lecturers[].last_name</code></td>
+<td><code>string</code></td>
+<td>Lecturer&#39;s last name.</td>
+</tr>
+</tbody></table>
+<p><strong>Expected Response (200):</strong></p>
+<pre><code class="hljs language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Course synced successfully&quot;</span>
+<span class="hljs-punctuation">}</span>
+</code></pre><h3>4.4 Department Sync</h3>
+<pre><code>POST &lt;LMS_BACKEND_URL&gt;/api/v1/sync/departments
+</code></pre><p><strong>Request Body:</strong></p>
+<pre><code class="hljs language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;uuid-here&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;CSC&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Computer Science&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;is_active&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span>
+<span class="hljs-punctuation">}</span>
+</code></pre><h3>4.5 Programme Sync</h3>
+<pre><code>POST &lt;LMS_BACKEND_URL&gt;/api/v1/sync/programmes
+</code></pre><p><strong>Request Body:</strong></p>
+<pre><code class="hljs language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;uuid-here&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;NDCSC&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;National Diploma in Computer Science&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;department_code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;CSC&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;programme_type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;NATIONAL_DIPLOMA&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;duration&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">2</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;is_active&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span>
+<span class="hljs-punctuation">}</span>
+</code></pre><h3>4.6 Session Sync</h3>
+<pre><code>POST &lt;LMS_BACKEND_URL&gt;/api/v1/sync/sessions
+</code></pre><p><strong>Request Body:</strong></p>
+<pre><code class="hljs language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;uuid-here&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2024/2025&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;start_date&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2024-09-01T00:00:00Z&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;end_date&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2025-08-31T00:00:00Z&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;is_current&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;is_active&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span>
+<span class="hljs-punctuation">}</span>
+</code></pre><h3>4.7 Registration Sync</h3>
+<pre><code>POST &lt;LMS_BACKEND_URL&gt;/api/v1/sync/registrations
+</code></pre><p><strong>Request Body:</strong></p>
+<pre><code class="hljs language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;uuid-here&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;student_matric&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;AHP/ND/CSC/24/0042&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;academic_session&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2024/2025&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;semester&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;level&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">100</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;courses&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;CSC101&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;MTH101&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;SUBMITTED&quot;</span>
+<span class="hljs-punctuation">}</span>
+</code></pre><hr>
+<h2>4.8 Initialization APIs (Hosted on the Portal)</h2>
+<p>If your LMS database is empty, you can bootstrap it by pulling the latest active data directly from the Portal. You must provide the <code>LMS_API_TOKEN</code> as a Bearer token.</p>
+<p><strong>Base URL:</strong> <code>&lt;PORTAL_BACKEND_URL&gt;/api/v1/lms/sync/init</code></p>
+<ul>
+<li><code>GET /departments</code> — Fetch all active departments.</li>
+<li><code>GET /programmes</code> — Fetch all active programmes.</li>
+<li><code>GET /sessions</code> — Fetch all sessions.</li>
+<li><code>GET /courses</code> — Fetch all active courses.</li>
+<li><code>GET /students</code> — Fetch all active online students.</li>
+<li><code>GET /registrations</code> — Fetch all submitted course registrations.</li>
+</ul>
+<p><em>Example:</em></p>
+<pre><code>GET &lt;PORTAL_BACKEND_URL&gt;/api/v1/lms/sync/init/departments
+Authorization: Bearer &lt;LMS_API_TOKEN&gt;
+</code></pre><hr>
+<h2>5. Nightly Reconciliation</h2>
+<p>Every night at <strong>4:00 AM</strong>, the Portal re-syncs <strong>all</strong> online students to the LMS by calling <code>POST /api/v1/sync/students</code> for each student. This ensures data consistency even if individual sync events were missed.</p>
+<p>Your LMS should handle these as upserts — if the student already exists with the same data, it should be a no-op.</p>
+<hr>
+<h2>6. Error Handling</h2>
+<h3>Sync Error Responses</h3>
+<p>If your endpoint encounters an error, return an appropriate HTTP status:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>200</code></td>
+<td>Success.</td>
+</tr>
+<tr>
+<td><code>400</code></td>
+<td>Invalid payload (missing required fields).</td>
+</tr>
+<tr>
+<td><code>401</code></td>
+<td>Invalid or missing <code>Authorization</code> token.</td>
+</tr>
+<tr>
+<td><code>409</code></td>
+<td>Conflict (e.g. duplicate matric number in an unexpected state).</td>
+</tr>
+<tr>
+<td><code>500</code></td>
+<td>Internal server error.</td>
+</tr>
+</tbody></table>
+<p>The Portal uses BullMQ (a job queue) for sync operations. <strong>Failed sync jobs will be automatically retried</strong> with exponential backoff. If your endpoint returns a 5xx error, the Portal will retry the request.</p>
+<h3>SSO Error Handling</h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>No <code>assertion</code> query param</td>
+<td>Show &quot;No assertion provided&quot; error page.</td>
+</tr>
+<tr>
+<td>JWT signature verification fails</td>
+<td>Show &quot;Invalid assertion&quot; error page.</td>
+</tr>
+<tr>
+<td>JWT is expired (<code>exp</code> &lt; now)</td>
+<td>Show &quot;Assertion expired, please try again from the Portal&quot; error page.</td>
+</tr>
+<tr>
+<td><code>user_type</code> is invalid</td>
+<td>Show &quot;Unsupported user type&quot; error page.</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>7. Quick-Start Checklist</h2>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>Get secrets</strong> from Portal admin: <code>PORTAL_SSO_SECRET</code> and <code>LMS_API_TOKEN</code>.</li>
+<li><input disabled="" type="checkbox"> <strong>Set up env vars</strong> as shown in Section 2.</li>
+<li><input disabled="" type="checkbox"> <strong>Implement SSO verification</strong> endpoint <code>POST /api/v1/auth/sso</code>.</li>
+<li><input disabled="" type="checkbox"> <strong>Implement initialization script</strong> to fetch bootstrap data (<code>GET /api/v1/lms/sync/init/*</code>)</li>
+<li><input disabled="" type="checkbox"> <strong>Implement student sync</strong> endpoint <code>POST /api/v1/sync/students</code>.</li>
+<li><input disabled="" type="checkbox"> <strong>Implement course sync</strong> endpoint <code>POST /api/v1/sync/courses</code>.</li>
+<li><input disabled="" type="checkbox"> <strong>Implement department sync</strong> endpoint <code>POST /api/v1/sync/departments</code>.</li>
+<li><input disabled="" type="checkbox"> <strong>Implement programme sync</strong> endpoint <code>POST /api/v1/sync/programmes</code>.</li>
+<li><input disabled="" type="checkbox"> <strong>Implement session sync</strong> endpoint <code>POST /api/v1/sync/sessions</code>.</li>
+<li><input disabled="" type="checkbox"> <strong>Implement registration sync</strong> endpoint <code>POST /api/v1/sync/registrations</code>.</li>
+<li><input disabled="" type="checkbox"> <strong>Add auth middleware</strong> to validate <code>LMS_API_TOKEN</code> on all <code>/api/v1/sync/*</code> routes.</li>
+<li><input disabled="" type="checkbox"> <strong>Build SSO callback page</strong> at <code>/sso/callback</code> on your frontend.</li>
+<li><input disabled="" type="checkbox"> <strong>Test end-to-end</strong>: Login to student portal → Click &quot;Open LMS&quot; → Verify SSO lands on your dashboard.</li>
+</ul>
+<hr>
+<h2>8. Testing</h2>
+<p>The Portal provides the following URLs for local development:</p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>URL</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Portal Backend</td>
+<td><code>http://127.0.0.1:5000</code></td>
+</tr>
+<tr>
+<td>Admin Portal</td>
+<td><code>http://127.0.0.1:3000</code></td>
+</tr>
+<tr>
+<td>Student Portal</td>
+<td><code>http://127.0.0.1:3001</code></td>
+</tr>
+<tr>
+<td>LMS Backend (yours)</td>
+<td><code>http://localhost:4000</code></td>
+</tr>
+<tr>
+<td>LMS Frontend (yours)</td>
+<td><code>http://localhost:4001</code></td>
+</tr>
+</tbody></table>
+<p>The Portal&#39;s <code>LMS_BASE_URL</code> is set to <code>http://localhost:4000</code> and <code>LMS_FRONTEND_URL</code> is set to <code>http://localhost:4001</code>. Ensure your LMS backend and frontend run on these ports during development.</p>
+
+</body>
+</html>

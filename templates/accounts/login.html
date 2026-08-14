@@ -43,10 +43,10 @@
       <form method="post" novalidate>
         {% csrf_token %}
         <div class="field">
-          <label>Email Address</label>
+          <label>Matric Number or Email</label>
           <div class="ico-wrap">
-            <span class="ico">✉️</span>
-            <input type="email" name="username" placeholder="you@example.com" value="{{ form.username.value|default:'' }}" required>
+            <span class="ico">🎓</span>
+            <input type="text" name="username" placeholder="e.g. CS/ND1/001 or you@example.com" value="{{ form.username.value|default:'' }}" required autofocus>
           </div>
           {% if form.username.errors %}<div class="field-err">{{ form.username.errors.0 }}</div>{% endif %}
         </div>

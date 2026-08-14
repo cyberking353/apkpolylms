@@ -43,6 +43,65 @@ class AcademicSettings(models.Model):
         return obj
 
 
+class AcademicSession(models.Model):
+    """
+    A school year (e.g. 2024/2025) pushed from the Portal via
+    POST /api/v1/sync/sessions. Mirror-only data: the Portal owns sessions;
+    the LMS stores them so courses/registrations can be placed in time.
+    """
+    portal_id   = models.CharField(max_length=64, blank=True, null=True, unique=True,
+                    help_text="Portal's UUID for this session.")
+    name        = models.CharField(max_length=20, unique=True, help_text="e.g. 2024/2025")
+    start_date  = models.DateTimeField(blank=True, null=True)
+    end_date    = models.DateTimeField(blank=True, null=True)
+    is_current  = models.BooleanField(default=False,
+                    help_text="Only one session is current at a time (as decided by the Portal).")
+    is_active   = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-start_date']
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def get_or_none(cls, name):
+        try:
+            return cls.objects.get(name=name)
+        except cls.DoesNotExist:
+            return None
+
+
+class Programme(models.Model):
+    """
+    A study programme (e.g. National Diploma in Computer Science, code NDCSC)
+    pushed from the Portal via POST /api/v1/sync/programmes. Mirror-only data.
+    """
+    portal_id      = models.CharField(max_length=64, blank=True, null=True, unique=True,
+                        help_text="Portal's UUID for this programme.")
+    code           = models.CharField(max_length=20, unique=True, help_text="e.g. NDCSC")
+    name           = models.CharField(max_length=200)
+    department_code = models.CharField(max_length=10, blank=True,
+                        help_text="Short department code this programme belongs to (e.g. CSC).")
+    programme_type = models.CharField(max_length=50, blank=True,
+                        help_text="e.g. NATIONAL_DIPLOMA, HIGHER_NATIONAL_DIPLOMA.")
+    duration       = models.PositiveIntegerField(default=2, help_text="Duration in years.")
+    is_active      = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['code']
+
+    def __str__(self):
+        return f"{self.code} — {self.name}"
+
+    @classmethod
+    def get_or_none(cls, code):
+        try:
+            return cls.objects.get(code=code)
+        except cls.DoesNotExist:
+            return None
+
+
 class Category(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
@@ -89,6 +148,14 @@ class Course(models.Model):
     # --- Academic identifiers ---
     code        = models.CharField(max_length=20, blank=True, help_text='e.g. COM101')
     credit_unit = models.PositiveIntegerField(default=3, help_text='Credit units for this course')
+
+    # --- Portal mirror data (from POST /api/v1/sync/courses) ---
+    # Raw JSON as received from the Portal. The Portal owns the catalog; the
+    # LMS mirrors it here so course shells can be built and offered.
+    portal_offerings = models.JSONField(default=list, blank=True,
+        help_text="List of {programme_code, department_code, level, semester, is_elective} from the Portal.")
+    portal_lecturers = models.JSONField(default=list, blank=True,
+        help_text="List of {staff_id, first_name, last_name} from the Portal.")
 
     # --- Who this course is for ---
     # A course can serve more than one department at once (a "borrowed" course),

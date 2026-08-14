@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Al-Hikma LMS — Sign in</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --brand:#0057B8; --red:#D62828; --ink:#0D1F3C; --muted:#5B6B7C; --bg:#F4F7FB; --card:#ffffff; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family:'Manrope',sans-serif; background:var(--bg); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; color:var(--ink); }
+        .card { background:var(--card); border-radius:18px; box-shadow:0 18px 50px rgba(13,31,60,.10); padding:40px 34px; width:100%; max-width:420px; text-align:center; }
+        .logo { width:58px; height:58px; border-radius:14px; background:var(--brand); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:22px; margin-bottom:18px; }
+        .icon { font-size:34px; margin-bottom:14px; }
+        h1 { font-family:'Plus Jakarta Sans',sans-serif; font-size:20px; font-weight:800; margin-bottom:8px; }
+        p { color:var(--muted); font-size:14.5px; line-height:1.6; margin-bottom:20px; }
+        a.btn { display:inline-block; background:var(--brand); color:#fff; text-decoration:none; font-weight:700; font-size:14.5px; padding:12px 22px; border-radius:10px; }
+        a.btn:hover { background:#004599; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">AH</div>
+        <div class="icon">⛔</div>
+        <h1>Unable to sign you in</h1>
+        <p>{{ error }}</p>
+        <a class="btn" href="{% url 'accounts:login' %}">Back to sign in</a>
+    </div>
+</body>
+</html>

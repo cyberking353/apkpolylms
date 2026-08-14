@@ -41,7 +41,9 @@
             <div style="font-weight:600">{{ s.get_full_name }}</div>
             <div style="font-size:.72rem;color:var(--muted)">{{ s.email }}</div>
           </td>
-          <td>{{ s.matric_number|default:"—" }}</td>
+          <td>{{ s.matric_number|default:"—" }}
+            {% if s.is_sms_synced %}<span class="chip c-teal" style="margin-left:4px">SMS</span>{% endif %}
+          </td>
           <td>{{ s.get_department_display|default:"—" }}</td>
           <td>{{ s.get_academic_level_display|default:"—" }}</td>
           <td>

@@ -8,6 +8,8 @@ class Department(models.Model):
     `code` is the short unique identifier (e.g. 'CS') used as the FK key everywhere,
     keeping backward compatibility with existing data.
     """
+    portal_id = models.CharField(max_length=64, blank=True, null=True, unique=True,
+                  help_text="Portal's UUID for this department (from /api/v1/sync/departments).")
     code      = models.CharField(max_length=10, unique=True,
                   help_text="Short unique code e.g. CS, EE, BA. Cannot be changed after creation.")
     name      = models.CharField(max_length=100, help_text="Full name e.g. Computer Science")

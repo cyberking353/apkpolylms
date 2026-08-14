@@ -1,0 +1,134 @@
+AL-HIKMA LMS <-> PORTAL INTEGRATION — TESTING GUIDE
+===================================================
+Follows the confirmed contract in LMS_Integration_Guide.html and
+LMS_Database_Schema.html (received from the Portal programmer).
+
+
+1. CONFIGURATION (already wired in)
+-----------------------------------
+Secrets live in .env (gitignored). settings.py reads them:
+
+    PORTAL_BACKEND_URL   = the Portal backend base URL
+                           e.g. https://api-demo.auxilax.com
+    LMS_API_TOKEN        = Bearer token the Portal sends on every sync request
+    PORTAL_SSO_SECRET    = HMAC-SHA256 secret used to verify SSO JWTs
+                           (guide also calls it LMS_SSO_SECRET)
+
+IMPORTANT: Never commit .env. Rotate LMS_API_TOKEN / PORTAL_SSO_SECRET before
+production, and set DJANGO_SECRET_KEY / DEBUG=False too.
+
+
+2. MAKING THE LMS REACHABLE FOR WEBHOOKS (ngrok)
+------------------------------------------------
+The Portal's staging server pushes webhooks to your LMS, so the LMS must have
+a public URL. Run Django on port 8000, then expose it:
+
+    # terminal 1 — Django
+    python manage.py runserver 0.0.0.0:8000
+
+    # terminal 2 — tunnel
+    ngrok http 8000
+    # copy the https://xxxx.ngrok.io URL
+
+Give that URL to the Portal programmer as LMS_BACKEND_URL. On PythonAnywhere /
+a real host it's just your deployed URL — ngrok is only for local/staging tests.
+The Portal will then call e.g.  https://xxxx.ngrok.io/api/v1/sync/students
+
+
+3. SERVER-TO-SERVER SYNC ENDPOINTS (all POST, Bearer LMS_API_TOKEN)
+------------------------------------------------------------------
+  POST /api/v1/sync/students       upsert a student
+  POST /api/v1/sync/courses        upsert a course (offerings + lecturers)
+  POST /api/v1/sync/departments    upsert a department
+  POST /api/v1/sync/programmes     upsert a programme (mirror only)
+  POST /api/v1/sync/sessions       upsert an academic session
+  POST /api/v1/sync/registrations  enroll a student in their courses
+
+All are idempotent upserts — replaying the same payload never duplicates rows.
+Responses: 200 success, 400 bad payload, 401 bad/missing token, 500 server error.
+Unknown department codes / invalid levels are stored with a warning, never rejected.
+
+Curl smoke tests (values loaded from .env):
+
+    TOKEN=$(grep LMS_API_TOKEN .env | cut -d= -f2)
+
+    # student
+    curl -s -X POST http://localhost:8000/api/v1/sync/students \
+      -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+      -d '{"matric_number":"AHP/ND/CSC/24/0042","first_name":"Amina","last_name":"Bello",
+           "email":"amina@example.com","department_code":"CSC","academic_level":"ND1",
+           "current_session":"2025/2026","semester":"1","status":"active","lms_access":true}'
+
+    # course (level 100 -> ND1; offering CSC -> CourseDepartment)
+    curl -s -X POST http://localhost:8000/api/v1/sync/courses \
+      -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+      -d '{"course_code":"CSC101","title":"Introduction to Computer Science","credit_unit":3,
+           "offerings":[{"programme_code":"NDCSC","department_code":"CSC","level":100,"semester":"1","is_elective":false}],
+           "lecturers":[{"staff_id":"STAFF001","first_name":"Dr","last_name":"Musa"}]}'
+
+    # department / programme / session
+    curl -s -X POST http://localhost:8000/api/v1/sync/departments -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+      -d '{"id":"uuid-1","code":"CSC","name":"Computer Science","is_active":true}'
+    curl -s -X POST http://localhost:8000/api/v1/sync/programmes   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+      -d '{"id":"uuid-2","code":"NDCSC","name":"National Diploma in CS","department_code":"CSC","programme_type":"NATIONAL_DIPLOMA","duration":2,"is_active":true}'
+    curl -s -X POST http://localhost:8000/api/v1/sync/sessions     -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+      -d '{"id":"uuid-3","name":"2025/2026","start_date":"2025-09-01T00:00:00Z","end_date":"2026-08-31T00:00:00Z","is_current":true,"is_active":true}'
+
+    # registration (enrolls the student above)
+    curl -s -X POST http://localhost:8000/api/v1/sync/registrations -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+      -d '{"id":"uuid-4","student_matric":"AHP/ND/CSC/24/0042","academic_session":"2025/2026","semester":"1","level":100,
+           "courses":["CSC101","MTH101"],"status":"SUBMITTED"}'
+
+Expected: {"success": true, "message": "...synced successfully", ...}
+
+
+4. BOOTSTRAP PULL (initial load / nightly reconcile)
+----------------------------------------------------
+The Portal exposes GET <PORTAL_BACKEND_URL>/api/v1/lms/sync/init/{departments,
+programmes,sessions,courses,students,registrations}. The LMS can pull instead
+of waiting for pushes:
+
+    python manage.py sync_portal            # full bootstrap, dependency order
+    python manage.py sync_portal --only courses students
+    python manage.py sync_students          # students only (nightly reconcile)
+
+Both use PORTAL_BACKEND_URL + LMS_API_TOKEN from .env.
+
+
+5. SSO
+------
+Flow: Portal verifies the session, signs a 60s HS256 JWT, redirects the browser
+to <LMS>/sso/callback?assertion=<jwt>. The LMS verifies signature+exp, finds-or-
+creates the user (linked by portal_id "sub", then matric/email), logs them in,
+and redirects to their dashboard. Students are keyed by portal_id; staff map to
+existing lecturer accounts (never auto-created). The JWT is single-use.
+
+  GET  /sso/callback?assertion=<jwt>   browser entry point (Django session)
+  POST /api/v1/auth/sso                JSON {"assertion":"<jwt>"} -> {user, token}
+
+Quick manual test — mint a JWT with Django shell and hit the endpoint:
+
+    python manage.py shell -c "
+    from api.sso import sign_jwt
+    print(sign_jwt({'sub':'test-uuid','matric_number':'AHP/ND/CSC/24/0042',
+                    'email':'amina@example.com','first_name':'Amina',
+                    'last_name':'Bello','user_type':'student'},
+                   __import__('django.conf', fromlist=['settings']).settings.PORTAL_SSO_SECRET))"
+
+Then visit  http://localhost:8000/sso/callback?assertion=<printed-jwt>  — you
+should land on /dashboard/ logged in as Amina. Error cases render a styled page:
+no assertion / invalid signature / expired / unsupported user type / blocked access.
+
+
+6. TESTS
+--------
+    python manage.py test api --noinput     # sync endpoints + SSO + callback
+    python manage.py test --noinput         # full suite (63 tests)
+
+
+7. WHAT'S STILL PENDING FROM THE PORTAL PROGRAMMER
+--------------------------------------------------
+- Confirm the exact shape of the init endpoint responses (list vs {data: [...]})
+  and the final department/course code list.
+- He pushes webhooks to your ngrok URL — confirm he received LMS_BACKEND_URL.
+- When live: rotate LMS_API_TOKEN + PORTAL_SSO_SECRET and set DEBUG=False.

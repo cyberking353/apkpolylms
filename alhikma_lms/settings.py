@@ -3,7 +3,51 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _load_env_file(path):
+    """
+    Minimal .env loader (no third-party dependency). Reads KEY=VALUE lines and
+    sets them into os.environ only when not already set. The real secrets live
+    in .env, which is gitignored — never hardcode them in code.
+    """
+    if not path.exists():
+        return
+    for raw in path.read_text().splitlines():
+        line = raw.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, _, value = line.partition('=')
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_env_file(BASE_DIR / '.env')
+
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-change-me-in-production')
+
+# --- Portal <-> LMS integration secrets (server-side only, from .env) ---
+
+# Bearer token the Portal sends on every /api/v1/sync/* request to the LMS.
+# Named LMS_API_TOKEN to match the Portal integration guide. SMS_API_TOKEN is
+# kept as a fallback for older environments.
+LMS_API_TOKEN = (
+    os.environ.get('LMS_API_TOKEN') or os.environ.get('SMS_API_TOKEN')
+    or 'lms-dev-token-change-me'
+)
+
+# HMAC-SHA256 secret used to verify the Portal's SSO JWT assertions
+# (POST /api/v1/auth/sso and GET /sso/callback). Must equal the Portal's
+# LMS_SSO_SECRET. The guide calls it PORTAL_SSO_SECRET; we accept both names.
+PORTAL_SSO_SECRET = (
+    os.environ.get('PORTAL_SSO_SECRET') or os.environ.get('LMS_SSO_SECRET')
+    or ''
+)
+
+# Public base URL of the Portal backend, used by the bootstrap pull command
+# (manage.py sync_portal) to hit GET /api/v1/lms/sync/init/*.
+PORTAL_BACKEND_URL = os.environ.get('PORTAL_BACKEND_URL', '')
 
 DEBUG = True
 
@@ -24,6 +68,7 @@ INSTALLED_APPS = [
     'results',
     'portal',
     'announcements',
+    'api',
 ]
 
 MIDDLEWARE = [

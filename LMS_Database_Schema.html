@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LMS Integration Guide</title>
+    <!-- GitHub Markdown CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+    <!-- Highlight.js CSS for code blocks -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+    <style>
+        body {
+            box-sizing: border-box;
+            min-width: 200px;
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 45px;
+            background-color: #ffffff;
+        }
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #0d1117;
+            }
+        }
+        @media (max-width: 767px) {
+            body {
+                padding: 15px;
+            }
+        }
+        .markdown-body {
+            box-sizing: border-box;
+            min-width: 200px;
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 45px;
+        }
+        @media (max-width: 767px) {
+            .markdown-body {
+                padding: 15px;
+            }
+        }
+        /* Mermaid diagrams support placeholder */
+        pre code.language-mermaid {
+            background: none;
+            color: inherit;
+        }
+    </style>
+    <!-- Mermaid JS -->
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true, theme: 'default' });
+      
+      // Convert code blocks with language-mermaid to div class mermaid
+      document.addEventListener('DOMContentLoaded', () => {
+        const blocks = document.querySelectorAll('pre code.language-mermaid');
+        blocks.forEach(block => {
+          const div = document.createElement('div');
+          div.className = 'mermaid';
+          div.textContent = block.textContent;
+          block.parentNode.replaceWith(div);
+        });
+        mermaid.run();
+      });
+    </script>
+</head>
+<body class="markdown-body">
+    <h1>LMS Database Schema Recommendations</h1>
+<p>Here is a breakdown of the core database tables/collections the LMS developer should create, along with the specific fields they need to store the data coming from the Portal. </p>
+<p>I&#39;ve marked the primary keys and the fields they should use to link records together.</p>
+<hr>
+<h2>1. Users Table (Students &amp; Staff)</h2>
+<p>This table stores all accounts that can log into the LMS.</p>
+<ul>
+<li><code>id</code> <em>(Primary Key)</em>: The LMS&#39;s own internal ID.</li>
+<li><code>portal_id</code> <em>(Unique/Indexed)</em>: The UUID coming from the Portal&#39;s <code>id</code> or <code>sub</code> field. This is the <strong>most important field</strong> for linking LMS users to Portal users.</li>
+<li><code>email</code>: User&#39;s email address (used in SSO).</li>
+<li><code>first_name</code>: First name.</li>
+<li><code>last_name</code>: Last name.</li>
+<li><code>user_type</code>: Enum string (<code>&quot;student&quot;</code> or <code>&quot;staff&quot;</code>).</li>
+<li><code>matric_number</code>: <em>(Nullable)</em> Student matriculation number.</li>
+<li><code>staff_id</code>: <em>(Nullable)</em> Staff identification code.</li>
+<li><code>department_code</code>: <em>(Nullable)</em> The short code of their department (e.g., <code>CSC</code>).</li>
+<li><code>academic_level</code>: <em>(Nullable)</em> Derived string level (e.g., <code>ND1</code>, <code>HND2</code>).</li>
+<li><code>current_session</code>: <em>(Nullable)</em> E.g., <code>2024/2025</code>.</li>
+<li><code>semester</code>: <em>(Nullable)</em> <code>&quot;1&quot;</code> or <code>&quot;2&quot;</code>.</li>
+<li><code>status</code>: e.g., <code>&quot;active&quot;</code>, <code>&quot;suspended&quot;</code>.</li>
+<li><code>lms_access</code>: Boolean. If <code>false</code>, the LMS should block them from logging in.</li>
+</ul>
+<hr>
+<h2>2. Courses Table</h2>
+<p>This table stores the master list of all courses.</p>
+<ul>
+<li><code>id</code> <em>(Primary Key)</em></li>
+<li><code>course_code</code> <em>(Unique/Indexed)</em>: e.g., <code>CSC101</code>. This is what links registrations to courses.</li>
+<li><code>title</code>: Course title.</li>
+<li><code>credit_unit</code>: Integer.</li>
+<li><code>description</code>: <em>(Nullable)</em> Text description.</li>
+<li><code>offerings</code>: Array/JSON of objects. Contains <code>programme_code</code>, <code>department_code</code>, <code>level</code>, <code>semester</code>, and <code>is_elective</code>.</li>
+<li><code>lecturers</code>: Array/JSON of objects. Contains <code>staff_id</code>, <code>first_name</code>, and <code>last_name</code>.</li>
+</ul>
+<hr>
+<h2>3. Departments Table</h2>
+<ul>
+<li><code>id</code> <em>(Primary Key)</em></li>
+<li><code>portal_id</code> <em>(Unique/Indexed)</em>: UUID from the Portal.</li>
+<li><code>code</code> <em>(Unique/Indexed)</em>: Short code (e.g., <code>CSC</code>). Used to link Students and Programmes to this department.</li>
+<li><code>name</code>: Full name (e.g., <code>&quot;Computer Science&quot;</code>).</li>
+<li><code>is_active</code>: Boolean.</li>
+</ul>
+<hr>
+<h2>4. Programmes Table</h2>
+<ul>
+<li><code>id</code> <em>(Primary Key)</em></li>
+<li><code>portal_id</code> <em>(Unique/Indexed)</em>: UUID from the Portal.</li>
+<li><code>code</code> <em>(Unique/Indexed)</em>: Short code (e.g., <code>NDCSC</code>).</li>
+<li><code>name</code>: Full name.</li>
+<li><code>department_code</code>: Links back to the Department table&#39;s <code>code</code>.</li>
+<li><code>programme_type</code>: String (e.g., <code>&quot;NATIONAL_DIPLOMA&quot;</code>).</li>
+<li><code>duration</code>: Integer (years).</li>
+<li><code>is_active</code>: Boolean.</li>
+</ul>
+<hr>
+<h2>5. Academic Sessions Table</h2>
+<ul>
+<li><code>id</code> <em>(Primary Key)</em></li>
+<li><code>portal_id</code> <em>(Unique/Indexed)</em>: UUID from the Portal.</li>
+<li><code>name</code> <em>(Unique/Indexed)</em>: e.g., <code>&quot;2024/2025&quot;</code>.</li>
+<li><code>start_date</code>: Timestamp/Date.</li>
+<li><code>end_date</code>: Timestamp/Date.</li>
+<li><code>is_current</code>: Boolean (Only one session should be current at a time).</li>
+<li><code>is_active</code>: Boolean.</li>
+</ul>
+<hr>
+<h2>6. Course Registrations Table</h2>
+<p>This table maps a student to the courses they are taking in a specific session/semester.</p>
+<ul>
+<li><code>id</code> <em>(Primary Key)</em></li>
+<li><code>portal_id</code> <em>(Unique/Indexed)</em>: UUID from the Portal.</li>
+<li><code>student_matric</code> <em>(Indexed)</em>: Links back to the User table&#39;s <code>matric_number</code>.</li>
+<li><code>academic_session</code>: Links to the Session table&#39;s <code>name</code> (e.g., <code>&quot;2024/2025&quot;</code>).</li>
+<li><code>semester</code>: <code>&quot;1&quot;</code> or <code>&quot;2&quot;</code>.</li>
+<li><code>level</code>: Integer (e.g., <code>100</code>, <code>200</code>).</li>
+<li><code>courses</code>: Array/JSON of course objects. E.g., <code>[{ course_code: &quot;CSC101&quot;, is_carried_over: false }]</code>. This links to the Courses table.</li>
+<li><code>status</code>: e.g., <code>&quot;SUBMITTED&quot;</code>.</li>
+</ul>
+<hr>
+<blockquote>
+<p>[!TIP]
+<strong>A Note for the Developer:</strong>
+For simple setup, the <code>offerings</code>, <code>lecturers</code>, and registered <code>courses</code> arrays can just be stored as JSON columns in your database. However, if you are using a relational database (like PostgreSQL or MySQL) and want strict integrity, you can split those arrays out into join tables (e.g., a <code>CourseLecturer</code> table and a <code>StudentEnrolledCourse</code> table). </p>
+<p>Regardless of how you structure the underlying SQL, the fields above represent the exact JSON data you will receive from the Portal&#39;s webhooks.</p>
+</blockquote>
+
+</body>
+</html>

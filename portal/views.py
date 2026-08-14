@@ -183,6 +183,7 @@ def student_create(request):
         if Student.objects.filter(email=p['email']).exists():
             messages.error(request, 'An account with this email already exists.')
         else:
+            matric = (p.get('matric_number','') or '').strip() or None
             s = Student.objects.create_user(
                 username=p['email'], email=p['email'],
                 first_name=p.get('first_name',''), last_name=p.get('last_name',''),
@@ -190,7 +191,10 @@ def student_create(request):
                 role='student',
                 department=p.get('department',''),
                 academic_level=p.get('academic_level',''),
-                matric_number=p.get('matric_number',''),
+                matric_number=matric,
+                current_session=p.get('current_session',''),
+                current_semester=p.get('current_semester',''),
+                is_sms_synced=False,  # manual portal creation, not SMS-originated
             )
             from courses.models import Enrollment
             Enrollment.sync_for_student(s)
@@ -211,7 +215,7 @@ def student_edit(request, pk):
         p = request.POST
         student.first_name    = p.get('first_name', student.first_name)
         student.last_name     = p.get('last_name', student.last_name)
-        student.matric_number = p.get('matric_number', student.matric_number)
+        student.matric_number = (p.get('matric_number', '') or '').strip() or None
         student.department    = p.get('department', student.department)
         student.academic_level = p.get('academic_level', student.academic_level)
         student.is_active     = 'is_active' in p
@@ -867,7 +871,7 @@ def student_bulk_upload(request):
             email        = row.get('email','')
             first_name   = row.get('first_name','')
             last_name    = row.get('last_name','')
-            matric       = row.get('matric_number','')
+            matric       = (row.get('matric_number','') or '').strip() or None
             department   = row.get('department','').upper()
             level        = row.get('academic_level','').upper()
 
