@@ -69,7 +69,7 @@ def upsert_department(data):
         defaults={
             'portal_id': _clean(data.get('id')),
             'name': name,
-            'is_active': bool(data.get('is_active', True)),
+            'is_active': bool(data.get('is_active', data.get('isActive', True))),
         },
     )
     return dept
@@ -87,7 +87,7 @@ def upsert_programme(data):
             'name': name,
             'department_code': _clean(data.get('department_code')),
             'programme_type': _clean(data.get('programme_type')),
-            'duration': data.get('duration') or 2,
+            'duration': data.get('duration') or data.get('duration_years') or 2,
             'is_active': bool(data.get('is_active', True)),
         },
     )
