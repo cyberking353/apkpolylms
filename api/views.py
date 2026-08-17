@@ -247,14 +247,57 @@ def _resolve_sso_user(payload):
         user = Student.objects.filter(role='lecturer', staff_id=staff_id).first()
     if user is None and email:
         user = Student.objects.filter(role='lecturer', email__iexact=email).first()
+
     if user is None:
-        raise SsoError('Staff account not provisioned in the LMS. Please contact the administrator.')
-    if sub and not user.portal_id:
-        user.portal_id = sub
-        user.save(update_fields=['portal_id'])
+        # Auto-provision a lecturer account from the assertion so Portal staff
+        # can sign in without a manual admin step.
+        user = Student(
+            username=_unique_username(email or staff_id or sub or 'staff'),
+            email=email,
+            first_name=first,
+            last_name=last,
+            role='lecturer',
+            staff_id=staff_id,
+            is_active=True,
+            is_sms_synced=True,
+        )
+        if sub:
+            user.portal_id = sub
+        user.set_unusable_password()
+        user.save()
+    else:
+        changed = False
+        if sub and not user.portal_id:
+            user.portal_id = sub
+            changed = True
+        if staff_id and user.staff_id != staff_id:
+            user.staff_id = staff_id
+            changed = True
+        for field, value in (('first_name', first), ('last_name', last)):
+            if value and getattr(user, field) != value:
+                setattr(user, field, value)
+                changed = True
+        if email and user.email != email:
+            user.email = email
+            if not Student.objects.exclude(pk=user.pk).filter(username__iexact=email).exists():
+                user.username = email
+            changed = True
+        if changed:
+            user.save()
+
     if not user.is_active:
         raise SsoError('This account has been deactivated. Please contact the school office.')
     return user
+
+
+def _unique_username(base):
+    """Return a username that isn't taken by any other account."""
+    candidate = base
+    counter = 1
+    while Student.objects.filter(username__iexact=candidate).exists():
+        counter += 1
+        candidate = f'{base}-{counter}'
+    return candidate
 
 
 def _user_payload(user):

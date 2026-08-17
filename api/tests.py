@@ -280,12 +280,22 @@ class SsoApiTests(TestCase):
                                                  email='blocked@example.com'))
         self.assertEqual(resp.status_code, 401)
 
-    def test_staff_without_lecturer_account_401(self):
+    def test_staff_without_lecturer_account_is_auto_provisioned(self):
         token = sign_jwt({'sub': 'st1', 'staff_id': 'STAFF001',
-                          'email': 'ibrahim@example.com', 'user_type': 'staff'},
-                         TEST_SECRET)
+                          'email': 'ibrahim@example.com',
+                          'first_name': 'Ibrahim', 'last_name': 'Musa',
+                          'user_type': 'staff'}, TEST_SECRET)
         resp = self._sso(token)
-        self.assertEqual(resp.status_code, 401)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['user']['user_type'], 'lecturer')
+        lecturer = Student.objects.get(role='lecturer', staff_id='STAFF001')
+        self.assertEqual(lecturer.email, 'ibrahim@example.com')
+        self.assertEqual(lecturer.portal_id, 'st1')
+        self.assertFalse(lecturer.has_usable_password())
+        # Replay is idempotent — no duplicate accounts.
+        self._sso(token)
+        self.assertEqual(
+            Student.objects.filter(role='lecturer', staff_id='STAFF001').count(), 1)
 
     def test_staff_with_lecturer_account_logs_in(self):
         Student.objects.create_user(
