@@ -17,6 +17,7 @@ urlpatterns = [
     path('lecturers/',              views.lecturer_list,     name='lecturer_list'),
     path('lecturers/new/',          views.lecturer_create,   name='lecturer_create'),
     path('lecturers/<int:pk>/edit/', views.lecturer_edit,    name='lecturer_edit'),
+    path('lecturers/<int:pk>/delete/', views.lecturer_delete, name='lecturer_delete'),
     path('lecturers/<int:pk>/reset-password/', views.lecturer_reset_password, name='lecturer_reset_password'),
     # Courses
     path('courses/',                views.course_list,       name='course_list'),

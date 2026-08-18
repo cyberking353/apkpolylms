@@ -23,6 +23,9 @@
             <div style="display:flex;gap:6px">
               <a href="{% url 'portal:lecturer_edit' l.pk %}" class="btn btn-ghost btn-sm">Edit</a>
               <a href="{% url 'portal:lecturer_reset_password' l.pk %}" class="btn btn-ghost btn-sm">🔑 Reset Password</a>
+              <form method="post" action="{% url 'portal:lecturer_delete' l.pk %}">{% csrf_token %}
+                <button class="btn btn-danger btn-sm" data-confirm="Delete {{ l.display_name }}? This cannot be undone.">Delete</button>
+              </form>
             </div>
           </td>
         </tr>

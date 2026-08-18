@@ -354,6 +354,24 @@ def lecturer_reset_password(request, pk):
     return render(request, 'portal/lecturer_reset_password.html', {'lecturer': lecturer})
 
 
+@portal_required
+def lecturer_delete(request, pk):
+    """Permanently delete a staff (lecturer) account. Their courses are kept
+    (the course->lecturer link is SET_NULL) but the account itself is removed.
+    Users are only ever managed here or via the SMS sync — this is a manual
+    admin override."""
+    from accounts.models import Student
+    lecturer = get_object_or_404(Student, pk=pk, role='lecturer')
+    if request.method == 'POST':
+        if request.user.pk == lecturer.pk:
+            messages.error(request, 'You cannot delete your own account.')
+            return redirect('portal:lecturer_list')
+        name = lecturer.display_name
+        lecturer.delete()
+        messages.success(request, f'{name} has been permanently deleted.')
+    return redirect('portal:lecturer_list')
+
+
 # ── Courses ────────────────────────────────────────────────────────────
 
 @portal_required
