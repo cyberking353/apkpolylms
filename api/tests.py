@@ -12,6 +12,7 @@ from courses.models import (
 from departments.models import Department
 
 from .sso import sign_jwt
+from . import sync as sync_helpers
 
 TEST_TOKEN = 'test-lms-api-token'
 TEST_SECRET = 'test-sso-secret'
@@ -261,6 +262,50 @@ class StaffSyncTests(TestCase):
         self.assertEqual(resp.status_code, 400)
 
 
+class ReconcileStaffTests(TestCase):
+    def _staff(self, staff_id, portal_id, is_sms_synced=True, is_active=True):
+        return Student.objects.create(
+            username=staff_id, email=f'{staff_id}@example.com',
+            role='lecturer', staff_id=staff_id, portal_id=portal_id,
+            is_sms_synced=is_sms_synced, is_active=is_active,
+        )
+
+    def test_deactivates_synced_staff_absent_from_list(self):
+        kept = self._staff('STF/CSC/01', 'uuid-1')
+        removed = self._staff('STF/CSC/02', 'uuid-2')
+        deactivated = sync_helpers.reconcile_staff([
+            {'staff_id': 'STF/CSC/01', 'portal_id': 'uuid-1'},
+        ])
+        self.assertEqual(deactivated, ['STF/CSC/02'])
+        kept.refresh_from_db()
+        removed.refresh_from_db()
+        self.assertTrue(kept.is_active)
+        self.assertFalse(removed.is_active)
+
+    def test_matches_by_portal_id(self):
+        removed = self._staff('STF/CSC/03', 'uuid-3')
+        deactivated = sync_helpers.reconcile_staff([
+            {'portal_id': 'uuid-3'},   # same user, staff_id omitted
+        ])
+        self.assertEqual(deactivated, [])
+        removed.refresh_from_db()
+        self.assertTrue(removed.is_active)
+
+    def test_never_touches_manually_created_lecturers(self):
+        local = self._staff('LEC-LOCAL', 'uuid-x', is_sms_synced=False)
+        deactivated = sync_helpers.reconcile_staff([])
+        self.assertEqual(deactivated, [])
+        local.refresh_from_db()
+        self.assertTrue(local.is_active)
+
+    def test_already_inactive_untouched(self):
+        inactive = self._staff('STF/CSC/04', 'uuid-4', is_active=False)
+        deactivated = sync_helpers.reconcile_staff([])
+        self.assertEqual(deactivated, [])
+        inactive.refresh_from_db()
+        self.assertFalse(inactive.is_active)
+
+
 @override_settings(LMS_API_TOKEN=TEST_TOKEN, PORTAL_SSO_SECRET=TEST_SECRET)
 class SsoApiTests(TestCase):
     URL = reverse('api:auth_sso')
@@ -348,6 +393,30 @@ class SsoApiTests(TestCase):
         resp = self._sso(token)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()['user']['user_type'], 'lecturer')
+
+    def test_staff_lms_access_false_blocked(self):
+        Student.objects.create_user(
+            username='denied@example.com', email='denied@example.com',
+            password='x', role='lecturer', staff_id='STAFF002',
+            lms_access=False, is_sms_synced=True)
+        token = sign_jwt({'sub': 'st2', 'staff_id': 'STAFF002',
+                          'email': 'denied@example.com', 'user_type': 'staff'},
+                         TEST_SECRET)
+        resp = self._sso(token)
+        self.assertEqual(resp.status_code, 401)
+        self.assertIn('access is disabled', resp.json()['message'])
+
+    def test_staff_deactivated_blocked(self):
+        Student.objects.create_user(
+            username='gone@example.com', email='gone@example.com',
+            password='x', role='lecturer', staff_id='STAFF003',
+            is_active=False, is_sms_synced=True)
+        token = sign_jwt({'sub': 'st3', 'staff_id': 'STAFF003',
+                          'email': 'gone@example.com', 'user_type': 'staff'},
+                         TEST_SECRET)
+        resp = self._sso(token)
+        self.assertEqual(resp.status_code, 401)
+        self.assertIn('deactivated', resp.json()['message'])
 
 
 @override_settings(LMS_API_TOKEN=TEST_TOKEN, PORTAL_SSO_SECRET=TEST_SECRET)

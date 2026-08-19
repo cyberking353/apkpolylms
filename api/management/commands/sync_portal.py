@@ -93,4 +93,11 @@ class Command(BaseCommand):
                     errors += 1
             self.stdout.write(f'  Done (skipped {errors} bad record(s)).')
 
+            # The init list is authoritative: deactivate sms-synced staff who
+            # are no longer on it (removed/denied LMS access on the SMS).
+            if name == 'staffs':
+                for staff_id in sync_helpers.reconcile_staff(records):
+                    self.stdout.write(self.style.WARNING(
+                        f'  ⚠️  Deactivated {staff_id} (absent from Portal staff list)'))
+
         self.stdout.write(self.style.SUCCESS('\nPortal bootstrap complete.'))

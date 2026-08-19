@@ -273,6 +273,8 @@ def _resolve_sso_user(payload):
     if sub and not user.portal_id:
         user.portal_id = sub
         user.save(update_fields=['portal_id'])
+    if not getattr(user, 'lms_access', True):
+        raise SsoError('Your LMS access is disabled. Please contact the school office.')
     if not user.is_active:
         raise SsoError('This account has been deactivated. Please contact the school office.')
     return user

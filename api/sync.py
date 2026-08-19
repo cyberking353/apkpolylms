@@ -352,6 +352,8 @@ def upsert_staff(data):
     dept_code = _clean(data.get('department_code'))
     portal_id = _clean(data.get('portal_id'))
     is_active = bool(data.get('is_active', True))
+    lms_access = data.get('lms_access', True)
+    lms_access = True if lms_access is None else bool(lms_access)
 
     warnings = {}
     if dept_code:
@@ -386,6 +388,7 @@ def upsert_staff(data):
             email=email,
             role='lecturer',
             is_active=is_active,
+            lms_access=lms_access,
             is_sms_synced=True,
         )
         # No password known — staff sign in via the Portal SSO.
@@ -398,6 +401,7 @@ def upsert_staff(data):
     user.last_name = last
     user.department = dept_stored
     user.is_active = is_active
+    user.lms_access = lms_access
     user.role = 'lecturer'
     user.is_sms_synced = True
     user.save()
@@ -422,3 +426,43 @@ def upsert_staff(data):
             course.save(update_fields=['lecturer'])
 
     return user, created, warnings
+
+
+def reconcile_staff(returned_records):
+    """
+    Reconciliation (tombstone) pass for the full staff list.
+
+    The init endpoint is the Portal's authoritative list of staff with LMS
+    access. Anyone the Portal previously synced (`is_sms_synced=True`) but who
+    is absent from that list has been removed/denied access on the SMS, so we
+    deactivate them here. Data is kept so they can be re-activated simply by
+    reappearing in the list.
+
+    Only ever call this with a COMPLETE list (the init endpoint), never from a
+    single-record webhook. Manually-created local lecturers
+    (`is_sms_synced=False`) are never touched.
+
+    Returns the list of deactivated staff_ids.
+    """
+    known_staff_ids = set()
+    known_portal_ids = set()
+    for row in returned_records or []:
+        if not isinstance(row, dict):
+            continue
+        if _clean(row.get('staff_id')):
+            known_staff_ids.add(_clean(row.get('staff_id')))
+        if _clean(row.get('portal_id')):
+            known_portal_ids.add(_clean(row.get('portal_id')))
+
+    deactivated = []
+    for user in Student.objects.filter(role='lecturer', is_sms_synced=True):
+        if not user.is_active:
+            continue
+        in_list = (user.staff_id and user.staff_id in known_staff_ids) or (
+            user.portal_id and user.portal_id in known_portal_ids)
+        if in_list:
+            continue
+        user.is_active = False
+        user.save(update_fields=['is_active'])
+        deactivated.append(user.staff_id or user.portal_id or f'user#{user.id}')
+    return deactivated
