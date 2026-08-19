@@ -45,7 +45,7 @@
         <div class="field">
           <label>Matric Number or Email</label>
           <div class="ico-wrap">
-            <span class="ico">🎓</span>
+            <span class="ico"><i data-lucide="graduation-cap"></i></span>
             <input type="text" name="username" placeholder="e.g. CS/ND1/001 or you@example.com" value="{{ form.username.value|default:'' }}" required autofocus>
           </div>
           {% if form.username.errors %}<div class="field-err">{{ form.username.errors.0 }}</div>{% endif %}
@@ -56,11 +56,11 @@
           </div>
           <div class="pw-wrap">
             <input type="password" name="password" placeholder="Your password" required>
-            <button type="button" class="pw-eye">👁</button>
+            <button type="button" class="pw-eye"><i data-lucide="eye"></i></button>
           </div>
           {% if form.non_field_errors %}<div class="field-err">{{ form.non_field_errors.0 }}</div>{% endif %}
         </div>
-        <button type="submit" class="btn btn-ink btn-full btn-lg">Sign In →</button>
+        <button type="submit" class="btn btn-ink btn-full btn-lg">Sign In <i data-lucide="arrow-right"></i></button>
       </form>
 
       <div class="auth-sw" style="margin-top:18px">
@@ -68,7 +68,7 @@
 
       </div>
       <div style="text-align:center;margin-top:20px;padding-top:14px;border-top:1px solid var(--line)">
-        <a href="{% url 'portal:login' %}" style="font-size:.78rem;color:var(--muted)">🏫 Admin Portal Login →</a>
+        <a href="{% url 'portal:login' %}" style="font-size:.78rem;color:var(--muted)"><i data-lucide="school"></i> Admin Portal Login <i data-lucide="arrow-right"></i></a>
       </div>
     </div>
   </div>

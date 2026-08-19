@@ -2,9 +2,9 @@
 {% block title %}Students{% endblock %}
 {% block page_title %}Students{% endblock %}
 {% block topbar_actions %}
-<a href="{% url 'portal:student_bulk_upload' %}" class="btn btn-ghost btn-sm">📤 Bulk Upload</a>
-<a href="{% url 'portal:student_export' %}?all=1" class="btn btn-success btn-sm">📥 Download All</a>
-<a href="{% url 'portal:student_export' %}" class="btn btn-ghost btn-sm">🎯 Download Filtered</a>
+<a href="{% url 'portal:student_bulk_upload' %}" class="btn btn-ghost btn-sm"><i data-lucide="upload"></i> Bulk Upload</a>
+<a href="{% url 'portal:student_export' %}?all=1" class="btn btn-success btn-sm"><i data-lucide="download"></i> Download All</a>
+<a href="{% url 'portal:student_export' %}" class="btn btn-ghost btn-sm"><i data-lucide="target"></i> Download Filtered</a>
 <a href="{% url 'portal:student_create' %}" class="btn btn-teal btn-sm">+ New Student</a>
 {% endblock %}
 {% block content %}
@@ -53,7 +53,7 @@
           <td>
             <div style="display:flex;gap:6px">
               <a href="{% url 'portal:student_edit' s.pk %}" class="btn btn-ghost btn-sm">Edit</a>
-              <a href="{% url 'portal:student_reset_password' s.pk %}" class="btn btn-ghost btn-sm">🔑 Reset Password</a>
+              <a href="{% url 'portal:student_reset_password' s.pk %}" class="btn btn-ghost btn-sm"><i data-lucide="key"></i> Reset Password</a>
               {% if s.next_academic_level %}
               <form method="post" action="{% url 'portal:student_promote' s.pk %}">{% csrf_token %}
                 <button class="btn btn-gold btn-sm" data-confirm="Promote {{ s.get_full_name }} to {{ s.next_academic_level }}?">Promote</button>

@@ -12,13 +12,13 @@
         <div style="display:flex;align-items:center;gap:9px;margin-bottom:3px">
           <h1>{{ quiz.title }}</h1>
           {% if quiz.quiz_type == 'final' %}
-            <span class="chip c-rose">🏁 Final Exam</span>
+            <span class="chip c-rose"><i data-lucide="flag"></i> Final Exam</span>
           {% endif %}
         </div>
         <p class="sub">{{ course.title }} · {{ quiz.question_count }} Questions · {{ quiz.time_limit_minutes }} minutes</p>
       </div>
       <div class="tbox {% if quiz.quiz_type == 'final' %}tbox-gold{% endif %}">
-        <span style="font-size:1.1rem">⏱</span>
+        <span style="font-size:1.1rem"><i data-lucide="stopwatch"></i></span>
         <div>
           <div class="t-lbl" {% if quiz.quiz_type == 'final' %}style="color:var(--gold)"{% endif %}>Time Remaining</div>
           <div class="t-val" id="timer" {% if quiz.quiz_type == 'final' %}style="color:var(--gold)"{% endif %}>
@@ -29,7 +29,7 @@
     </div>
 
     {% if quiz.quiz_type == 'final' %}
-    <div class="exam-alert">⚠️ <span><strong>Final Exam Mode.</strong> This is timed. Pass mark: {{ quiz.pass_mark }}%. Attempt {{ attempt_number }} of {{ quiz.max_attempts }}.</span></div>
+    <div class="exam-alert"><i data-lucide="triangle-alert"></i> <span><strong>Final Exam Mode.</strong> This is timed. Pass mark: {{ quiz.pass_mark }}%. Attempt {{ attempt_number }} of {{ quiz.max_attempts }}.</span></div>
     {% endif %}
 
     <form method="post" action="{% url 'quizzes:submit_quiz' quiz.id %}" id="quiz-form">
@@ -63,13 +63,13 @@
 
           <!-- Navigation -->
           <div class="qnav">
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-prev" onclick="prevQ()" disabled>← Prev</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-prev" onclick="prevQ()" disabled><i data-lucide="arrow-left"></i> Prev</button>
             <span style="font-size:.76rem;color:var(--muted)" id="nav-hint">Select an answer to continue</span>
             <div style="display:flex;gap:7px">
-              <button type="button" class="btn btn-teal btn-sm" id="btn-next" onclick="nextQ()">Next →</button>
+              <button type="button" class="btn btn-teal btn-sm" id="btn-next" onclick="nextQ()">Next <i data-lucide="arrow-right"></i></button>
               <button type="submit" class="btn btn-gold btn-sm" id="btn-submit" style="display:none"
                       data-confirm="Submit quiz now? You cannot change answers after submitting.">
-                Submit ✓
+                Submit <i data-lucide="check"></i>
               </button>
             </div>
           </div>
@@ -97,7 +97,7 @@
           <div style="margin-top:11px">
             <button type="submit" class="btn btn-danger btn-full btn-sm"
                     data-confirm="Submit exam now? This cannot be undone.">
-              🏁 Submit Now
+              <i data-lucide="flag"></i> Submit Now
             </button>
           </div>
         </aside>

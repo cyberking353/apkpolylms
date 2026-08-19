@@ -15,6 +15,15 @@
 </style>
 {% endblock %}
 
+{% block extrahead %}
+{{ block.super }}
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+</script>
+<style>svg.lucide{width:1em;height:1em;vertical-align:-0.125em}</style>
+{% endblock %}
+
 {% block breadcrumbs %}
 <div class="breadcrumbs">
   <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
@@ -72,7 +81,7 @@
 
   <div class="save-bar">
     <input type="submit" class="default" value="Save Questions &amp; Answers">
-    <a href="{% url 'admin:exams_exam_changelist' %}" class="button" style="margin-left:10px">← Back to Exams</a>
+    <a href="{% url 'admin:exams_exam_changelist' %}" class="button" style="margin-left:10px"><i data-lucide="arrow-left"></i> Back to Exams</a>
   </div>
 </form>
 {% endblock %}

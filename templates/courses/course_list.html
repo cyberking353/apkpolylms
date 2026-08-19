@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load course_extras %}
 {% block title %}My Courses — Al-Hikma LMS{% endblock %}
 
 {% block content %}
@@ -16,7 +17,7 @@
       <a href="{% url 'courses:course_list' %}" class="filter-chip {% if not active_cat %}active{% endif %}">All</a>
       {% for cat in categories %}
       <a href="?category={{ cat.slug }}" class="filter-chip {% if active_cat == cat.slug %}active{% endif %}">
-        {{ cat.icon }} {{ cat.name }}
+        {{ cat.icon|lucide }} {{ cat.name }}
       </a>
       {% endfor %}
     </div>
@@ -27,7 +28,7 @@
       <article class="card cc">
         <a href="{% url 'courses:course_detail' course.slug %}">
           <div class="cc-thumb" style="background:linear-gradient(135deg,{{ course.color_start }},{{ course.color_end }})">
-            {{ course.icon }}
+            {{ course.icon|lucide }}
           </div>
         </a>
         <div class="cc-body">
@@ -37,9 +38,9 @@
           <h4><a href="{% url 'courses:course_detail' course.slug %}" style="color:inherit">{{ course.title }}</a></h4>
           <p>{{ course.description|truncatewords:18 }}</p>
           <div class="cc-meta">
-            <span>📚 {{ course.total_modules }} Modules</span>
-            <span>⏱ {{ course.duration_hours }} hrs</span>
-            <span>👥 {{ course.enrolled_count }} students</span>
+            <span><i data-lucide="book-open"></i> {{ course.total_modules }} Modules</span>
+            <span><i data-lucide="stopwatch"></i> {{ course.duration_hours }} hrs</span>
+            <span><i data-lucide="users"></i> {{ course.enrolled_count }} students</span>
           </div>
         </div>
         <div class="cc-foot">
@@ -52,7 +53,7 @@
       </article>
       {% empty %}
       <div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--muted)">
-        <div style="font-size:3rem;margin-bottom:16px">📚</div>
+        <div style="font-size:3rem;margin-bottom:16px"><i data-lucide="book-open"></i></div>
         <h3>No courses found</h3>
         <p>No courses have been published for your department and level this semester yet.</p>
       </div>

@@ -7,7 +7,7 @@
   {% if exam.enable_proctoring %}
   <div id="proctor-gate" style="position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px">
     <div class="card cp" style="max-width:480px;padding:28px 26px;text-align:center">
-      <div style="font-size:2rem;margin-bottom:8px">🖥️</div>
+      <div style="font-size:2rem;margin-bottom:8px"><i data-lucide="monitor"></i></div>
       <h3 style="margin-bottom:10px">Proctored Exam</h3>
       <p style="font-size:.86rem;color:var(--muted);margin-bottom:16px">
         This exam is monitored. Stay in fullscreen and on this tab for the entire exam —
@@ -16,26 +16,26 @@
         Also, this exam can only be open in one tab/window at a time.
       </p>
       <p id="fullscreen-unsupported-note" style="display:none;font-size:.78rem;color:var(--muted);margin-top:-8px;margin-bottom:16px">
-        ℹ️ Fullscreen isn't available on this browser — tab-switching and session checks are still active.
+        <i data-lucide="info"></i> Fullscreen isn't available on this browser — tab-switching and session checks are still active.
       </p>
-      <button type="button" class="btn btn-gold btn-lg" id="btn-enter-fullscreen">Enter Fullscreen &amp; Begin →</button>
+      <button type="button" class="btn btn-gold btn-lg" id="btn-enter-fullscreen">Enter Fullscreen &amp; Begin <i data-lucide="arrow-right"></i></button>
     </div>
   </div>
   <div id="session-lost-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;display:none;align-items:center;justify-content:center;padding:24px">
     <div class="card cp" style="max-width:440px;padding:28px 26px;text-align:center">
-      <div style="font-size:2rem;margin-bottom:8px">🚫</div>
+      <div style="font-size:2rem;margin-bottom:8px"><i data-lucide="ban"></i></div>
       <h3 style="margin-bottom:10px">Session Ended</h3>
       <p style="font-size:.86rem;color:var(--muted)">This exam was opened in another tab or window, so this session has been closed. Return to the active tab to continue.</p>
     </div>
   </div>
   <div id="fullscreen-lock-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9998;display:none;align-items:center;justify-content:center;padding:24px">
     <div class="card cp" style="max-width:440px;padding:28px 26px;text-align:center">
-      <div style="font-size:2rem;margin-bottom:8px">⚠️</div>
+      <div style="font-size:2rem;margin-bottom:8px"><i data-lucide="triangle-alert"></i></div>
       <h3 style="margin-bottom:10px">Return to Fullscreen</h3>
       <p style="font-size:.86rem;color:var(--muted);margin-bottom:16px" id="fullscreen-lock-msg">
         You exited fullscreen mode. This has been logged as a violation.
       </p>
-      <button type="button" class="btn btn-gold btn-lg" id="btn-return-fullscreen">Return to Fullscreen →</button>
+      <button type="button" class="btn btn-gold btn-lg" id="btn-return-fullscreen">Return to Fullscreen <i data-lucide="arrow-right"></i></button>
     </div>
   </div>
   {% endif %}
@@ -46,12 +46,12 @@
       <div>
         <div style="display:flex;align-items:center;gap:9px;margin-bottom:3px">
           <h1>{{ exam.title|default:"Course Exam" }}</h1>
-          <span class="chip c-rose">🏁 Official Exam</span>
+          <span class="chip c-rose"><i data-lucide="flag"></i> Official Exam</span>
         </div>
         <p class="sub">{{ course.title }} · {{ questions|length }} Questions · One attempt only</p>
       </div>
       <div class="tbox tbox-gold">
-        <span style="font-size:1.1rem">⏱</span>
+        <span style="font-size:1.1rem"><i data-lucide="stopwatch"></i></span>
         <div>
           <div class="t-lbl" style="color:var(--gold)">Time Remaining</div>
           <div class="t-val" id="timer" style="color:var(--gold)">--:--</div>
@@ -59,7 +59,7 @@
       </div>
       {% if exam.enable_proctoring %}
       <div class="tbox" id="violation-box" style="{% if attempt.violation_count == 0 %}display:none{% endif %}">
-        <span style="font-size:1.1rem">⚠️</span>
+        <span style="font-size:1.1rem"><i data-lucide="triangle-alert"></i></span>
         <div>
           <div class="t-lbl">Violations</div>
           <div class="t-val" id="violation-count">{{ attempt.violation_count }}/{{ exam.max_violations }}</div>
@@ -68,7 +68,7 @@
       {% endif %}
     </div>
 
-    <div class="exam-alert">⚠️ <span><strong>This is your only attempt.</strong> Pass mark: {{ exam.pass_mark }}%. Do not refresh or close this tab.</span></div>
+    <div class="exam-alert"><i data-lucide="triangle-alert"></i> <span><strong>This is your only attempt.</strong> Pass mark: {{ exam.pass_mark }}%. Do not refresh or close this tab.</span></div>
 
     <div class="mob-qdots" id="mob-qdots">
       {% for question in questions %}
@@ -105,13 +105,13 @@
           {% endfor %}
 
           <div class="qnav">
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-prev" onclick="prevQ()" disabled>← Prev</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-prev" onclick="prevQ()" disabled><i data-lucide="arrow-left"></i> Prev</button>
             <span style="font-size:.76rem;color:var(--muted)" id="nav-hint">Select an answer to continue</span>
             <div style="display:flex;gap:7px">
-              <button type="button" class="btn btn-teal btn-sm" id="btn-next" onclick="nextQ()">Next →</button>
+              <button type="button" class="btn btn-teal btn-sm" id="btn-next" onclick="nextQ()">Next <i data-lucide="arrow-right"></i></button>
               <button type="submit" class="btn btn-gold btn-sm" id="btn-submit" style="display:none"
-                      data-confirm="Submit exam now? You cannot change answers after submitting, and there are no retakes.">
-                Submit ✓
+                      data-confirm="Submit exam now? You cannot change answers after submission, and there are no retakes.">
+                Submit <i data-lucide="check"></i>
               </button>
             </div>
           </div>
@@ -139,7 +139,7 @@
           <div style="margin-top:11px">
             <button type="submit" class="btn btn-danger btn-full btn-sm"
                     data-confirm="Submit exam now? This cannot be undone.">
-              🏁 Submit Now
+              <i data-lucide="flag"></i> Submit Now
             </button>
           </div>
         </aside>
@@ -291,7 +291,8 @@ const gate = document.getElementById('proctor-gate');
 const btnEnterFullscreen = document.getElementById('btn-enter-fullscreen');
 if (!fullscreenSupported) {
   document.getElementById('fullscreen-unsupported-note').style.display = 'block';
-  btnEnterFullscreen.textContent = 'Begin Exam →';
+  btnEnterFullscreen.innerHTML = 'Begin Exam <i data-lucide="arrow-right"></i>';
+  if (window.lucide) lucide.createIcons();
 }
 btnEnterFullscreen.addEventListener('click', () => {
   const req = getFullscreenRequestFn();

@@ -12,20 +12,20 @@
       <div class="sb-role">{{ user.get_department_display }} · {{ user.get_academic_level_display }}</div>
     </div>
     <div class="sb-sec-lbl">Student</div>
-    <a href="{% url 'courses:dashboard' %}" class="sbl"><span class="ic">🏠</span> Dashboard</a>
-    <a href="{% url 'courses:course_list' %}" class="sbl"><span class="ic">📚</span> My Courses</a>
-    <a href="{% url 'results:my_results' %}" class="sbl on"><span class="ic">📊</span> My Results</a>
-    <a href="{% url 'accounts:profile' %}" class="sbl"><span class="ic">👤</span> Profile</a>
-    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic">🚪</span> Sign Out</a>
+    <a href="{% url 'courses:dashboard' %}" class="sbl"><span class="ic"><i data-lucide="house"></i></span> Dashboard</a>
+    <a href="{% url 'courses:course_list' %}" class="sbl"><span class="ic"><i data-lucide="book-open"></i></span> My Courses</a>
+    <a href="{% url 'results:my_results' %}" class="sbl on"><span class="ic"><i data-lucide="chart-column"></i></span> My Results</a>
+    <a href="{% url 'accounts:profile' %}" class="sbl"><span class="ic"><i data-lucide="user"></i></span> Profile</a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic"><i data-lucide="log-out"></i></span> Sign Out</a>
   </aside>
 
   <main class="dmain">
     <div class="wlc">
       <div>
-        <h2>My Results 📊</h2>
+        <h2>My Results <i data-lucide="chart-column"></i></h2>
         <p>{{ settings.academic_year }} — Semester {{ settings.current_semester }} · {{ user.get_department_display }}</p>
       </div>
-      <div class="wlc-em">📋</div>
+      <div class="wlc-em"><i data-lucide="clipboard-list"></i></div>
     </div>
 
     <!-- Current semester results table -->
@@ -60,7 +60,7 @@
             {% if result.remark %}
             <tr style="background:var(--bg)">
               <td colspan="5" style="padding:5px 12px;font-size:.76rem;color:var(--muted);font-style:italic">
-                📝 Admin note: {{ result.remark }}
+                <i data-lucide="file-text"></i> Admin note: {{ result.remark }}
               </td>
             </tr>
             {% endif %}
@@ -83,7 +83,7 @@
     </div>
     {% else %}
     <div class="empty-state">
-      <div class="empty-icon">📊</div>
+      <div class="empty-icon"><i data-lucide="chart-column"></i></div>
       <h3>No results yet</h3>
       <p>Results will appear here once you have completed quizzes or exams this semester.</p>
     </div>

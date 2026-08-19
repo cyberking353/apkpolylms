@@ -11,14 +11,14 @@
       <div class="sb-role">Lecturer</div>
     </div>
     <div class="sb-sec-lbl">Lecturer</div>
-    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl"><span class="ic">🏠</span> My Courses</a>
-    <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="sbl on"><span class="ic">✏️</span> {{ course.title }}</a>
-    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic">🚪</span> Sign Out</a>
+    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl"><span class="ic"><i data-lucide="house"></i></span> My Courses</a>
+    <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="sbl on"><span class="ic"><i data-lucide="pencil"></i></span> {{ course.title }}</a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic"><i data-lucide="log-out"></i></span> Sign Out</a>
   </aside>
   <main class="dmain">
     <div class="dsh" style="margin-bottom:20px">
       <h2 style="font-size:1.1rem;margin:0">Quiz — {{ module.title }}</h2>
-      <a href="{% if request.user.is_staff %}{% url 'portal:course_edit' course.pk %}{% else %}{% url 'courses:lecturer_course_edit' course.slug %}{% endif %}" class="btn btn-ghost btn-sm">← Back to Course</a>
+      <a href="{% if request.user.is_staff %}{% url 'portal:course_edit' course.pk %}{% else %}{% url 'courses:lecturer_course_edit' course.slug %}{% endif %}" class="btn btn-ghost btn-sm"><i data-lucide="arrow-left"></i> Back to Course</a>
     </div>
     <div class="card cp-lg">
       <h4 style="font-size:.9rem;font-weight:700;margin-bottom:16px">Quiz Settings</h4>
@@ -42,7 +42,7 @@
             <input type="number" name="max_attempts" value="{{ quiz.max_attempts|default:3 }}" min="1">
           </div>
         </div>
-        <button type="submit" class="btn btn-teal">Save & Add Questions →</button>
+        <button type="submit" class="btn btn-teal">Save &amp; Add Questions <i data-lucide="arrow-right"></i></button>
       </form>
     </div>
   </main>

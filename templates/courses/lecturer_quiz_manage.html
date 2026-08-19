@@ -12,19 +12,19 @@
       <div class="sb-role">Lecturer</div>
     </div>
     <div class="sb-sec-lbl">Lecturer</div>
-    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl"><span class="ic">🏠</span> My Courses</a>
-    <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="sbl on"><span class="ic">✏️</span> {{ course.title }}</a>
-    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic">🚪</span> Sign Out</a>
+    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl"><span class="ic"><i data-lucide="house"></i></span> My Courses</a>
+    <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="sbl on"><span class="ic"><i data-lucide="pencil"></i></span> {{ course.title }}</a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic"><i data-lucide="log-out"></i></span> Sign Out</a>
   </aside>
 
   <main class="dmain">
     <div class="dsh" style="margin-bottom:16px">
-      <h2 style="font-size:1.1rem;margin:0">📝 {{ quiz.title }}</h2>
-      <a href="{% if request.user.is_staff %}{% url 'portal:course_edit' course.pk %}{% else %}{% url 'courses:lecturer_course_edit' course.slug %}{% endif %}" class="btn btn-ghost btn-sm">← Back to Course</a>
+      <h2 style="font-size:1.1rem;margin:0"><i data-lucide="clipboard-list"></i> {{ quiz.title }}</h2>
+      <a href="{% if request.user.is_staff %}{% url 'portal:course_edit' course.pk %}{% else %}{% url 'courses:lecturer_course_edit' course.slug %}{% endif %}" class="btn btn-ghost btn-sm"><i data-lucide="arrow-left"></i> Back to Course</a>
     </div>
 
     <div class="exam-alert" style="margin-bottom:18px">
-      ℹ️ <span>Each question saves on its own — no need to resave everything when you add or edit one.</span>
+      <i data-lucide="info"></i> <span>Each question saves on its own — no need to resave everything when you add or edit one.</span>
     </div>
 
     <div class="card" style="padding:12px 16px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">

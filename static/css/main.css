@@ -636,3 +636,13 @@ button,input,select,textarea{font-family:inherit}
 .card-premium:hover{transform:translateY(-5px);box-shadow:0 20px 40px -10px rgba(0,87,184,.16);border-color:rgba(0,87,184,.3)}
 .glass-card{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.6);box-shadow:0 8px 32px 0 rgba(0,87,184,.08)}
 .bg-radial-gradient{background:radial-gradient(circle at 50% 0%,rgba(0,87,184,.12) 0%,rgba(248,250,252,0) 70%)}
+
+/* ── Lucide icons ── */
+svg.lucide{width:1em;height:1em;vertical-align:-0.125em;display:inline-block;flex-shrink:0}
+.dropdown-item svg.lucide{width:15px;height:15px;color:var(--muted)}
+.dropdown-item-danger svg.lucide{color:var(--rose)}
+.pnl .ic svg.lucide{width:16px;height:16px}
+.confirm-icon svg.lucide{width:26px;height:26px}
+.btn svg.lucide, button svg.lucide{pointer-events:none}
+.pager-btn svg.lucide, .quiz-nav svg.lucide{width:14px;height:14px}
+.flash-close svg.lucide{width:14px;height:14px}

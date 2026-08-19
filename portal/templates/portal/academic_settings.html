@@ -3,10 +3,10 @@
 {% block page_title %}Academic Settings{% endblock %}
 {% block content %}
 <div class="portal-card" style="max-width:440px">
-  <div class="portal-card-head"><h3>⚙️ Current Semester</h3></div>
+  <div class="portal-card-head"><h3><i data-lucide="settings"></i> Current Semester</h3></div>
   <div class="portal-card-body" style="padding:20px">
     <div class="exam-alert" style="margin-bottom:18px">
-      ⚠️ <span>Changing the semester updates every student's dashboard immediately. New courses matching the new semester will appear; old ones will disappear.</span>
+      <i data-lucide="triangle-alert"></i> <span>Changing the semester updates every student's dashboard immediately. New courses matching the new semester will appear; old ones will disappear.</span>
     </div>
     <form method="post">
       {% csrf_token %}

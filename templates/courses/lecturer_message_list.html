@@ -12,12 +12,12 @@
       <div class="sb-role">Lecturer · {{ user.get_department_display|default:"—" }}</div>
     </div>
     <div class="sb-sec-lbl">Lecturer</div>
-    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl"><span class="ic">🏠</span> My Courses</a>
-    <a href="{% url 'courses:lecturer_course_create' %}" class="sbl"><span class="ic">➕</span> New Course</a>
-    <a href="{% url 'courses:lecturer_message_list' %}" class="sbl on"><span class="ic">✉️</span> Course Messages</a>
+    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl"><span class="ic"><i data-lucide="house"></i></span> My Courses</a>
+    <a href="{% url 'courses:lecturer_course_create' %}" class="sbl"><span class="ic"><i data-lucide="plus"></i></span> New Course</a>
+    <a href="{% url 'courses:lecturer_message_list' %}" class="sbl on"><span class="ic"><i data-lucide="mail"></i></span> Course Messages</a>
     <div class="sb-sec-lbl" style="margin-top:8px">Account</div>
-    <a href="{% url 'accounts:profile' %}" class="sbl"><span class="ic">👤</span> Profile</a>
-    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic">🚪</span> Sign Out</a>
+    <a href="{% url 'accounts:profile' %}" class="sbl"><span class="ic"><i data-lucide="user"></i></span> Profile</a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic"><i data-lucide="log-out"></i></span> Sign Out</a>
   </aside>
 
   <main class="dmain">
@@ -47,7 +47,7 @@
       </a>
       {% empty %}
       <div style="padding:44px 20px;text-align:center;color:var(--muted)">
-        <div style="font-size:2rem;margin-bottom:10px">✉️</div>
+        <div style="font-size:2rem;margin-bottom:10px"><i data-lucide="mail"></i></div>
         <p>No messages{% if status_filter != 'all' %} in this filter{% endif %} yet.</p>
       </div>
       {% endfor %}

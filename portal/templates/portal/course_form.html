@@ -126,7 +126,7 @@
       <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
         <button type="submit" class="btn btn-ink">{% if is_new %}Create &amp; Publish{% else %}Save Changes{% endif %}</button>
         {% if not is_new %}
-        <a href="{% url 'portal:course_review' course.pk %}" class="btn btn-teal">🔍 Review Course</a>
+        <a href="{% url 'portal:course_review' course.pk %}" class="btn btn-teal"><i data-lucide="search"></i> Review Course</a>
         {% endif %}
         <a href="{% url 'portal:course_list' %}" class="btn btn-ghost">Cancel</a>
       </div>
@@ -145,12 +145,12 @@
 
 <!-- Official Exam -->
 <div class="portal-card" style="margin-top:20px">
-  <div class="portal-card-head"><h3>🎓 Official Semester Exam</h3></div>
+  <div class="portal-card-head"><h3><i data-lucide="graduation-cap"></i> Official Semester Exam</h3></div>
   <div class="portal-card-body" style="padding:20px">
     {% if course.exam %}
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <span>Status: <strong>{{ course.exam.get_exam_status_display }}</strong> — {{ course.exam.question_count }} question{{ course.exam.question_count|pluralize }}</span>
-        <a href="{% url 'courses:lecturer_exam_manage' course.slug %}" class="btn btn-gold btn-sm">📝 Edit Exam Questions</a>
+        <a href="{% url 'courses:lecturer_exam_manage' course.slug %}" class="btn btn-gold btn-sm"><i data-lucide="clipboard-list"></i> Edit Exam Questions</a>
       </div>
       {% if course.exam.review_note %}
       <div style="margin-top:10px;font-size:.83rem;padding:8px 12px;background:var(--rose-bg);border-radius:6px;color:var(--rose)">
@@ -171,7 +171,7 @@
 <div id="save-loader"
      style="position:fixed;inset:0;background:rgba(255,255,255,.6);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:600;color:var(--ink);gap:10px;pointer-events:none;opacity:0;transition:opacity .15s ease">
   <span style="display:inline-flex;align-items:center;gap:10px;background:var(--surface);padding:16px 28px;border-radius:var(--r-md);box-shadow:var(--sh-lg)">
-    <span style="font-size:1.4rem">⏳</span> Saving…
+    <span style="font-size:1.4rem"><i data-lucide="hourglass"></i></span> Saving…
   </span>
 </div>
 {% endif %}

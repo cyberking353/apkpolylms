@@ -20,7 +20,7 @@
           <td style="font-size:.8rem;color:var(--muted)">{{ e.course.title }}</td>
           <td>{{ e.question_count }}</td>
           <td style="font-size:.76rem">
-            {% if e.open_at %}{{ e.open_at|date:"d M Y H:i" }} → {{ e.close_at|date:"d M Y H:i" }}
+            {% if e.open_at %}{{ e.open_at|date:"d M Y H:i" }} <i data-lucide="arrow-right"></i> {{ e.close_at|date:"d M Y H:i" }}
             {% else %}Not scheduled{% endif %}
           </td>
           <td>

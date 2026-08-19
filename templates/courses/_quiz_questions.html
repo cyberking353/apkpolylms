@@ -3,7 +3,7 @@
   <div style="padding:9px 14px;border-radius:var(--r-sm);margin-bottom:10px;font-size:.8rem;font-weight:600;
               background:{% if feedback.0 == 'success' %}var(--green-bg){% else %}var(--rose-bg){% endif %};
               color:{% if feedback.0 == 'success' %}var(--green){% else %}var(--rose){% endif %}">
-    {% if feedback.0 == 'success' %}✓{% else %}✗{% endif %} {{ feedback.1 }}
+    {% if feedback.0 == 'success' %}<i data-lucide="check"></i>{% else %}<i data-lucide="x"></i>{% endif %} {{ feedback.1 }}
   </div>
   {% endif %}
   <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px;text-align:right">
@@ -20,20 +20,20 @@
         <div style="display:flex;gap:6px;flex-shrink:0">
           <button type="button" class="btn btn-ghost btn-sm" style="padding:3px 9px;font-size:.72rem"
             onclick="document.getElementById('q-view-{{ question.id }}').style.display='none';document.getElementById('q-edit-{{ question.id }}').style.display='block'">
-            ✎ Edit
+            <i data-lucide="pencil"></i> Edit
           </button>
           <form method="post" action="{% url 'courses:lecturer_quiz_question_delete' course.slug quiz.id question.id %}"
                 hx-post="{% url 'courses:lecturer_quiz_question_delete' course.slug quiz.id question.id %}"
                 hx-target="#questions-list" hx-swap="outerHTML" style="display:inline">
             {% csrf_token %}
             <button type="submit" class="btn btn-danger btn-sm" style="padding:3px 9px;font-size:.72rem"
-              data-confirm="Delete this question?">🗑 Delete</button>
+              data-confirm="Delete this question?"><i data-lucide="trash"></i> Delete</button>
           </form>
         </div>
       </div>
       {% for choice in question.padded_choices %}
       <div style="font-size:.8rem;padding:3px 0;color:{% if choice.is_correct %}var(--green){% else %}var(--muted){% endif %}">
-        {% if choice.is_correct %}✓{% else %}○{% endif %}
+        {% if choice.is_correct %}<i data-lucide="check"></i>{% else %}○{% endif %}
         {% if forloop.counter0 == 0 %}A{% elif forloop.counter0 == 1 %}B{% elif forloop.counter0 == 2 %}C{% else %}D{% endif %}.
         {{ choice.text|default:"—" }}
       </div>
@@ -90,8 +90,8 @@
       </div>
       {% endfor %}
       <button type="submit" class="btn btn-ink btn-sm">
-        + Add Question
-        <span id="add-q-spinner" class="htmx-indicator" style="margin-left:6px">⏳</span>
+        <i data-lucide="plus"></i> Add Question
+        <span id="add-q-spinner" class="htmx-indicator" style="margin-left:6px"><i data-lucide="hourglass"></i></span>
       </button>
     </form>
   </div>

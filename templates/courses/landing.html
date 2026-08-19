@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load course_extras %}
 
 {% block title %}Al-Hikma Polytechnic LMS — Innovation and Creativity{% endblock %}
 {% block nav_class %}dark{% endblock %}
@@ -57,7 +58,7 @@
         <div class="hp-title">◇ Available Courses</div>
         {% for course in courses %}
         <a href="{% url 'courses:course_detail' course.slug %}" class="cr">
-          <div class="cr-ic" style="background:{{ course.color_start }}">{{ course.icon }}</div>
+          <div class="cr-ic" style="background:{{ course.color_start }}">{{ course.icon|lucide }}</div>
           <div>
             <div class="cr-n">{{ course.title }}</div>
             <div class="cr-m">{{ course.total_modules }} modules · {{ course.enrolled_count }} students</div>
@@ -113,7 +114,7 @@
       <article class="card cc">
         <a href="{% url 'courses:course_detail' course.slug %}">
           <div class="cc-thumb" style="background:linear-gradient(135deg,{{ course.color_start }},{{ course.color_end }})">
-            {{ course.icon }}
+            {{ course.icon|lucide }}
           </div>
         </a>
         <div class="cc-body">
@@ -123,8 +124,8 @@
           <h4><a href="{% url 'courses:course_detail' course.slug %}" style="color:inherit">{{ course.title }}</a></h4>
           <p>{{ course.description|truncatewords:18 }}</p>
           <div class="cc-meta">
-            <span>📚 {{ course.total_modules }} Modules</span>
-            <span>⏱ {{ course.duration_hours }} hrs</span>
+            <span><i data-lucide="book-open"></i> {{ course.total_modules }} Modules</span>
+            <span><i data-lucide="stopwatch"></i> {{ course.duration_hours }} hrs</span>
           </div>
         </div>
         <div class="cc-foot">
@@ -142,7 +143,7 @@
       {% endfor %}
     </div>
     <div style="text-align:center;margin-top:32px">
-      <a href="{% url 'courses:course_list' %}" class="btn btn-ghost btn-lg">Browse All Courses →</a>
+      <a href="{% url 'courses:course_list' %}" class="btn btn-ghost btn-lg">Browse All Courses <i data-lucide="arrow-right"></i></a>
     </div>
   </div>
 </section>

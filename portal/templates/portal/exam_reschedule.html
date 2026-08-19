@@ -2,7 +2,7 @@
 {% block title %}Reschedule — {{ exam.title }}{% endblock %}
 {% block page_title %}Exam Reschedule{% endblock %}
 {% block topbar_actions %}
-<a href="{% url 'portal:exam_list' %}" class="btn btn-ghost btn-sm">← Exams</a>
+<a href="{% url 'portal:exam_list' %}" class="btn btn-ghost btn-sm"><i data-lucide="arrow-left"></i> Exams</a>
 {% endblock %}
 
 {% block content %}
@@ -11,13 +11,13 @@
   <!-- Create reschedule form -->
   <div class="portal-card">
     <div class="portal-card-head">
-      <h3>📅 Schedule Override for {{ exam.title }}</h3>
+      <h3><i data-lucide="calendar"></i> Schedule Override for {{ exam.title }}</h3>
     </div>
     <div class="portal-card-body" style="padding:20px">
 
       <div style="background:var(--bg);border-radius:var(--r-sm);padding:10px 14px;font-size:.8rem;color:var(--muted);margin-bottom:16px">
         <strong style="color:var(--ink)">Global window:</strong>
-        {% if exam.open_at %}{{ exam.open_at|date:"d M Y H:i" }} → {{ exam.close_at|date:"d M Y H:i" }}{% else %}Not set{% endif %}
+        {% if exam.open_at %}{{ exam.open_at|date:"d M Y H:i" }} <i data-lucide="arrow-right"></i> {{ exam.close_at|date:"d M Y H:i" }}{% else %}Not set{% endif %}
       </div>
 
       <form method="post" action="{% url 'portal:exam_reschedule_create' exam.pk %}">
@@ -80,7 +80,7 @@
             </td>
             <td style="font-size:.76rem">
               {{ rs.open_at|date:"d M Y H:i" }}<br>
-              → {{ rs.close_at|date:"d M Y H:i" }}
+              <i data-lucide="arrow-right"></i> {{ rs.close_at|date:"d M Y H:i" }}
             </td>
             <td style="font-size:.76rem;color:var(--muted)">{{ rs.reason|default:"—" }}</td>
             <td>

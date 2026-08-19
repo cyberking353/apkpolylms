@@ -13,7 +13,7 @@
 
     {% if lecturer_preview %}
     <div style="background:var(--gold-bg);border:1px solid var(--gold);border-radius:var(--r-md);padding:10px 16px;margin-bottom:14px;font-size:.83rem">
-      👁 <strong>Preview Mode</strong> — viewing as a student. Progress not recorded.
+      <i data-lucide="eye"></i> <strong>Preview Mode</strong> — viewing as a student. Progress not recorded.
     </div>
     {% endif %}
 
@@ -35,7 +35,7 @@
           </iframe>
           {% else %}
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,.5)">
-            <div style="font-size:3rem;margin-bottom:12px">🎥</div>
+            <div style="font-size:3rem;margin-bottom:12px"><i data-lucide="video"></i></div>
             <p style="font-size:.85rem">Video not yet available</p>
           </div>
           {% endif %}
@@ -50,7 +50,7 @@
         <div style="background:var(--bg);border-radius:var(--r-md);padding:10px 14px;margin-bottom:14px">
           <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:4px">
             <span>Lecture {{ lecture_index|add:1 }} of {{ module_lectures|length }} in {{ module.title }}</span>
-            <span>{% if module_completion|get_item:module.id %}✓ Module Complete{% else %}{{ lecture_index|add:1 }}/{{ module_lectures|length }}{% endif %}</span>
+            <span>{% if module_completion|get_item:module.id %}<i data-lucide="check"></i> Module Complete{% else %}{{ lecture_index|add:1 }}/{{ module_lectures|length }}{% endif %}</span>
           </div>
           <div class="prog sm">
             <div class="prog-fill" style="width:{% widthratio lecture_index|add:1 module_lectures|length 100 %}%"></div>
@@ -59,43 +59,43 @@
 
         {% if module_completion|get_item:module.id and next_target_url %}
         <div style="background:var(--green-bg);border:1px solid var(--green);border-radius:var(--r-md);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <span style="font-size:.85rem;color:var(--green);font-weight:600">✓ {{ module.title }} — Complete!</span>
+          <span style="font-size:.85rem;color:var(--green);font-weight:600"><i data-lucide="check"></i> {{ module.title }} — Complete!</span>
           <a href="{{ next_target_url }}" class="btn btn-success btn-sm">{{ next_target_label }}</a>
         </div>
         {% elif module_completion|get_item:module.id and all_modules_complete %}
         <div style="background:var(--teal-bg);border:1px solid var(--teal);border-radius:var(--r-md);padding:14px 16px;margin-bottom:14px;text-align:center">
-          <div style="font-size:2rem;margin-bottom:6px">🎉</div>
+          <div style="font-size:2rem;margin-bottom:6px"><i data-lucide="party-popper"></i></div>
           <div style="font-size:1rem;font-weight:700;color:var(--teal);margin-bottom:4px">Course Complete!</div>
           <p style="font-size:.83rem;color:var(--muted);margin-bottom:12px">You have completed all modules. {% if course.exam %}The exam is now open for you.{% else %}Congratulations!{% endif %}</p>
           {% if course.exam %}
-          <a href="{% url 'exams:exam_detail' course.exam.id %}" class="btn btn-gold">📝 Take Exam →</a>
+          <a href="{% url 'exams:exam_detail' course.exam.id %}" class="btn btn-gold"><i data-lucide="clipboard-list"></i> Take Exam <i data-lucide="arrow-right"></i></a>
           {% endif %}
         </div>
         {% endif %}
 
         <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
           {% if prev_lecture %}
-          <a href="{% url 'courses:lecture' course.slug prev_lecture %}" class="btn btn-ghost btn-sm">← Previous Lecture</a>
+          <a href="{% url 'courses:lecture' course.slug prev_lecture %}" class="btn btn-ghost btn-sm"><i data-lucide="arrow-left"></i> Previous Lecture</a>
           {% elif prev_module_lecture_id %}
-          <a href="{% url 'courses:lecture' course.slug prev_module_lecture_id %}" class="btn btn-ghost btn-sm">← Previous Module</a>
+          <a href="{% url 'courses:lecture' course.slug prev_module_lecture_id %}" class="btn btn-ghost btn-sm"><i data-lucide="arrow-left"></i> Previous Module</a>
           {% endif %}
           {% if next_lecture %}
-          <a href="{% url 'courses:lecture' course.slug next_lecture %}" class="btn btn-teal btn-sm">Next Lecture →</a>
+          <a href="{% url 'courses:lecture' course.slug next_lecture %}" class="btn btn-teal btn-sm">Next Lecture <i data-lucide="arrow-right"></i></a>
           {% elif next_target_url %}
           <a href="{{ next_target_url }}" class="btn btn-gold btn-sm">{{ next_target_label }}</a>
           {% elif next_module_lecture_id %}
-          <a href="{% url 'courses:lecture' course.slug next_module_lecture_id %}" class="btn btn-gold btn-sm">Next Module →</a>
+          <a href="{% url 'courses:lecture' course.slug next_module_lecture_id %}" class="btn btn-gold btn-sm">Next Module <i data-lucide="arrow-right"></i></a>
           {% endif %}
         </div>
         {% endif %}
 
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           {% if lecture.notes %}
-          <a href="{{ lecture.notes.url }}" class="btn btn-ghost btn-sm" download>📥 Download Notes</a>
+          <a href="{{ lecture.notes.url }}" class="btn btn-ghost btn-sm" download><i data-lucide="download"></i> Download Notes</a>
           {% endif %}
           {% with module=lecture.module %}
           {% if module.quiz %}
-          <a href="{% url 'quizzes:quiz_detail' module.quiz.id %}" class="btn btn-teal btn-sm">📝 Take Quiz</a>
+          <a href="{% url 'quizzes:quiz_detail' module.quiz.id %}" class="btn btn-teal btn-sm"><i data-lucide="clipboard-list"></i> Take Quiz</a>
           {% endif %}
           {% endwith %}
         </div>

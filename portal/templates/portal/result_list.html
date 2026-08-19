@@ -2,10 +2,10 @@
 {% block title %}Results{% endblock %}
 {% block page_title %}Results{% endblock %}
 {% block topbar_actions %}
-<a href="{% url 'portal:result_export' %}?all=1" class="btn btn-success btn-sm">📥 Download All</a>
-<a href="{% url 'portal:result_export' %}" class="btn btn-ghost btn-sm">🎯 Download Filtered</a>
+<a href="{% url 'portal:result_export' %}?all=1" class="btn btn-success btn-sm"><i data-lucide="download"></i> Download All</a>
+<a href="{% url 'portal:result_export' %}" class="btn btn-ghost btn-sm"><i data-lucide="target"></i> Download Filtered</a>
 <form method="post" action="{% url 'portal:result_sync' %}" style="display:inline">{% csrf_token %}
-  <button class="btn btn-ghost btn-sm" data-confirm="Sync all results from latest quiz/exam data?">🔄 Sync All</button>
+  <button class="btn btn-ghost btn-sm" data-confirm="Sync all results from latest quiz/exam data?"><i data-lucide="rotate-cw"></i> Sync All</button>
 </form>
 {% endblock %}
 {% block content %}
@@ -45,8 +45,8 @@
           </td>
           <td style="font-size:.82rem">{{ r.course.title }}</td>
           <td style="font-size:.78rem;color:var(--muted)">{{ r.academic_year }} S{{ r.semester }}</td>
-          <td>{{ r.ca_score|floatformat:1 }}{% if r.ca_override %} <span style="font-size:.65rem;color:var(--gold)">✎</span>{% endif %}</td>
-          <td>{{ r.exam_score|floatformat:1 }}{% if r.exam_override %} <span style="font-size:.65rem;color:var(--gold)">✎</span>{% endif %}</td>
+          <td>{{ r.ca_score|floatformat:1 }}{% if r.ca_override %} <span style="font-size:.65rem;color:var(--gold)"><i data-lucide="pencil"></i></span>{% endif %}</td>
+          <td>{{ r.exam_score|floatformat:1 }}{% if r.exam_override %} <span style="font-size:.65rem;color:var(--gold)"><i data-lucide="pencil"></i></span>{% endif %}</td>
           <td style="font-weight:700">{{ r.total|floatformat:1 }}</td>
           <td><span class="chip {% if r.grade == 'A' or r.grade == 'B' %}c-green{% elif r.grade == 'F' %}c-rose{% else %}c-gold{% endif %}">{{ r.grade }}</span></td>
           <td><a href="{% url 'portal:result_edit' r.pk %}" class="btn btn-ghost btn-sm">Edit</a></td>

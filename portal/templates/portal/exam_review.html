@@ -31,7 +31,7 @@
           <div style="font-weight:600;font-size:.86rem;margin-bottom:8px">Q{{ forloop.counter }}: {{ q.text }}</div>
           {% for c in q.choices.all %}
           <div style="font-size:.8rem;padding:4px 0;color:{% if c.is_correct %}var(--green){% else %}var(--muted){% endif %}">
-            {% if c.is_correct %}✓{% else %}○{% endif %}
+            {% if c.is_correct %}<i data-lucide="check"></i>{% else %}<i data-lucide="circle"></i>{% endif %}
             {% if forloop.counter0 == 0 %}A{% elif forloop.counter0 == 1 %}B{% elif forloop.counter0 == 2 %}C{% else %}D{% endif %}.
             {{ c.text }}
           </div>
@@ -50,7 +50,7 @@
     <div class="portal-card-body" style="padding:16px">
       {% if exam.exam_status == 'approved' %}
       <div class="exam-alert" style="background:var(--green-bg);border:1px solid var(--green);margin-bottom:12px">
-        ✓ Already approved. Edit schedule below if needed.
+        <i data-lucide="check"></i> Already approved. Edit schedule below if needed.
       </div>
       {% endif %}
       <form method="post">
@@ -77,14 +77,14 @@
         </div>
         <button type="submit" name="action" value="approve" class="btn btn-teal btn-full" style="margin-bottom:8px"
           data-confirm="Approve and schedule this exam?">
-          ✓ Approve & Schedule
+          <i data-lucide="check"></i> Approve &amp; Schedule
         </button>
         <button type="submit" name="action" value="reject" class="btn btn-danger btn-full"
           data-confirm="Send back to lecturer?">
-          ✗ Send Back to Lecturer
+          <i data-lucide="x"></i> Send Back to Lecturer
         </button>
       </form>
-      <a href="{% url 'portal:exam_list' %}" class="btn btn-ghost btn-full" style="margin-top:8px">← Back</a>
+      <a href="{% url 'portal:exam_list' %}" class="btn btn-ghost btn-full" style="margin-top:8px"><i data-lucide="arrow-left"></i> Back</a>
     </div>
   </div>
 </div>

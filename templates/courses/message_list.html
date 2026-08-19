@@ -12,12 +12,12 @@
       <div class="sb-role">{{ user.get_department_display }} · {{ user.get_academic_level_display }}</div>
     </div>
     <div class="sb-sec-lbl">Student</div>
-    <a href="{% url 'courses:dashboard' %}" class="sbl"><span class="ic">🏠</span> Dashboard</a>
-    <a href="{% url 'courses:course_list' %}" class="sbl"><span class="ic">📚</span> My Courses</a>
-    <a href="{% url 'results:my_results' %}" class="sbl"><span class="ic">📊</span> My Results</a>
-    <a href="{% url 'courses:message_list' %}" class="sbl on"><span class="ic">✉️</span> My Messages</a>
-    <a href="{% url 'accounts:profile' %}" class="sbl"><span class="ic">👤</span> Profile</a>
-    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic">🚪</span> Sign Out</a>
+    <a href="{% url 'courses:dashboard' %}" class="sbl"><span class="ic"><i data-lucide="house"></i></span> Dashboard</a>
+    <a href="{% url 'courses:course_list' %}" class="sbl"><span class="ic"><i data-lucide="book-open"></i></span> My Courses</a>
+    <a href="{% url 'results:my_results' %}" class="sbl"><span class="ic"><i data-lucide="chart-column"></i></span> My Results</a>
+    <a href="{% url 'courses:message_list' %}" class="sbl on"><span class="ic"><i data-lucide="mail"></i></span> My Messages</a>
+    <a href="{% url 'accounts:profile' %}" class="sbl"><span class="ic"><i data-lucide="user"></i></span> Profile</a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic"><i data-lucide="log-out"></i></span> Sign Out</a>
   </aside>
 
   <main class="dmain">
@@ -40,7 +40,7 @@
       </a>
       {% empty %}
       <div style="padding:44px 20px;text-align:center;color:var(--muted)">
-        <div style="font-size:2rem;margin-bottom:10px">✉️</div>
+        <div style="font-size:2rem;margin-bottom:10px"><i data-lucide="mail"></i></div>
         <p>You haven't messaged any course instructors yet.</p>
         <p style="font-size:.82rem;margin-top:6px">Open a course you're enrolled in and use "Message Instructor" if you run into a problem.</p>
       </div>

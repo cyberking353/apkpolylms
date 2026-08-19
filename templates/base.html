@@ -44,17 +44,17 @@
                 <div class="dropdown-email">{{ user.email }}</div>
               </div>
               {% if user.role == 'lecturer' %}
-                <a href="{% url 'courses:lecturer_dashboard' %}" class="dropdown-item">🏠 My Courses</a>
-                <a href="{% url 'courses:lecturer_course_create' %}" class="dropdown-item">➕ New Course</a>
-                <a href="{% url 'courses:lecturer_message_list' %}" class="dropdown-item">✉️ Course Messages{% if unread_message_count %} <span class="chip c-rose" style="margin-left:auto">{{ unread_message_count }}</span>{% endif %}</a>
+                <a href="{% url 'courses:lecturer_dashboard' %}" class="dropdown-item"><i data-lucide="house"></i> My Courses</a>
+                <a href="{% url 'courses:lecturer_course_create' %}" class="dropdown-item"><i data-lucide="plus"></i> New Course</a>
+                <a href="{% url 'courses:lecturer_message_list' %}" class="dropdown-item"><i data-lucide="mail"></i> Course Messages{% if unread_message_count %} <span class="chip c-rose" style="margin-left:auto">{{ unread_message_count }}</span>{% endif %}</a>
               {% else %}
-                <a href="{% url 'courses:dashboard' %}" class="dropdown-item">🏠 Dashboard</a>
-                <a href="{% url 'results:my_results' %}" class="dropdown-item">📊 My Results</a>
-                <a href="{% url 'courses:message_list' %}" class="dropdown-item">✉️ My Messages{% if unread_message_count %} <span class="chip c-rose" style="margin-left:auto">{{ unread_message_count }}</span>{% endif %}</a>
+                <a href="{% url 'courses:dashboard' %}" class="dropdown-item"><i data-lucide="house"></i> Dashboard</a>
+                <a href="{% url 'results:my_results' %}" class="dropdown-item"><i data-lucide="chart-column"></i> My Results</a>
+                <a href="{% url 'courses:message_list' %}" class="dropdown-item"><i data-lucide="mail"></i> My Messages{% if unread_message_count %} <span class="chip c-rose" style="margin-left:auto">{{ unread_message_count }}</span>{% endif %}</a>
               {% endif %}
-              <a href="{% url 'accounts:profile' %}" class="dropdown-item">👤 Profile</a>
+              <a href="{% url 'accounts:profile' %}" class="dropdown-item"><i data-lucide="user"></i> Profile</a>
               <div class="dropdown-divider"></div>
-              <a href="{% url 'accounts:logout' %}" class="dropdown-item dropdown-item-danger">🚪 Sign Out</a>
+              <a href="{% url 'accounts:logout' %}" class="dropdown-item dropdown-item-danger"><i data-lucide="log-out"></i> Sign Out</a>
             </div>
           </div>
         {% else %}
@@ -73,7 +73,7 @@
     {% for message in messages %}
     <div class="flash flash-{{ message.tags }}">
       <span>{{ message }}</span>
-      <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
+      <button class="flash-close" onclick="this.parentElement.remove()"><i data-lucide="x"></i></button>
     </div>
     {% endfor %}
   </div>
@@ -133,6 +133,10 @@
   {% endblock %}
 
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+  </script>
   <script src="{% static 'js/main.js' %}"></script>
   {% block extra_js %}{% endblock %}
 </body>

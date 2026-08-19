@@ -33,7 +33,7 @@
           <tr><td style="color:var(--muted)">Icon</td><td style="font-size:1.4rem">{{ course.icon }}</td></tr>
           <tr><td style="color:var(--muted)">Color</td>
               <td><span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:{{ course.color_start }};vertical-align:middle"></span>
-                  {{ course.color_start }} → {{ course.color_end }}</td></tr>
+                  {{ course.color_start }} <i data-lucide="arrow-right"></i> {{ course.color_end }}</td></tr>
           <tr><td style="color:var(--muted);vertical-align:top">Description</td><td>{{ course.description|linebreaks }}</td></tr>
           {% if course.review_note %}
           <tr><td style="color:var(--muted);vertical-align:top">Review Note</td><td style="color:var(--rose)">{{ course.review_note }}</td></tr>
@@ -65,9 +65,9 @@
               {% endif %}
             </div>
             <div style="display:flex;gap:16px;font-size:.73rem;color:var(--muted);margin-top:3px">
-              {% if lec.duration_minutes %}<span>⏱ {{ lec.duration_minutes }} min</span>{% endif %}
-              {% if lec.video_url %}<span>🎬 <a href="{{ lec.video_url }}" target="_blank" style="color:var(--teal)">Open Video</a></span>{% endif %}
-              {% if lec.notes %}<span>📄 <a href="{{ lec.notes.url }}" target="_blank" style="color:var(--teal)">Download Notes</a></span>{% endif %}
+              {% if lec.duration_minutes %}<span><i data-lucide="stopwatch"></i> {{ lec.duration_minutes }} min</span>{% endif %}
+              {% if lec.video_url %}<span><i data-lucide="clapperboard"></i> <a href="{{ lec.video_url }}" target="_blank" style="color:var(--teal)">Open Video</a></span>{% endif %}
+              {% if lec.notes %}<span><i data-lucide="file-text"></i> <a href="{{ lec.notes.url }}" target="_blank" style="color:var(--teal)">Download Notes</a></span>{% endif %}
               {% if lec.is_free_preview %}<span class="chip c-green" style="font-size:.65rem">Preview</span>{% endif %}
             </div>
             <div class="lec-preview">
@@ -101,7 +101,7 @@
           {% endfor %}
           {% if module.quiz %}
           <div style="padding:6px 16px 6px 28px;font-size:.78rem;color:var(--teal);font-weight:600">
-            📝 Quiz: {{ module.quiz.title }} ({{ module.quiz.questions.count }} questions, {{ module.quiz.time_limit_minutes }}min, pass mark {{ module.quiz.pass_mark }}%)
+            <i data-lucide="clipboard-list"></i> Quiz: {{ module.quiz.title }} ({{ module.quiz.questions.count }} questions, {{ module.quiz.time_limit_minutes }}min, pass mark {{ module.quiz.pass_mark }}%)
           </div>
           {% endif %}
         </div>
@@ -125,9 +125,9 @@
             </div>
             <div style="display:flex;gap:10px;font-size:.73rem;color:var(--muted)">
               <span>{{ quiz.quiz_type|title }}</span>
-              <span>⏱ {{ quiz.time_limit_minutes }}min</span>
-              <span>🎯 {{ quiz.pass_mark }}% to pass</span>
-              <span>🔄 {{ quiz.max_attempts }} attempts</span>
+              <span><i data-lucide="stopwatch"></i> {{ quiz.time_limit_minutes }}min</span>
+              <span><i data-lucide="target"></i> {{ quiz.pass_mark }}% to pass</span>
+              <span><i data-lucide="rotate-cw"></i> {{ quiz.max_attempts }} attempts</span>
             </div>
           </div>
           {% for question in quiz.questions.all %}
@@ -136,7 +136,7 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
               {% for choice in question.choices.all %}
               <div style="padding:3px 8px;border-radius:4px;{% if choice.is_correct %}background:var(--green-bg);color:var(--green);font-weight:600{% else %}color:var(--ink-3){% endif %}">
-                {% if choice.is_correct %}✓ {% endif %}{{ choice.text }}
+                {% if choice.is_correct %}<i data-lucide="check"></i> {% endif %}{{ choice.text }}
               </div>
               {% endfor %}
             </div>
@@ -154,7 +154,7 @@
     {% if exam %}
     <div class="portal-card" style="margin-top:16px">
       <div class="portal-card-head">
-        <h3>📝 Semester Exam</h3>
+        <h3><i data-lucide="clipboard-list"></i> Semester Exam</h3>
         <span class="chip {% if exam.exam_status == 'approved' %}c-green{% elif exam.exam_status == 'pending' %}c-gold{% else %}c-muted{% endif %}">{{ exam.get_exam_status_display }}</span>
       </div>
       <div class="portal-card-body" style="padding:14px 16px">
@@ -162,7 +162,7 @@
           <span><strong>Time Limit:</strong> {{ exam.time_limit_minutes }} min</span>
           <span><strong>Pass Mark:</strong> {{ exam.pass_mark }}%</span>
           <span><strong>Proctoring:</strong> {% if exam.enable_proctoring %}Enabled ({{ exam.max_violations }} violations){% else %}Disabled{% endif %}</span>
-          {% if exam.open_at %}<span><strong>Window:</strong> {{ exam.open_at|date:"d M Y H:i" }} → {{ exam.close_at|date:"d M Y H:i" }}</span>{% endif %}
+          {% if exam.open_at %}<span><strong>Window:</strong> {{ exam.open_at|date:"d M Y H:i" }} <i data-lucide="arrow-right"></i> {{ exam.close_at|date:"d M Y H:i" }}</span>{% endif %}
         </div>
         {% if exam.instructions %}
         <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px;padding:8px 12px;background:var(--bg);border-radius:6px">
@@ -176,7 +176,7 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
             {% for choice in question.choices.all %}
             <div style="padding:3px 8px;border-radius:4px;{% if choice.is_correct %}background:var(--green-bg);color:var(--green);font-weight:600{% else %}color:var(--ink-3){% endif %}">
-              {% if choice.is_correct %}✓ {% endif %}{{ choice.text }}
+              {% if choice.is_correct %}<i data-lucide="check"></i> {% endif %}{{ choice.text }}
             </div>
             {% endfor %}
           </div>
@@ -194,10 +194,10 @@
     <div class="portal-card" style="margin-bottom:12px">
       <div class="portal-card-head"><h3>Actions</h3></div>
       <div class="portal-card-body" style="padding:16px">
-        <a href="{% url 'portal:course_edit' course.pk %}" class="btn btn-ghost btn-full" style="margin-bottom:8px">✏️ Edit Course</a>
-        <a href="{% url 'portal:course_list' %}" class="btn btn-ghost btn-full" style="margin-bottom:8px">← Back to Courses</a>
+        <a href="{% url 'portal:course_edit' course.pk %}" class="btn btn-ghost btn-full" style="margin-bottom:8px"><i data-lucide="pencil"></i> Edit Course</a>
+        <a href="{% url 'portal:course_list' %}" class="btn btn-ghost btn-full" style="margin-bottom:8px"><i data-lucide="arrow-left"></i> Back to Courses</a>
         <a href="{% url 'portal:course_delete' course.pk %}" class="btn btn-danger btn-full"
-           onclick="return confirm('⚠️ Permanently delete «{{ course.title }}»?\n\nThis action cannot be undone. All modules, lectures, quizzes, exams, enrollments and results will be removed.')">🗑️ Delete Course</a>
+           onclick="return confirm('Permanently delete «{{ course.title }}»?\n\nThis action cannot be undone. All modules, lectures, quizzes, exams, enrollments and results will be removed.')"><i data-lucide="trash"></i> Delete Course</a>
       </div>
     </div>
 
@@ -226,11 +226,11 @@
 
           <button type="submit" name="action" value="publish" class="btn btn-teal btn-full" style="margin-bottom:8px"
             data-confirm="Publish this course? Students will see it immediately.">
-            ✓ Publish Course
+            <i data-lucide="check"></i> Publish Course
           </button>
           <button type="submit" name="action" value="reject" class="btn btn-danger btn-full"
             data-confirm="Reject and send back to lecturer?">
-            ✗ Reject
+            <i data-lucide="x"></i> Reject
           </button>
         </form>
       </div>

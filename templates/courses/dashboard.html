@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load course_extras %}
 
 {% block title %}Dashboard — Al-Hikma LMS{% endblock %}
 {% block nav_class %}dark{% endblock %}
@@ -24,26 +25,26 @@
 
     <div class="sb-sec-lbl">Main</div>
     <a href="{% url 'courses:dashboard' %}" class="sbl {% if request.resolver_match.url_name == 'dashboard' %}on{% endif %}">
-      <span class="ic">🏠</span> Dashboard
+      <span class="ic"><i data-lucide="house"></i></span> Dashboard
     </a>
     <a href="{% url 'courses:course_list' %}" class="sbl">
-      <span class="ic">📚</span> My Courses
+      <span class="ic"><i data-lucide="book-open"></i></span> My Courses
       <span class="bge">{{ enrollments.count }}</span>
     </a>
     <a href="{% url 'results:my_results' %}" class="sbl">
-      <span class="ic">📊</span> My Results
+      <span class="ic"><i data-lucide="chart-column"></i></span> My Results
     </a>
     <a href="{% url 'courses:message_list' %}" class="sbl {% if 'message' in request.resolver_match.url_name %}on{% endif %}">
-      <span class="ic">✉️</span> My Messages
+      <span class="ic"><i data-lucide="mail"></i></span> My Messages
       {% if unread_message_count %}<span class="bge" style="background:var(--rose)">{{ unread_message_count }}</span>{% endif %}
     </a>
 
     <div class="sb-sec-lbl" style="margin-top:8px">Account</div>
     <a href="{% url 'accounts:profile' %}" class="sbl">
-      <span class="ic">👤</span> Profile
+      <span class="ic"><i data-lucide="user"></i></span> Profile
     </a>
     <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)">
-      <span class="ic">🚪</span> Sign Out
+      <span class="ic"><i data-lucide="log-out"></i></span> Sign Out
     </a>
   </aside>
 
@@ -53,14 +54,14 @@
     <!-- Welcome -->
     <div class="wlc">
       <div>
-        <h2>Welcome back, {{ user.first_name|default:user.username }}! 👋</h2>
+        <h2>Welcome back, {{ user.first_name|default:user.username }}! <i data-lucide="hand"></i></h2>
         <p>
           {{ user.get_academic_level_display }} · {{ user.get_department_display }} —
           {{ current_semester.academic_year }}, Semester {{ current_semester.current_semester }}.
           You have {{ enrollments.count }} course{{ enrollments.count|pluralize }} this semester.
         </p>
       </div>
-      <div class="wlc-em">🎓</div>
+      <div class="wlc-em"><i data-lucide="graduation-cap"></i></div>
     </div>
 
     <!-- Announcements -->
@@ -70,7 +71,7 @@
       <div style="display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:var(--r-md);margin-bottom:8px;
                   background:{% if ann.priority == 'urgent' %}var(--rose-bg){% else %}var(--gold-bg){% endif %};
                   border-left:4px solid {% if ann.priority == 'urgent' %}var(--rose){% else %}var(--gold){% endif %}">
-        <span style="font-size:1.2rem;flex-shrink:0">{% if ann.priority == 'urgent' %}🔴{% else %}📢{% endif %}</span>
+        <span style="font-size:1.2rem;flex-shrink:0">{% if ann.priority == 'urgent' %}<i data-lucide="circle"></i>{% else %}<i data-lucide="megaphone"></i>{% endif %}</span>
         <div>
           <div style="font-weight:700;font-size:.88rem;margin-bottom:2px">{{ ann.title }}</div>
           <div style="font-size:.82rem;color:var(--ink);line-height:1.5">{{ ann.body }}</div>
@@ -84,15 +85,15 @@
     <!-- Stats -->
     <div class="stats">
       <div class="stb">
-        <div class="st-ic si-t">📚</div>
+        <div class="st-ic si-t"><i data-lucide="book-open"></i></div>
         <div><div class="st-n">{{ enrollments.count }}</div><div class="st-l">Enrolled</div></div>
       </div>
       <div class="stb">
-        <div class="st-ic si-g">✅</div>
+        <div class="st-ic si-g"><i data-lucide="circle-check"></i></div>
         <div><div class="st-n">{{ user.quiz_attempts.count }}</div><div class="st-l">Quizzes Done</div></div>
       </div>
       <div class="stb">
-        <div class="st-ic si-r">⭐</div>
+        <div class="st-ic si-r"><i data-lucide="star"></i></div>
         <div><div class="st-n">{{ user.xp_points }}</div><div class="st-l">XP Points</div></div>
       </div>
     </div>
@@ -107,7 +108,7 @@
       {% for enr in enrollments %}
       <div class="card enc">
         <div class="enc-th" style="background:linear-gradient(135deg,{{ enr.course.color_start }},{{ enr.course.color_end }})">
-          {{ enr.course.icon }}
+          {{ enr.course.icon|lucide }}
         </div>
         <div class="enc-bd">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
@@ -130,9 +131,9 @@
         </div>
         <div class="enc-ft">
           {% if enr.completed %}
-            <span style="font-size:.7rem;color:var(--green);font-weight:700">✓ Completed</span>
+            <span style="font-size:.7rem;color:var(--green);font-weight:700"><i data-lucide="check"></i> Completed</span>
           {% else %}
-            <a href="{% url 'courses:course_detail' enr.course.slug %}" class="btn btn-teal btn-sm">Continue →</a>
+            <a href="{% url 'courses:course_detail' enr.course.slug %}" class="btn btn-teal btn-sm">Continue <i data-lucide="arrow-right"></i></a>
             <span style="font-size:.7rem;color:var(--muted)">{{ enr.course.total_modules }} modules</span>
           {% endif %}
         </div>
@@ -141,7 +142,7 @@
     </div>
     {% else %}
     <div class="empty-state">
-      <div class="empty-icon">📚</div>
+      <div class="empty-icon"><i data-lucide="book-open"></i></div>
       <h3>No courses yet</h3>
       {% if not user.academic_level or not user.department %}
         <p>Your account doesn't have a department/level set yet. Please contact the admin office to get this sorted.</p>

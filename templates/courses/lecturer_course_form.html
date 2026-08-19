@@ -16,18 +16,18 @@
 
     <div class="sb-sec-lbl">Lecturer</div>
     <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl">
-      <span class="ic">🏠</span> My Courses
+      <span class="ic"><i data-lucide="house"></i></span> My Courses
     </a>
     <a href="{% url 'courses:lecturer_course_create' %}" class="sbl {% if is_new %}on{% endif %}">
-      <span class="ic">➕</span> New Course
+      <span class="ic"><i data-lucide="plus"></i></span> New Course
     </a>
 
     <div class="sb-sec-lbl" style="margin-top:8px">Account</div>
     <a href="{% url 'accounts:profile' %}" class="sbl">
-      <span class="ic">👤</span> Profile
+      <span class="ic"><i data-lucide="user"></i></span> Profile
     </a>
     <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)">
-      <span class="ic">🚪</span> Sign Out
+      <span class="ic"><i data-lucide="log-out"></i></span> Sign Out
     </a>
   </aside>
 
@@ -40,24 +40,24 @@
       <div style="display:flex;gap:8px;align-items:center">
         {% if not is_new %}
           {% if course.status == 'pending' %}
-          <span class="chip c-gold">⏳ Under Admin Review</span>
+          <span class="chip c-gold"><i data-lucide="hourglass"></i> Under Admin Review</span>
           {% elif course.status == 'published' %}
-          <span class="chip c-green">✓ Live</span>
+          <span class="chip c-green"><i data-lucide="check"></i> Live</span>
           {% elif course.status == 'rejected' %}
-          <span class="chip" style="background:var(--rose-bg);color:var(--rose)">✗ Rejected</span>
+          <span class="chip" style="background:var(--rose-bg);color:var(--rose)"><i data-lucide="circle-x"></i> Rejected</span>
           {% else %}
-          <span class="chip">✏️ Draft</span>
+          <span class="chip"><i data-lucide="pencil"></i> Draft</span>
           {% endif %}
         {% endif %}
         {% if not is_new %}
-        <a href="{% url 'courses:lecturer_course_preview' course.slug %}" class="btn btn-ghost btn-sm">👁 Preview as Student</a>
+        <a href="{% url 'courses:lecturer_course_preview' course.slug %}" class="btn btn-ghost btn-sm"><i data-lucide="eye"></i> Preview as Student</a>
         {% endif %}
         {% if not is_new and course.status != 'pending' %}
         <form method="post" action="{% url 'courses:lecturer_course_submit' course.slug %}">
           {% csrf_token %}
           <button class="btn btn-teal btn-sm"
             data-confirm="Submit this course for admin review? You won't be able to edit it until admin responds.">
-            Submit for Review →
+            Submit for Review <i data-lucide="arrow-right"></i>
           </button>
         </form>
         {% endif %}
@@ -66,13 +66,13 @@
 
     {% if not is_new and course.status == 'pending' %}
     <div class="exam-alert" style="margin-bottom:18px">
-      ℹ️ <span>This course is under review — editing is disabled until admin approves or rejects it.</span>
+      <i data-lucide="info"></i> <span>This course is under review — editing is disabled until admin approves or rejects it.</span>
     </div>
     {% endif %}
 
     {% if not is_new and course.review_note and course.status == 'rejected' %}
     <div class="exam-alert" style="background:var(--rose-bg);border:1px solid var(--rose);margin-bottom:18px">
-      ✗ <strong>Admin note:</strong> {{ course.review_note }}. Edit the course below and resubmit.
+      <i data-lucide="circle-x"></i> <strong>Admin note:</strong> {{ course.review_note }}. Edit the course below and resubmit.
     </div>
     {% endif %}
 
@@ -172,7 +172,7 @@
       <div id="save-loader"
            style="position:fixed;inset:0;background:rgba(255,255,255,.6);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:600;color:var(--ink);gap:10px;pointer-events:none;opacity:0;transition:opacity .15s ease">
         <span style="display:inline-flex;align-items:center;gap:10px;background:var(--surface);padding:16px 28px;border-radius:var(--r-md);box-shadow:var(--sh-lg)">
-          <span style="font-size:1.4rem">⏳</span> Saving…
+          <span style="font-size:1.4rem"><i data-lucide="hourglass"></i></span> Saving…
         </span>
       </div>
     </div>
@@ -182,10 +182,10 @@
     <!-- ── Official Exam ── -->
     <div class="card cp-lg" style="margin-top:18px">
       <div class="dsh" style="margin-bottom:14px">
-        <h4 style="font-size:.9rem;font-weight:700;margin:0">🎓 Official Semester Exam</h4>
+        <h4 style="font-size:.9rem;font-weight:700;margin:0"><i data-lucide="graduation-cap"></i> Official Semester Exam</h4>
         {% if course.exam %}
           <span class="chip {% if course.exam.exam_status == 'approved' %}c-green{% elif course.exam.exam_status == 'pending' %}c-gold{% else %}{% endif %}">
-            {% if course.exam.exam_status == 'approved' %}✓ Approved{% elif course.exam.exam_status == 'pending' %}⏳ Pending Approval{% else %}✏️ Draft{% endif %}
+            {% if course.exam.exam_status == 'approved' %}<i data-lucide="check"></i> Approved{% elif course.exam.exam_status == 'pending' %}<i data-lucide="hourglass"></i> Pending Approval{% else %}<i data-lucide="pencil"></i> Draft{% endif %}
             — {{ course.exam.question_count }} question{{ course.exam.question_count|pluralize }}
           </span>
         {% endif %}
@@ -193,22 +193,22 @@
       {% if course.exam %}
         {% if course.exam.exam_status == 'approved' %}
         <div class="exam-alert" style="background:var(--green-bg);border:1px solid var(--green);margin-bottom:12px">
-          ✓ <span>Approved by admin.{% if course.exam.open_at %} Scheduled: {{ course.exam.open_at|date:"d M Y, H:i" }} → {{ course.exam.close_at|date:"d M Y, H:i" }}{% else %} Admin will set the schedule soon.{% endif %}</span>
+          <i data-lucide="check"></i> <span>Approved by admin.{% if course.exam.open_at %} Scheduled: {{ course.exam.open_at|date:"d M Y, H:i" }} <i data-lucide="arrow-right"></i> {{ course.exam.close_at|date:"d M Y, H:i" }}{% else %} Admin will set the schedule soon.{% endif %}</span>
         </div>
         {% elif course.exam.exam_status == 'pending' %}
         <div class="exam-alert" style="background:var(--gold-bg);border:1px solid var(--gold);margin-bottom:12px">
-          ⏳ <span>Submitted for admin approval. You cannot edit questions while it is under review.</span>
+          <i data-lucide="hourglass"></i> <span>Submitted for admin approval. You cannot edit questions while it is under review.</span>
         </div>
         {% elif course.exam.review_note %}
         <div class="exam-alert" style="background:var(--rose-bg);border:1px solid var(--rose);margin-bottom:12px">
-          ✗ <span><strong>Admin note:</strong> {{ course.exam.review_note }} — edit your questions and resubmit.</span>
+          <i data-lucide="circle-x"></i> <span><strong>Admin note:</strong> {{ course.exam.review_note }} — edit your questions and resubmit.</span>
         </div>
         {% endif %}
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           {% if course.exam.exam_status != 'pending' %}
-          <a href="{% url 'courses:lecturer_exam_manage' course.slug %}" class="btn btn-gold btn-sm">📝 Edit Exam Questions</a>
+          <a href="{% url 'courses:lecturer_exam_manage' course.slug %}" class="btn btn-gold btn-sm"><i data-lucide="clipboard-list"></i> Edit Exam Questions</a>
           {% else %}
-          <a href="{% url 'courses:lecturer_exam_manage' course.slug %}" class="btn btn-ghost btn-sm">👁 View Exam</a>
+          <a href="{% url 'courses:lecturer_exam_manage' course.slug %}" class="btn btn-ghost btn-sm"><i data-lucide="eye"></i> View Exam</a>
           {% endif %}
         </div>
       {% else %}

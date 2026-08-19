@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.id = 'confirmOverlay';
     overlay.innerHTML =
       '<div class="confirm-box">' +
-        '<div class="confirm-icon" id="confirmIcon">⚠️</div>' +
+        '<div class="confirm-icon" id="confirmIcon"><i data-lucide="triangle-alert"></i></div>' +
         '<div class="confirm-msg" id="confirmMsg"></div>' +
         '<div class="confirm-acts">' +
           '<button type="button" class="btn btn-ghost btn-sm" id="confirmCancel">Cancel</button>' +
@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         '</div>' +
       '</div>';
     document.body.appendChild(overlay);
+    if (window.lucide) lucide.createIcons();
 
     const msgEl     = document.getElementById('confirmMsg');
     const okBtn     = document.getElementById('confirmOk');
@@ -60,18 +61,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const isDestructive = el.classList.contains('btn-danger');
 
       if (isDestructive) {
-        iconEl.textContent = '⚠️';
+        iconEl.innerHTML = '<i data-lucide="triangle-alert"></i>';
         iconEl.style.background = 'var(--rose-bg)';
         iconEl.style.color = 'var(--rose)';
         okBtn.className = 'btn btn-danger btn-sm';
         okBtn.textContent = 'Delete';
       } else {
-        iconEl.textContent = '✓';
+        iconEl.innerHTML = '<i data-lucide="check"></i>';
         iconEl.style.background = 'var(--green-bg)';
         iconEl.style.color = 'var(--green)';
         okBtn.className = 'btn btn-teal btn-sm';
         okBtn.textContent = 'Confirm';
       }
+      if (window.lucide) lucide.createIcons();
 
       openModal(message, () => {
         // Temporarily remove data-confirm so the re-triggered click
@@ -105,7 +107,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sb) {
       const btn = document.createElement('button');
       btn.className = 'mob-sb-toggle';
-      btn.innerHTML = '☰';
       btn.setAttribute('aria-label', 'Open menu');
       document.body.appendChild(btn);
 
@@ -113,16 +114,21 @@ document.addEventListener('DOMContentLoaded', () => {
       overlay.className = 'mob-sb-overlay';
       document.body.appendChild(overlay);
 
+      function setSbIcon(name) {
+        btn.innerHTML = '<i data-lucide="' + name + '"></i>';
+        if (window.lucide) lucide.createIcons();
+      }
       function openSb() {
         sb.classList.add('mob-open');
         overlay.classList.add('open');
-        btn.innerHTML = '✕';
+        setSbIcon('x');
       }
       function closeSb() {
         sb.classList.remove('mob-open');
         overlay.classList.remove('open');
-        btn.innerHTML = '☰';
+        setSbIcon('menu');
       }
+      setSbIcon('menu');
       btn.addEventListener('click', () => sb.classList.contains('mob-open') ? closeSb() : openSb());
       overlay.addEventListener('click', closeSb);
       sb.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
@@ -172,7 +178,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const input = btn.previousElementSibling;
         if (!input) return;
         input.type = input.type === 'password' ? 'text' : 'password';
-        btn.textContent = input.type === 'password' ? '👁' : '🙈';
+        btn.innerHTML = '<i data-lucide="' + (input.type === 'password' ? 'eye' : 'eye-off') + '"></i>';
+        if (window.lucide) lucide.createIcons();
       });
     });
   } catch (err) { console.error('Password eye toggle setup failed:', err); }
@@ -198,7 +205,13 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.style.opacity = '1';
             e.target.style.transform = 'translateY(0)';
           }
-        });
+  /* ── Re-render Lucide icons after HTMX swaps ── */
+  try {
+    document.body.addEventListener('htmx:afterSwap', () => { if (window.lucide) lucide.createIcons(); });
+    document.body.addEventListener('htmx:afterSettle', () => { if (window.lucide) lucide.createIcons(); });
+  } catch (err) { console.error('Lucide htmx re-render setup failed:', err); }
+
+});
       }, { threshold: 0.08 });
 
       document.querySelectorAll('.card, .step, .bi, .stb').forEach(el => {

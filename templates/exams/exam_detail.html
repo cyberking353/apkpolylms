@@ -13,12 +13,12 @@
 
       {% if status == 'scheduled' %}
         <div class="exam-alert" style="background:var(--bg);border:1px solid var(--line)">
-          🗓️ <span>This exam opens on <strong>{{ exam.open_at|date:"d M Y, H:i" }}</strong> and closes on <strong>{{ exam.close_at|date:"d M Y, H:i" }}</strong>. Come back then.</span>
+          <i data-lucide="calendar"></i> <span>This exam opens on <strong>{{ exam.open_at|date:"d M Y, H:i" }}</strong> and closes on <strong>{{ exam.close_at|date:"d M Y, H:i" }}</strong>. Come back then.</span>
         </div>
 
       {% elif status == 'closed' %}
         <div class="exam-alert">
-          🔒 <span>{% if attempt %}You did not complete this exam before the window closed.{% else %}This exam window has closed.{% endif %} Contact the admin office if you believe this is a mistake.</span>
+          <i data-lucide="lock"></i> <span>{% if attempt %}You did not complete this exam before the window closed.{% else %}This exam window has closed.{% endif %} Contact the admin office if you believe this is a mistake.</span>
         </div>
         {% if attempt and attempt.submitted_at %}
         <div style="text-align:center;margin-top:16px">
@@ -28,7 +28,7 @@
 
       {% elif attempt and attempt.submitted_at %}
         <div class="exam-alert" style="background:var(--green-bg);border:1px solid var(--green)">
-          ✓ <span>You already submitted this exam {% if attempt.auto_submitted %}(auto-submitted when time ran out){% endif %}.</span>
+          <i data-lucide="check"></i> <span>You already submitted this exam {% if attempt.auto_submitted %}(auto-submitted when time ran out){% endif %}.</span>
         </div>
         <div style="text-align:center;margin-top:16px">
           <a href="{% url 'exams:exam_result' attempt.id %}" class="btn btn-teal">View My Result</a>
@@ -36,22 +36,22 @@
 
       {% elif attempt and not attempt.submitted_at %}
         <div class="exam-alert" style="background:var(--gold-bg);border:1px solid var(--gold)">
-          ⏱️ <span>You already started this exam. Resume now — your timer has been running since you started.</span>
+          <i data-lucide="stopwatch"></i> <span>You already started this exam. Resume now — your timer has been running since you started.</span>
         </div>
         {% if not all_modules_complete %}
         <div class="exam-alert" style="background:var(--rose-bg);border:1px solid var(--rose)">
-          🔒 <span>You must complete all course modules before you can resume this exam.</span>
+          <i data-lucide="lock"></i> <span>You must complete all course modules before you can resume this exam.</span>
         </div>
         {% else %}
         <noscript>
           <div class="exam-alert" style="background:var(--red-bg,#fee);border:1px solid var(--danger,#d33);margin-top:12px">
-            🚫 <span><strong>JavaScript is disabled in your browser.</strong> This exam requires JavaScript for timing and monitoring. Please enable it and reload this page.</span>
+            <i data-lucide="ban"></i> <span><strong>JavaScript is disabled in your browser.</strong> This exam requires JavaScript for timing and monitoring. Please enable it and reload this page.</span>
           </div>
         </noscript>
         <form method="post" action="{% url 'exams:start_exam' exam.id %}" id="resume-exam-form" style="text-align:center;margin-top:16px">
           {% csrf_token %}
           <input type="hidden" name="js_check" id="js-check-input">
-          <button type="submit" class="btn btn-gold" id="btn-start-exam" disabled>Resume Exam →</button>
+          <button type="submit" class="btn btn-gold" id="btn-start-exam" disabled>Resume Exam <i data-lucide="arrow-right"></i></button>
           <p id="js-check-pending" style="font-size:.76rem;color:var(--muted);margin-top:8px">Checking your browser…</p>
         </form>
         <script>
@@ -77,21 +77,21 @@
         {% endif %}
 
         <div class="exam-alert">
-          ⚠️ <span><strong>Once you start, the clock does not stop.</strong> You get exactly one attempt and the exam closes at {{ exam.close_at|date:"d M Y, H:i" }} regardless of when you start.</span>
+          <i data-lucide="triangle-alert"></i> <span><strong>Once you start, the clock does not stop.</strong> You get exactly one attempt and the exam closes at {{ exam.close_at|date:"d M Y, H:i" }} regardless of when you start.</span>
         </div>
 
         <noscript>
           <div class="exam-alert" style="background:var(--red-bg,#fee);border:1px solid var(--danger,#d33);margin-top:12px">
-            🚫 <span><strong>JavaScript is disabled in your browser.</strong> This exam requires JavaScript for timing and monitoring — please enable it and reload this page to continue.</span>
+            <i data-lucide="ban"></i> <span><strong>JavaScript is disabled in your browser.</strong> This exam requires JavaScript for timing and monitoring — please enable it and reload this page to continue.</span>
           </div>
         </noscript>
 
         {% if not all_modules_complete %}
         <div class="exam-alert" style="background:var(--rose-bg);border:1px solid var(--rose);margin-top:12px">
-          🔒 <span>You must complete <strong>all course modules</strong> (watch every lecture) before you can take this exam. Go back to the course page to continue learning.</span>
+          <i data-lucide="lock"></i> <span>You must complete <strong>all course modules</strong> (watch every lecture) before you can take this exam. Go back to the course page to continue learning.</span>
         </div>
         <div style="text-align:center;margin-top:16px">
-          <a href="{% url 'courses:course_detail' course.slug %}" class="btn btn-gold">📚 Go to Course Modules</a>
+          <a href="{% url 'courses:course_detail' course.slug %}" class="btn btn-gold"><i data-lucide="book-open"></i> Go to Course Modules</a>
         </div>
         {% else %}
         <form method="post" action="{% url 'exams:start_exam' exam.id %}" id="start-exam-form" style="text-align:center;margin-top:18px">
@@ -99,7 +99,7 @@
           <input type="hidden" name="js_check" id="js-check-input">
           <button type="submit" class="btn btn-gold btn-lg" id="btn-start-exam" disabled
                   data-confirm="Start the exam now? The timer begins immediately and you will not be able to retake it.">
-            Start Exam →
+            Start Exam <i data-lucide="arrow-right"></i>
           </button>
           <p id="js-check-pending" style="font-size:.76rem;color:var(--muted);margin-top:8px">Checking your browser…</p>
         </form>
@@ -112,7 +112,7 @@
       {% endif %}
 
       <div style="text-align:center;margin-top:22px">
-        <a href="{% url 'courses:course_detail' course.slug %}" class="btn btn-ghost btn-sm">← Back to Course</a>
+        <a href="{% url 'courses:course_detail' course.slug %}" class="btn btn-ghost btn-sm"><i data-lucide="arrow-left"></i> Back to Course</a>
       </div>
 
     </div>

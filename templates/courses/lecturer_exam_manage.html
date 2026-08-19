@@ -12,40 +12,40 @@
       <div class="sb-role">Lecturer</div>
     </div>
     <div class="sb-sec-lbl">Lecturer</div>
-    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl"><span class="ic">🏠</span> My Courses</a>
-    <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="sbl on"><span class="ic">✏️</span> {{ course.title }}</a>
-    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic">🚪</span> Sign Out</a>
+    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl"><span class="ic"><i data-lucide="house"></i></span> My Courses</a>
+    <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="sbl on"><span class="ic"><i data-lucide="pencil"></i></span> {{ course.title }}</a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)"><span class="ic"><i data-lucide="log-out"></i></span> Sign Out</a>
   </aside>
 
   <main class="dmain">
     <div class="dsh" style="margin-bottom:16px">
       <div>
-        <h2 style="font-size:1.1rem;margin:0">🎓 {{ exam.title }}</h2>
+        <h2 style="font-size:1.1rem;margin:0"><i data-lucide="graduation-cap"></i> {{ exam.title }}</h2>
         <div style="font-size:.78rem;color:var(--muted);margin-top:3px">
           {{ course.title }} ·
           <span class="chip {% if exam.exam_status == 'approved' %}c-green{% elif exam.exam_status == 'pending' %}c-gold{% else %}{% endif %}" style="font-size:.72rem">
-            {% if exam.exam_status == 'approved' %}✓ Approved
-            {% elif exam.exam_status == 'pending' %}⏳ Pending Approval
-            {% else %}✏️ Draft{% endif %}
+            {% if exam.exam_status == 'approved' %}<i data-lucide="check"></i> Approved
+            {% elif exam.exam_status == 'pending' %}<i data-lucide="hourglass"></i> Pending Approval
+            {% else %}<i data-lucide="pencil"></i> Draft{% endif %}
           </span>
         </div>
       </div>
-      <a href="{% if request.user.is_staff %}{% url 'portal:course_edit' course.pk %}{% else %}{% url 'courses:lecturer_course_edit' course.slug %}{% endif %}" class="btn btn-ghost btn-sm">← Back to Course</a>
+      <a href="{% if request.user.is_staff %}{% url 'portal:course_edit' course.pk %}{% else %}{% url 'courses:lecturer_course_edit' course.slug %}{% endif %}" class="btn btn-ghost btn-sm"><i data-lucide="arrow-left"></i> Back to Course</a>
     </div>
 
     {% if exam.exam_status == 'pending' %}
     <div class="exam-alert" style="background:var(--gold-bg);border:1px solid var(--gold);margin-bottom:18px">
-      ⏳ <span>This exam is under admin review. You cannot edit questions until admin approves or sends it back.</span>
+      <i data-lucide="hourglass"></i> <span>This exam is under admin review. You cannot edit questions until admin approves or sends it back.</span>
     </div>
     {% elif exam.exam_status == 'approved' %}
     <div class="exam-alert" style="background:var(--green-bg);border:1px solid var(--green);margin-bottom:18px">
-      ✓ <span>Approved by admin.{% if exam.open_at %} Exam runs {{ exam.open_at|date:"d M Y H:i" }} → {{ exam.close_at|date:"d M Y H:i" }}.{% else %} Admin will set the schedule soon.{% endif %}</span>
+      <i data-lucide="check"></i> <span>Approved by admin.{% if exam.open_at %} Exam runs {{ exam.open_at|date:"d M Y H:i" }} <i data-lucide="arrow-right"></i> {{ exam.close_at|date:"d M Y H:i" }}.{% else %} Admin will set the schedule soon.{% endif %}</span>
     </div>
     {% endif %}
 
     {% if exam.review_note and exam.exam_status == 'draft' %}
     <div class="exam-alert" style="background:var(--rose-bg);border:1px solid var(--rose);margin-bottom:18px">
-      ✗ <strong>Admin note:</strong> {{ exam.review_note }}
+      <i data-lucide="circle-x"></i> <strong>Admin note:</strong> {{ exam.review_note }}
     </div>
     {% endif %}
 
@@ -90,7 +90,7 @@
 
       <!-- Questions -->
       <div class="exam-alert" style="margin-bottom:14px">
-        ℹ️ <span>{{ exam.question_count }} question{{ exam.question_count|pluralize }} saved.{% if can_edit %} Fill in a question + 4 choices, mark the correct answer, then click <strong>Save Questions</strong>.{% endif %}</span>
+        <i data-lucide="info"></i> <span>{{ exam.question_count }} question{{ exam.question_count|pluralize }} saved.{% if can_edit %} Fill in a question + 4 choices, mark the correct answer, then click <strong>Save Questions</strong>.{% endif %}</span>
       </div>
 
       {% for question in questions %}
@@ -133,9 +133,9 @@
         <button type="submit" name="action" value="submit"
           class="btn btn-gold"
           data-confirm="Submit for admin approval? You won't be able to edit questions until admin responds.">
-          Submit for Approval →
+          Submit for Approval <i data-lucide="arrow-right"></i>
         </button>
-        <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="btn btn-ghost">← Back</a>
+        <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="btn btn-ghost"><i data-lucide="arrow-left"></i> Back</a>
       </div>
       {% endif %}
     </form>

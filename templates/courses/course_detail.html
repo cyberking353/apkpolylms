@@ -12,7 +12,7 @@
       <a href="{% url 'courses:landing' %}">Home</a> ›
       {% if lecturer_preview %}
       <a href="{% url 'courses:lecturer_course_edit' course.slug %}">My Courses</a> ›
-      <span style="color:var(--gold);font-weight:600">👁 Preview Mode</span> ›
+      <span style="color:var(--gold);font-weight:600"><i data-lucide="eye"></i> Preview Mode</span> ›
       {% else %}
       <a href="{% url 'courses:course_list' %}">Courses</a> ›
       {% endif %}
@@ -26,9 +26,9 @@
         <h1>{{ course.title }}</h1>
         <p class="desc">{{ course.description }}</p>
         <div class="c-meta">
-          <span>📚 {{ course.total_modules }} Modules</span>
-          <span>⏱ {{ course.duration_hours }} hours</span>
-          <span>👥 {{ course.enrolled_count }} students</span>
+          <span><i data-lucide="book-open"></i> {{ course.total_modules }} Modules</span>
+          <span><i data-lucide="stopwatch"></i> {{ course.duration_hours }} hours</span>
+          <span><i data-lucide="users"></i> {{ course.enrolled_count }} students</span>
         </div>
         <div class="c-instr">
           <div class="iav2">{{ course.instructor_initials }}</div>
@@ -37,7 +37,7 @@
             <div class="ir">{{ course.instructor_title }}</div>
           </div>
           {% if enrolled and not lecturer_preview %}
-          <a href="{% url 'courses:message_new' course.slug %}" class="btn btn-gw btn-sm" style="margin-left:auto">✉️ Message Instructor</a>
+          <a href="{% url 'courses:message_new' course.slug %}" class="btn btn-gw btn-sm" style="margin-left:auto"><i data-lucide="mail"></i> Message Instructor</a>
           {% endif %}
         </div>
       </div>
@@ -46,23 +46,23 @@
       <div>
         <div class="ec">
           <div class="ec-th" style="background:linear-gradient(135deg,{{ course.color_start }},{{ course.color_end }})">
-            {{ course.icon }}
+            {{ course.icon|lucide }}
           </div>
           <div class="ec-bd">
             <div class="ec-pr">{{ course.get_level_display }}</div>
-            <div class="ec-fr">✓ Assigned to your semester</div>
+            <div class="ec-fr"><i data-lucide="check"></i> Assigned to your semester</div>
             {% if enrolled %}
-              <a href="#modules" class="btn btn-success btn-full">✓ Continue Learning</a>
+              <a href="#modules" class="btn btn-success btn-full"><i data-lucide="check"></i> Continue Learning</a>
             {% else %}
               <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="btn btn-ink btn-full">Login to View</a>
             {% endif %}
             <div class="ec-inc">
               <div class="ec-inc-t">What's Included</div>
-              <div class="inc"><span class="ck">✓</span> {{ course.duration_hours }} hours of video lectures</div>
-              <div class="inc"><span class="ck">✓</span> {{ course.total_modules }} weekly modules</div>
-              <div class="inc"><span class="ck">✓</span> Weekly quizzes</div>
-              <div class="inc"><span class="ck">✓</span> Final examination</div>
-              <div class="inc"><span class="ck">✓</span> Lifetime access</div>
+              <div class="inc"><span class="ck"><i data-lucide="check"></i></span> {{ course.duration_hours }} hours of video lectures</div>
+              <div class="inc"><span class="ck"><i data-lucide="check"></i></span> {{ course.total_modules }} weekly modules</div>
+              <div class="inc"><span class="ck"><i data-lucide="check"></i></span> Weekly quizzes</div>
+              <div class="inc"><span class="ck"><i data-lucide="check"></i></span> Final examination</div>
+              <div class="inc"><span class="ck"><i data-lucide="check"></i></span> Lifetime access</div>
             </div>
           </div>
         </div>
@@ -83,24 +83,24 @@
         <div class="mod">
           <div class="mod-h" data-target="mod-{{ module.id }}">
             <div class="mod-circ {% if module_completion|get_item:module.id %}done{% endif %}">
-              {% if module_completion|get_item:module.id %}✓{% else %}{{ module.week_number }}{% endif %}
+              {% if module_completion|get_item:module.id %}<i data-lucide="check"></i>{% else %}{{ module.week_number }}{% endif %}
             </div>
             <div class="mod-info">
               <h4>Week {{ module.week_number }}: {{ module.title }}</h4>
               <div class="sub">{{ module.lectures.count }} lecture{{ module.lectures.count|pluralize }} · {{ module.description|truncatewords:10 }}</div>
               {% if enrolled and module_completion|get_item:module.id %}
-              <span style="font-size:.7rem;color:var(--green);font-weight:600;margin-top:3px;display:inline-block">✓ Complete</span>
+              <span style="font-size:.7rem;color:var(--green);font-weight:600;margin-top:3px;display:inline-block"><i data-lucide="check"></i> Complete</span>
               {% endif %}
             </div>
             {% if module.quiz %}
-            <a href="{% url 'quizzes:quiz_detail' module.quiz.id %}" class="chip c-gold" style="flex-shrink:0" onclick="event.stopPropagation()">📝 Quiz</a>
+            <a href="{% url 'quizzes:quiz_detail' module.quiz.id %}" class="chip c-gold" style="flex-shrink:0" onclick="event.stopPropagation()"><i data-lucide="clipboard-list"></i> Quiz</a>
             {% endif %}
             <span class="mod-arr">▾</span>
           </div>
           <div class="mod-body" id="mod-{{ module.id }}">
             {% for lecture in module.lectures.all %}
             <div class="lecture-item">
-              <span class="lec-icon">🎥</span>
+              <span class="lec-icon"><i data-lucide="video"></i></span>
               <div class="lec-info">
                 <div class="lec-title">{{ lecture.title }}</div>
                 <div class="lec-meta">{{ lecture.duration_minutes }} min</div>
@@ -108,7 +108,7 @@
               {% if enrolled %}
                 <a href="{% if lecturer_preview %}{% url 'courses:lecturer_lecture_preview' course.slug lecture.id %}{% else %}{% url 'courses:lecture' course.slug lecture.id %}{% endif %}" class="btn btn-teal btn-sm">Watch</a>
               {% else %}
-                <span class="chip c-muted">🔒</span>
+                <span class="chip c-muted"><i data-lucide="lock"></i></span>
               {% endif %}
             </div>
             {% endfor %}
@@ -128,7 +128,7 @@
           {% if quiz.quiz_type == 'final' %}
           <div class="mod" style="border:2px solid var(--gold);margin-top:10px">
             <div class="mod-h" style="background:var(--gold-bg)">
-              <div class="mod-circ" style="background:var(--gold);border-color:var(--gold);color:#fff">🏁</div>
+              <div class="mod-circ" style="background:var(--gold);border-color:var(--gold);color:#fff"><i data-lucide="flag"></i></div>
               <div class="mod-info">
                 <h4>{{ quiz.title }}</h4>
                 <div class="sub">{{ quiz.question_count }} questions · {{ quiz.time_limit_minutes }} minutes · Pass mark: {{ quiz.pass_mark }}%</div>
@@ -136,7 +136,7 @@
               {% if enrolled %}
               <a href="{% url 'quizzes:quiz_detail' quiz.id %}" class="btn btn-gold btn-sm" style="flex-shrink:0">Take Exam</a>
               {% else %}
-              <span class="chip c-gold" style="flex-shrink:0">🔒 Locked</span>
+              <span class="chip c-gold" style="flex-shrink:0"><i data-lucide="lock"></i> Locked</span>
               {% endif %}
             </div>
           </div>
@@ -147,7 +147,7 @@
         {% if course.exam %}
         <div class="mod" style="border:2px solid var(--rose);margin-top:10px">
           <div class="mod-h" style="background:var(--rose-bg)">
-            <div class="mod-circ" style="background:var(--rose);border-color:var(--rose);color:#fff">📝</div>
+            <div class="mod-circ" style="background:var(--rose);border-color:var(--rose);color:#fff"><i data-lucide="clipboard-list"></i></div>
             <div class="mod-info">
               <h4>{{ course.exam.title|default:"Official Semester Exam" }}</h4>
               <div class="sub">
@@ -161,10 +161,10 @@
               {% if all_modules_complete %}
               <a href="{% url 'exams:exam_detail' course.exam.id %}" class="btn btn-danger btn-sm" style="flex-shrink:0">View Exam</a>
               {% else %}
-              <span class="chip c-rose" style="flex-shrink:0;cursor:pointer" title="Complete all modules to unlock the exam">🔒 Complete Modules First</span>
+              <span class="chip c-rose" style="flex-shrink:0;cursor:pointer" title="Complete all modules to unlock the exam"><i data-lucide="lock"></i> Complete Modules First</span>
               {% endif %}
             {% else %}
-            <span class="chip" style="flex-shrink:0">🔒 Locked</span>
+            <span class="chip" style="flex-shrink:0"><i data-lucide="lock"></i> Locked</span>
             {% endif %}
           </div>
         </div>
@@ -182,9 +182,9 @@
           {% endfor %}
           <div style="padding:13px 17px;border-top:1px solid var(--line)">
             {% if enrolled %}
-            <a href="{% if lecturer_preview %}{% url 'courses:lecturer_course_edit' course.slug %}{% else %}{% url 'courses:course_list' %}{% endif %}" class="btn btn-ghost btn-full btn-sm">← {% if lecturer_preview %}Back to Edit{% else %}My Courses{% endif %}</a>
+            <a href="{% if lecturer_preview %}{% url 'courses:lecturer_course_edit' course.slug %}{% else %}{% url 'courses:course_list' %}{% endif %}" class="btn btn-ghost btn-full btn-sm"><i data-lucide="arrow-left"></i> {% if lecturer_preview %}Back to Edit{% else %}My Courses{% endif %}</a>
             {% if not lecturer_preview %}
-            <a href="{% url 'courses:message_new' course.slug %}" class="btn btn-ghost btn-full btn-sm" style="margin-top:8px">✉️ Report a Problem</a>
+            <a href="{% url 'courses:message_new' course.slug %}" class="btn btn-ghost btn-full btn-sm" style="margin-top:8px"><i data-lucide="mail"></i> Report a Problem</a>
             {% endif %}
             {% else %}
             <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="btn btn-teal btn-full btn-sm">Login to View</a>

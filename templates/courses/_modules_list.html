@@ -4,7 +4,7 @@
   <div style="padding:9px 14px;border-radius:var(--r-sm);margin-bottom:10px;font-size:.8rem;font-weight:600;
               background:{% if feedback.0 == 'success' %}var(--green-bg){% else %}var(--rose-bg){% endif %};
               color:{% if feedback.0 == 'success' %}var(--green){% else %}var(--rose){% endif %}">
-    {% if feedback.0 == 'success' %}✓{% else %}✗{% endif %} {{ feedback.1 }}
+    {% if feedback.0 == 'success' %}<i data-lucide="check"></i>{% else %}<i data-lucide="x"></i>{% endif %} {{ feedback.1 }}
   </div>
   {% endif %}
   <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px;text-align:right">
@@ -26,7 +26,7 @@
       <div style="margin-left:auto;display:flex;gap:6px">
         <button type="button" class="btn btn-ghost btn-sm" style="padding:3px 9px;font-size:.72rem"
           onclick="document.getElementById('module-view-{{ module.id }}').style.display='none';document.getElementById('module-edit-{{ module.id }}').style.display='flex'">
-          ✎ Edit
+          <i data-lucide="pencil"></i> Edit
         </button>
         <form method="post" action="{% url 'courses:lecturer_module_delete' course.slug module.id %}"
               hx-post="{% url 'courses:lecturer_module_delete' course.slug module.id %}"
@@ -34,7 +34,7 @@
           {% csrf_token %}
           <button type="submit" class="btn btn-danger btn-sm" style="padding:3px 9px;font-size:.72rem"
             data-confirm="Delete &quot;{{ module.title }}&quot; and all its lectures? This cannot be undone.">
-            🗑 Delete
+            <i data-lucide="trash"></i> Delete
           </button>
         </form>
       </div>
@@ -64,15 +64,15 @@
         {% for lecture in module.lectures.all %}
         <div style="padding:6px 0;font-size:.82rem;color:var(--ink);display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)"
              id="lecture-view-{{ lecture.id }}">
-          <span>🎬</span>
+          <span><i data-lucide="clapperboard"></i></span>
           <span>{{ lecture.title }}</span>
           {% if lecture.duration_minutes %}<span style="color:var(--muted)">{{ lecture.duration_minutes }}min</span>{% endif %}
-          {% if lecture.notes %}<span title="Has notes attached">📎</span>{% endif %}
+          {% if lecture.notes %}<span title="Has notes attached"><i data-lucide="paperclip"></i></span>{% endif %}
           {% if request.user.is_staff or course.status != 'pending' %}
           <div style="margin-left:auto;display:flex;gap:5px">
             <button type="button" class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:.68rem"
               onclick="document.getElementById('lecture-view-{{ lecture.id }}').style.display='none';document.getElementById('lecture-edit-{{ lecture.id }}').style.display='flex'">
-              ✎
+              <i data-lucide="pencil"></i>
             </button>
             <form method="post" action="{% url 'courses:lecturer_lecture_delete' course.slug lecture.id %}"
                   hx-post="{% url 'courses:lecturer_lecture_delete' course.slug lecture.id %}"
@@ -80,7 +80,7 @@
               {% csrf_token %}
               <button type="submit" class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:.68rem"
                 data-confirm="Delete &quot;{{ lecture.title }}&quot;?">
-                🗑
+                <i data-lucide="trash"></i>
               </button>
             </form>
           </div>
@@ -126,11 +126,11 @@
           <input type="number" name="duration_minutes" placeholder="Min" style="width:68px;font-size:.82rem">
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
-          <label style="font-size:.78rem;color:var(--muted);font-weight:600">📎 Attach Notes (PDF/PPT/DOC):</label>
+          <label style="font-size:.78rem;color:var(--muted);font-weight:600"><i data-lucide="paperclip"></i> Attach Notes (PDF/PPT/DOC):</label>
           <input type="file" name="notes" accept=".pdf,.doc,.docx,.ppt,.pptx" style="font-size:.78rem">
         </div>
         <button type="submit" class="btn btn-ghost btn-sm">
-          + Add Lecture ⏳
+          <i data-lucide="plus"></i> Add Lecture
         </button>
       </form>
       {% endif %}
@@ -141,7 +141,7 @@
     <div style="padding:10px 15px;border-top:1px dashed var(--line);background:var(--bg)">
       {% if module.quiz %}
       <a href="{% url 'courses:lecturer_quiz_manage' course.slug module.quiz.id %}" class="btn btn-gold btn-sm">
-        📝 Week {{ module.week_number }} Quiz — {{ module.quiz.questions.count }} question{{ module.quiz.questions.count|pluralize }}
+        <i data-lucide="clipboard-list"></i> Week {{ module.week_number }} Quiz — {{ module.quiz.questions.count }} question{{ module.quiz.questions.count|pluralize }}
       </a>
       {% else %}
       <form method="post" action="{% url 'courses:lecturer_quiz_create' course.slug module.id %}">
@@ -168,7 +168,7 @@
     {% csrf_token %}
     <input type="text" name="title" placeholder="New module title *" style="flex:2;min-width:180px">
     <input type="text" name="description" placeholder="Brief description (optional)" style="flex:3;min-width:180px">
-    <button type="submit" class="btn btn-teal btn-sm">+ Add Module ⏳</button>
+    <button type="submit" class="btn btn-teal btn-sm"><i data-lucide="plus"></i> Add Module</button>
   </form>
   {% endif %}
 </div>

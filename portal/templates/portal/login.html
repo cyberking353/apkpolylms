@@ -9,7 +9,7 @@
 <body style="background:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center">
 <div class="card cp-lg" style="width:100%;max-width:380px">
   <div style="text-align:center;margin-bottom:24px">
-    <div style="font-size:2rem">🏫</div>
+    <div style="font-size:2rem"><i data-lucide="school"></i></div>
     <h2 class="t-heading" style="margin:6px 0 2px">Al-Hikma Admin</h2>
     <p style="font-size:.8rem;color:var(--muted)">Sign in to the admin portal</p>
   </div>
@@ -18,11 +18,15 @@
     {% csrf_token %}
     <div class="field"><label>Email / Username</label><input type="text" name="username" autofocus required></div>
     <div class="field"><label>Password</label><input type="password" name="password" required></div>
-    <button type="submit" class="btn btn-ink btn-full" style="margin-top:6px">Sign In →</button>
+    <button type="submit" class="btn btn-ink btn-full" style="margin-top:6px">Sign In <i data-lucide="arrow-right"></i></button>
   </form>
   <div style="margin-top:16px;text-align:center">
-    <a href="/" style="font-size:.78rem;color:var(--muted)">← Back to site</a>
+    <a href="/" style="font-size:.78rem;color:var(--muted)"><i data-lucide="arrow-left"></i> Back to site</a>
   </div>
 </div>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+</script>
 </body>
 </html>

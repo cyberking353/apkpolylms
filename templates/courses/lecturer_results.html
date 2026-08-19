@@ -18,39 +18,39 @@
 
     <div class="sb-sec-lbl">Lecturer</div>
     <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl">
-      <span class="ic">🏠</span> My Courses
+      <span class="ic"><i data-lucide="house"></i></span> My Courses
     </a>
     <a href="{% url 'courses:lecturer_course_create' %}" class="sbl">
-      <span class="ic">➕</span> New Course
+      <span class="ic"><i data-lucide="plus"></i></span> New Course
     </a>
     <a href="{% url 'courses:lecturer_message_list' %}" class="sbl">
-      <span class="ic">✉️</span> Course Messages
+      <span class="ic"><i data-lucide="mail"></i></span> Course Messages
     </a>
 
     <div class="sb-sec-lbl" style="margin-top:8px">Account</div>
     <a href="{% url 'accounts:profile' %}" class="sbl">
-      <span class="ic">👤</span> Profile
+      <span class="ic"><i data-lucide="user"></i></span> Profile
     </a>
     <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)">
-      <span class="ic">🚪</span> Sign Out
+      <span class="ic"><i data-lucide="log-out"></i></span> Sign Out
     </a>
   </aside>
 
   <main class="dmain">
     <div class="wlc">
       <div>
-        <h2>{{ course.title }} — Results 📊</h2>
+        <h2>{{ course.title }} — Results <i data-lucide="chart-column"></i></h2>
         <p>{{ course.get_level_display }} · Sem {{ course.semester }} · {{ rows|length }} student{{ rows|length|pluralize }}</p>
       </div>
-      <div class="wlc-em">📊</div>
+      <div class="wlc-em"><i data-lucide="chart-column"></i></div>
     </div>
 
     {% if not rows %}
     <div class="empty-state">
-      <div class="empty-icon">📊</div>
+      <div class="empty-icon"><i data-lucide="chart-column"></i></div>
       <h3>No results yet</h3>
       <p>Students need to take quizzes and the exam before results appear here.</p>
-      <a href="{% url 'courses:lecturer_course_preview' course.slug %}" class="btn btn-teal">Back to Course →</a>
+      <a href="{% url 'courses:lecturer_course_preview' course.slug %}" class="btn btn-teal">Back to Course <i data-lucide="arrow-right"></i></a>
     </div>
     {% else %}
     <div class="card" style="overflow-x:auto;padding:0">
@@ -112,7 +112,7 @@
     {% endif %}
 
     <div style="margin-top:18px">
-      <a href="{% url 'courses:lecturer_course_preview' course.slug %}" class="btn btn-ghost">← Back to Course</a>
+      <a href="{% url 'courses:lecturer_course_preview' course.slug %}" class="btn btn-ghost"><i data-lucide="arrow-left"></i> Back to Course</a>
     </div>
 
   </main>

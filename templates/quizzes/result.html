@@ -14,7 +14,7 @@
       </div>
       {% endif %}
 
-      <div class="res-ic">{% if attempt.passed %}🏆{% else %}😔{% endif %}</div>
+      <div class="res-ic">{% if attempt.passed %}<i data-lucide="trophy"></i>{% else %}<i data-lucide="circle-x"></i>{% endif %}</div>
       <div class="res-pct {% if not attempt.passed %}fail{% endif %}">{{ attempt.score|floatformat:0 }}%</div>
       <h2 class="res-title t-heading">{% if attempt.passed %}Well Done!{% else %}Keep Trying!{% endif %}</h2>
       <p class="res-msg">
@@ -42,9 +42,9 @@
       </div>
 
       <div class="res-acts">
-        <a href="{% url 'courses:course_detail' attempt.quiz.course.slug %}" class="btn btn-ghost">← Course</a>
+        <a href="{% url 'courses:course_detail' attempt.quiz.course.slug %}" class="btn btn-ghost"><i data-lucide="arrow-left"></i> Course</a>
         {% if next_module and next_module.lectures.exists %}
-        <a href="{% url 'courses:lecture' attempt.quiz.course.slug next_module.lectures.first.id %}" class="btn btn-gold">Next Module →</a>
+        <a href="{% url 'courses:lecture' attempt.quiz.course.slug next_module.lectures.first.id %}" class="btn btn-gold">Next Module <i data-lucide="arrow-right"></i></a>
         {% endif %}
         <a href="{% url 'courses:dashboard' %}" class="btn btn-teal">Dashboard</a>
       </div>
@@ -63,7 +63,7 @@
             {% if answer.selected_choice %}
               <strong style="color:{% if answer.selected_choice.is_correct %}var(--green){% else %}var(--rose){% endif %}">
                 {{ answer.selected_choice.text }}
-                {% if answer.selected_choice.is_correct %}✓{% else %}✗{% endif %}
+                {% if answer.selected_choice.is_correct %}<i data-lucide="check"></i>{% else %}<i data-lucide="x"></i>{% endif %}
               </strong>
             {% else %}
               <em>Not answered</em>
