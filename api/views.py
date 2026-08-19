@@ -128,6 +128,27 @@ class SyncCourseView(SyncAPIView):
         return self._upsert(request, sync_helpers.upsert_course, 'course')
 
 
+class SyncStaffView(SyncAPIView):
+    """POST /api/v1/sync/staff — upsert a staff (lecturer) account from the Portal."""
+
+    def post(self, request):
+        data = _parse_json_body(request)
+        if data is None:
+            return _bad_request('Invalid JSON body')
+        if not isinstance(data, dict):
+            return _bad_request('staff: expected a JSON object')
+        try:
+            staff, created, warnings = sync_helpers.upsert_staff(data)
+        except ValueError as exc:
+            return _bad_request(str(exc))
+        return _success(
+            'Staff synced successfully',
+            created=created,
+            staff_id=staff.staff_id,
+            warning=warnings or None,
+        )
+
+
 class SyncDepartmentView(SyncAPIView):
     """POST /api/v1/sync/departments — upsert a department."""
 

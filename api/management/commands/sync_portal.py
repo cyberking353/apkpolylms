@@ -24,12 +24,14 @@ from api.management.commands.sync_students import _records
 class Command(BaseCommand):
     help = 'Pull all Portal bootstrap data (departments, programmes, sessions, courses, students, registrations)'
 
-    # Dependency order: departments -> programmes -> sessions -> courses -> students -> registrations
+    # Dependency order: departments -> programmes -> sessions -> courses -> staffs
+    # -> students -> registrations
     RESOURCES = [
         ('departments',   sync_helpers.upsert_department),
         ('programmes',    sync_helpers.upsert_programme),
         ('sessions',      sync_helpers.upsert_session),
         ('courses',       sync_helpers.upsert_course),
+        ('staffs',        sync_helpers.upsert_staff),
         ('students',      sync_helpers.upsert_student),
         ('registrations', sync_helpers.upsert_registration),
     ]

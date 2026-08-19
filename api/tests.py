@@ -212,6 +212,56 @@ class RegistrationSyncTests(TestCase):
 
 
 @override_settings(LMS_API_TOKEN=TEST_TOKEN, PORTAL_SSO_SECRET=TEST_SECRET)
+class StaffSyncTests(TestCase):
+    URL = reverse('api:sync_staff')
+
+    def _post(self, payload):
+        return self.client.post(self.URL, data=json.dumps(payload),
+                                content_type='application/json', **AUTH)
+
+    PAYLOAD = {
+        'portal_id': 'staff-uuid',
+        'staff_id': 'STF/CSC/24/0001',
+        'first_name': 'Ibrahim', 'last_name': 'Musa',
+        'email': 'ibrahim@example.com',
+        'department_code': 'CSC', 'staff_category': 'ACADEMIC',
+        'is_active': True,
+        'assigned_courses': [
+            {'course_code': 'CSC101', 'title': 'Intro to CS'},
+        ],
+    }
+
+    def test_create_staff(self):
+        resp = self._post(self.PAYLOAD)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()['created'])
+        staff = Student.objects.get(role='lecturer', staff_id='STF/CSC/24/0001')
+        self.assertEqual(staff.email, 'ibrahim@example.com')
+        self.assertEqual(staff.portal_id, 'staff-uuid')
+        self.assertTrue(staff.is_sms_synced)
+        self.assertFalse(staff.has_usable_password())
+
+    def test_assigned_courses_linked(self):
+        self._post(self.PAYLOAD)
+        staff = Student.objects.get(staff_id='STF/CSC/24/0001')
+        course = Course.objects.get(code='CSC101')
+        self.assertEqual(course.lecturer_id, staff.id)
+
+    def test_update_is_idempotent(self):
+        self._post(self.PAYLOAD)
+        resp = self._post(self.PAYLOAD)
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.json()['created'])
+        self.assertEqual(
+            Student.objects.filter(role='lecturer', staff_id='STF/CSC/24/0001').count(),
+            1)
+
+    def test_missing_staff_id_400(self):
+        resp = self._post({'email': 'x@example.com'})
+        self.assertEqual(resp.status_code, 400)
+
+
+@override_settings(LMS_API_TOKEN=TEST_TOKEN, PORTAL_SSO_SECRET=TEST_SECRET)
 class SsoApiTests(TestCase):
     URL = reverse('api:auth_sso')
 

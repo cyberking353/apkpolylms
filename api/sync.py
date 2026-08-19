@@ -332,3 +332,93 @@ def upsert_registration(data):
             created_count += 1
 
     return created_count, warnings
+
+
+def upsert_staff(data):
+    """
+    Upsert a staff (lecturer) account from the Portal. The Portal owns user
+    creation (it applies its own permission matrix before letting a staff
+    member reach the LMS), so the LMS only mirrors what it is sent.
+
+    Returns (staff, created, warnings). Raises ValueError if staff_id missing.
+    """
+    staff_id = _clean(data.get('staff_id'))
+    email = _clean(data.get('email'))
+    if not staff_id:
+        raise ValueError('staff: staff_id is required')
+
+    first = _clean(data.get('first_name'))
+    last = _clean(data.get('last_name'))
+    dept_code = _clean(data.get('department_code'))
+    portal_id = _clean(data.get('portal_id'))
+    is_active = bool(data.get('is_active', True))
+
+    warnings = {}
+    if dept_code:
+        dept = Department.get_or_none(dept_code)
+        if dept is None:
+            warnings['department_code'] = (
+                f'Unknown department code "{dept_code}", stored for review')
+            dept_stored = dept_code
+        else:
+            dept_stored = dept.code
+    else:
+        dept_stored = ''
+
+    user = None
+    if portal_id:
+        user = Student.objects.filter(role='lecturer', portal_id=portal_id).first()
+    if user is None:
+        user = Student.objects.filter(role='lecturer', staff_id=staff_id).first()
+    if user is None and email:
+        user = Student.objects.filter(role='lecturer', email__iexact=email).first()
+
+    created = user is None
+    if created:
+        base = email or staff_id or portal_id or 'staff'
+        username = base
+        counter = 1
+        while Student.objects.filter(username__iexact=username).exists():
+            counter += 1
+            username = f'{base}-{counter}'
+        user = Student(
+            username=username,
+            email=email,
+            role='lecturer',
+            is_active=is_active,
+            is_sms_synced=True,
+        )
+        # No password known — staff sign in via the Portal SSO.
+        user.set_unusable_password()
+
+    user.staff_id = staff_id
+    user.portal_id = portal_id or user.portal_id
+    user.email = email
+    user.first_name = first
+    user.last_name = last
+    user.department = dept_stored
+    user.is_active = is_active
+    user.role = 'lecturer'
+    user.is_sms_synced = True
+    user.save()
+
+    # Bind assigned courses to this lecturer (find-or-create the shell).
+    for item in data.get('assigned_courses') or []:
+        if not isinstance(item, dict):
+            continue
+        code = _clean(item.get('course_code') or item.get('code'))
+        if not code:
+            continue
+        title = _clean(item.get('title')) or code
+        course = Course.objects.filter(code=code).first()
+        if course is None:
+            course = Course.objects.create(
+                title=title, code=code,
+                slug=_course_slug(title, code),
+                status='published', level='ND1', semester='1',
+            )
+        if course.lecturer_id != user.id:
+            course.lecturer = user
+            course.save(update_fields=['lecturer'])
+
+    return user, created, warnings

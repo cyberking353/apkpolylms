@@ -7,6 +7,7 @@ from .views import (
     SyncProgrammeView,
     SyncRegistrationView,
     SyncSessionView,
+    SyncStaffView,
     SyncStudentView,
 )
 
@@ -15,6 +16,7 @@ app_name = 'api'
 urlpatterns = [
     path('v1/sync/students',      SyncStudentView.as_view(),       name='sync_students'),
     path('v1/sync/courses',       SyncCourseView.as_view(),        name='sync_courses'),
+    path('v1/sync/staff',         SyncStaffView.as_view(),         name='sync_staff'),
     path('v1/sync/departments',   SyncDepartmentView.as_view(),    name='sync_departments'),
     path('v1/sync/programmes',    SyncProgrammeView.as_view(),     name='sync_programmes'),
     path('v1/sync/sessions',      SyncSessionView.as_view(),       name='sync_sessions'),
