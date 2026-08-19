@@ -638,11 +638,14 @@ button,input,select,textarea{font-family:inherit}
 .bg-radial-gradient{background:radial-gradient(circle at 50% 0%,rgba(0,87,184,.12) 0%,rgba(248,250,252,0) 70%)}
 
 /* ── Lucide icons ── */
-svg.lucide{width:1em;height:1em;vertical-align:-0.125em;display:inline-block;flex-shrink:0}
+svg.lucide{width:1em;height:1em;vertical-align:middle;display:inline-block;flex-shrink:0}
 .dropdown-item svg.lucide{width:15px;height:15px;color:var(--muted)}
 .dropdown-item-danger svg.lucide{color:var(--rose)}
+.sbl .ic svg.lucide{width:16px;height:16px}
 .pnl .ic svg.lucide{width:16px;height:16px}
 .confirm-icon svg.lucide{width:26px;height:26px}
 .btn svg.lucide, button svg.lucide{pointer-events:none}
 .pager-btn svg.lucide, .quiz-nav svg.lucide{width:14px;height:14px}
 .flash-close svg.lucide{width:14px;height:14px}
+.cc-meta span{display:inline-flex;align-items:center;gap:6px}
+.mob-sb-toggle svg.lucide, .mob-portal-toggle svg.lucide{width:1.3rem;height:1.3rem}

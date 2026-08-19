@@ -65,7 +65,7 @@
               {% endif %}
             </div>
             <div style="display:flex;gap:16px;font-size:.73rem;color:var(--muted);margin-top:3px">
-              {% if lec.duration_minutes %}<span><i data-lucide="stopwatch"></i> {{ lec.duration_minutes }} min</span>{% endif %}
+              {% if lec.duration_minutes %}<span><i data-lucide="timer"></i> {{ lec.duration_minutes }} min</span>{% endif %}
               {% if lec.video_url %}<span><i data-lucide="clapperboard"></i> <a href="{{ lec.video_url }}" target="_blank" style="color:var(--teal)">Open Video</a></span>{% endif %}
               {% if lec.notes %}<span><i data-lucide="file-text"></i> <a href="{{ lec.notes.url }}" target="_blank" style="color:var(--teal)">Download Notes</a></span>{% endif %}
               {% if lec.is_free_preview %}<span class="chip c-green" style="font-size:.65rem">Preview</span>{% endif %}
@@ -125,7 +125,7 @@
             </div>
             <div style="display:flex;gap:10px;font-size:.73rem;color:var(--muted)">
               <span>{{ quiz.quiz_type|title }}</span>
-              <span><i data-lucide="stopwatch"></i> {{ quiz.time_limit_minutes }}min</span>
+              <span><i data-lucide="timer"></i> {{ quiz.time_limit_minutes }}min</span>
               <span><i data-lucide="target"></i> {{ quiz.pass_mark }}% to pass</span>
               <span><i data-lucide="rotate-cw"></i> {{ quiz.max_attempts }} attempts</span>
             </div>

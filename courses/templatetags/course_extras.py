@@ -65,16 +65,30 @@ LUCIDE_MAP = {
     '⚙': 'settings',
     '☰': 'menu',
     '⏳': 'hourglass',
-    '⏱': 'stopwatch',
+    '⏱': 'timer',
+    '⚡': 'zap',
+    '💬': 'message-circle',
+    '💻': 'laptop',
+    '🔌': 'plug',
+    '🔢': 'list-ordered',
 }
+
+
+def _is_emoji(s):
+    return any(
+        0x1F000 <= ord(c) <= 0x1FAFF or 0x2600 <= ord(c) <= 0x27BF or
+        0x2190 <= ord(c) <= 0x21FF or 0x2300 <= ord(c) <= 0x23FF or
+        0x2B00 <= ord(c) <= 0x2BFF or ord(c) in (0xFE0F, 0x200D)
+        for c in s
+    )
 
 
 @register.filter(name='lucide', is_safe=True)
 def lucide(value, icon_class=''):
     """Convert a stored icon value (emoji or lucide name) into a lucide icon."""
     text = str(value or '').replace('\ufe0f', '')
-    name = LUCIDE_MAP.get(text) or LUCIDE_MAP.get(text.strip()) or text.strip()
+    name = LUCIDE_MAP.get(text) or LUCIDE_MAP.get(text.strip())
     if not name:
-        name = 'sparkles'
+        name = text.strip() if (text.strip() and not _is_emoji(text)) else 'sparkles'
     cls = f' class="{icon_class}"' if icon_class else ''
     return mark_safe(f'<i data-lucide="{name}"{cls}></i>')

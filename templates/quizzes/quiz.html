@@ -18,7 +18,7 @@
         <p class="sub">{{ course.title }} · {{ quiz.question_count }} Questions · {{ quiz.time_limit_minutes }} minutes</p>
       </div>
       <div class="tbox {% if quiz.quiz_type == 'final' %}tbox-gold{% endif %}">
-        <span style="font-size:1.1rem"><i data-lucide="stopwatch"></i></span>
+        <span style="font-size:1.1rem"><i data-lucide="timer"></i></span>
         <div>
           <div class="t-lbl" {% if quiz.quiz_type == 'final' %}style="color:var(--gold)"{% endif %}>Time Remaining</div>
           <div class="t-val" id="timer" {% if quiz.quiz_type == 'final' %}style="color:var(--gold)"{% endif %}>

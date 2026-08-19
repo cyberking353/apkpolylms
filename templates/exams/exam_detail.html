@@ -36,7 +36,7 @@
 
       {% elif attempt and not attempt.submitted_at %}
         <div class="exam-alert" style="background:var(--gold-bg);border:1px solid var(--gold)">
-          <i data-lucide="stopwatch"></i> <span>You already started this exam. Resume now — your timer has been running since you started.</span>
+          <i data-lucide="timer"></i> <span>You already started this exam. Resume now — your timer has been running since you started.</span>
         </div>
         {% if not all_modules_complete %}
         <div class="exam-alert" style="background:var(--rose-bg);border:1px solid var(--rose)">
