@@ -15,10 +15,11 @@
   <div class="portal-card-head"><h3>{{ courses.count }} course{{ courses.count|pluralize }}</h3></div>
   <div class="portal-card-body">
     <table class="portal-table">
-      <thead><tr><th>Course</th><th>Lecturer</th><th>Level</th><th>Sem</th><th>Status</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Course Code</th><th>Course</th><th>Lecturer</th><th>Level</th><th>Sem</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
         {% for c in courses %}
         <tr>
+          <td><code style="font-size:.8rem;color:var(--ink)">{{ c.code }}</code></td>
           <td>
             <div style="font-weight:600">{{ c.title }}</div>
             <div style="font-size:.72rem;color:var(--muted)">{{ c.category.name|default:"—" }}</div>
@@ -40,7 +41,7 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No courses found.</td></tr>
+        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">No courses found.</td></tr>
         {% endfor %}
       </tbody>
     </table>
