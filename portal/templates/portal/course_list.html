@@ -19,7 +19,7 @@
       <tbody>
         {% for c in courses %}
         <tr>
-          <td><code style="font-size:.8rem;color:var(--ink)">{{ c.code }}</code></td>
+          <td>{{ c.code }}</td>
           <td>
             <div style="font-weight:600">{{ c.title }}</div>
             <div style="font-size:.72rem;color:var(--muted)">{{ c.category.name|default:"—" }}</div>
