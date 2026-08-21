@@ -645,6 +645,7 @@ svg.lucide{width:1em;height:1em;vertical-align:middle;display:inline-block;flex-
 .pnl .ic svg.lucide{width:16px;height:16px}
 .confirm-icon svg.lucide{width:26px;height:26px}
 .btn svg.lucide, button svg.lucide{pointer-events:none}
+.btn-sm svg.lucide{width:12px;height:12px}
 .pager-btn svg.lucide, .quiz-nav svg.lucide{width:14px;height:14px}
 .flash-close svg.lucide{width:14px;height:14px}
 .cc-meta span{display:inline-flex;align-items:center;gap:6px}

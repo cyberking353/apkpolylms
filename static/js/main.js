@@ -196,6 +196,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   } catch (err) { console.error('Flash auto-dismiss setup failed:', err); }
 
+  /* ── Re-render Lucide icons after HTMX swaps ── */
+  try {
+    document.body.addEventListener('htmx:afterSwap', () => { if (window.lucide) lucide.createIcons(); });
+    document.body.addEventListener('htmx:afterSettle', () => { if (window.lucide) lucide.createIcons(); });
+  } catch (err) { console.error('Lucide htmx re-render setup failed:', err); }
+
   /* ── Scroll animations ── */
   try {
     if ('IntersectionObserver' in window) {
@@ -205,13 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.style.opacity = '1';
             e.target.style.transform = 'translateY(0)';
           }
-  /* ── Re-render Lucide icons after HTMX swaps ── */
-  try {
-    document.body.addEventListener('htmx:afterSwap', () => { if (window.lucide) lucide.createIcons(); });
-    document.body.addEventListener('htmx:afterSettle', () => { if (window.lucide) lucide.createIcons(); });
-  } catch (err) { console.error('Lucide htmx re-render setup failed:', err); }
-
-});
+        });
       }, { threshold: 0.08 });
 
       document.querySelectorAll('.card, .step, .bi, .stb').forEach(el => {
