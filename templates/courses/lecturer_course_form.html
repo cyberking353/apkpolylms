@@ -37,7 +37,7 @@
     <!-- Header row -->
     <div class="dsh" style="margin-bottom:20px">
       <h2 style="font-size:1.2rem;margin:0">{% if is_new %}New Course{% else %}{{ course.title }}{% endif %}</h2>
-      <div style="display:flex;gap:8px;align-items:center">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         {% if not is_new %}
           {% if course.status == 'pending' %}
           <span class="chip c-gold"><i data-lucide="hourglass"></i> Under Admin Review</span>
