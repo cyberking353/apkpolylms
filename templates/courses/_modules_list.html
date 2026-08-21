@@ -70,7 +70,7 @@
           {% if lecture.notes %}<span title="Has notes attached"><i data-lucide="paperclip"></i></span>{% endif %}
           {% if request.user.is_staff or course.status != 'pending' %}
           <div style="margin-left:auto;display:flex;gap:5px">
-            <button type="button" class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:.68rem"
+            <button type="button" class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:.68rem" title="Edit lecture"
               onclick="document.getElementById('lecture-view-{{ lecture.id }}').style.display='none';document.getElementById('lecture-edit-{{ lecture.id }}').style.display='flex'">
               <i data-lucide="pencil"></i>
             </button>
@@ -78,10 +78,11 @@
                   hx-post="{% url 'courses:lecturer_lecture_delete' course.slug lecture.id %}"
                   hx-target="#modules-list" hx-swap="outerHTML" style="display:inline">
               {% csrf_token %}
-              <button type="submit" class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:.68rem"
+<button type="submit" class="btn btn-danger btn-sm" style="padding:2px 7px;font-size:.68rem"
+                title="Delete lecture"
                 data-confirm="Delete &quot;{{ lecture.title }}&quot;?">
-                <i data-lucide="trash"></i>
-              </button>
+              <i data-lucide="trash"></i>
+            </button>
             </form>
           </div>
           {% endif %}
