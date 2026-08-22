@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.utils import timezone
+from django.db import transaction
 from django.db.models import Count, Avg, Q
 
 
@@ -458,10 +459,51 @@ def course_review(request, pk):
 
 @portal_required
 def course_delete(request, pk):
-    from courses.models import Course
+    from courses.models import (
+        Course, CourseDepartment, Module, Lecture, LectureProgress,
+        Enrollment, CourseMessage, CourseMessageReply,
+    )
+    from quizzes.models import Quiz, Question, Choice, QuizAttempt, Answer
+    from exams.models import (
+        Exam, ExamQuestion, ExamChoice, ExamAttempt, ExamAnswer,
+        ExamViolation, ExamReschedule,
+    )
+    from results.models import Result
+
     course = get_object_or_404(Course, pk=pk)
     title = course.title
-    course.delete()
+
+    # Delete deepest dependencies first. Django's CASCADE normally handles
+    # this, but a production DB whose schema is behind the migrations can
+    # still carry legacy foreign-key constraints without ON DELETE CASCADE,
+    # which raises "FOREIGN KEY constraint failed" on a bare .delete().
+    with transaction.atomic():
+        ExamAnswer.objects.filter(attempt__exam__course=course).delete()
+        ExamViolation.objects.filter(attempt__exam__course=course).delete()
+        ExamAttempt.objects.filter(exam__course=course).delete()
+        ExamReschedule.objects.filter(exam__course=course).delete()
+        ExamChoice.objects.filter(question__exam__course=course).delete()
+        ExamQuestion.objects.filter(exam__course=course).delete()
+        Exam.objects.filter(course=course).delete()
+
+        Answer.objects.filter(question__quiz__course=course).delete()
+        QuizAttempt.objects.filter(quiz__course=course).delete()
+        Choice.objects.filter(question__quiz__course=course).delete()
+        Question.objects.filter(quiz__course=course).delete()
+        Quiz.objects.filter(course=course).delete()
+
+        LectureProgress.objects.filter(lecture__module__course=course).delete()
+        Lecture.objects.filter(module__course=course).delete()
+        Module.objects.filter(course=course).delete()
+
+        CourseMessageReply.objects.filter(thread__course=course).delete()
+        CourseMessage.objects.filter(course=course).delete()
+        Result.objects.filter(course=course).delete()
+        Enrollment.objects.filter(course=course).delete()
+        CourseDepartment.objects.filter(course=course).delete()
+
+        course.delete()
+
     messages.success(request, f'"{title}" has been permanently deleted.')
     return redirect('portal:course_list')
 

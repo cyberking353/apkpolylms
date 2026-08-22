@@ -244,3 +244,32 @@ class StaleEnrollmentSyncTest(TestCase):
         Enrollment.sync_for_student(self.student)
         Enrollment.sync_for_student(self.student)
         self.assertEqual(Enrollment.objects.filter(student=self.student).count(), 1)
+
+
+class CourseDeleteWithRelationsTest(TestCase):
+    """Deleting a course must succeed even with all related objects present."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = User.objects.create_user(
+            username='deleter', password='pass', role='student', is_staff=True)
+        cls.student = User.objects.create_user(
+            username='del-student', password='pass', role='student')
+        cls.cat = Category.objects.create(name='DelCat')
+        cls.course = Course.objects.create(
+            title='Delete Me', slug='delete-me', description='',
+            category=cls.cat, level='ND1', semester='1',
+            status='published', code='DEL1')
+        module = Module.objects.create(course=cls.course, title='M1', week_number=1)
+        Lecture.objects.create(module=module, title='L1', order=1)
+        quiz = Quiz.objects.create(course=cls.course, module=module, title='Q')
+        from quizzes.models import Question
+        Question.objects.create(quiz=quiz, text='t', order=1)
+        Enrollment.objects.create(student=cls.student, course=cls.course)
+
+    def test_delete_via_portal_view(self):
+        from django.urls import reverse
+        self.client.force_login(self.admin)
+        resp = self.client.post(reverse('portal:course_delete', args=[self.course.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(Course.objects.filter(pk=self.course.pk).exists())
