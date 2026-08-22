@@ -401,17 +401,23 @@ class Enrollment(models.Model):
     @classmethod
     def sync_for_student(cls, student):
         """
-        Auto-enroll a student in every course currently visible to them
-        (their department + level + the school's current semester).
-        Safe to call repeatedly — existing enrollments are left untouched.
-        No-ops for lecturer accounts.
+        Align a student's enrollments with the courses currently visible to
+        them (their department + level + the school's current semester):
+        auto-enrolls in any new matching course AND removes stale enrollments
+        left behind when a course's level/department/status changed or the
+        student moved up a level. Safe to call repeatedly.
+        No-ops for lecturer accounts and students without an academic level.
         """
         if getattr(student, 'role', 'student') != 'student':
             return
         if not student.academic_level:
             return
-        for course in Course.for_student(student):
+        visible = list(Course.for_student(student))
+        for course in visible:
             cls.objects.get_or_create(student=student, course=course)
+        # Drop enrollments that no longer match (course level/dept changed,
+        # course unpublished, or student promoted to a new level).
+        cls.objects.filter(student=student).exclude(course__in=visible).delete()
 
 
 class LectureProgress(models.Model):

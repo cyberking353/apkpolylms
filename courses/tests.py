@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.urls import reverse
-from .models import Course, Module, Lecture, LectureProgress, Enrollment, Notification, Category
+from .models import Course, Module, Lecture, LectureProgress, Enrollment, Notification, Category, CourseDepartment
 from quizzes.models import Quiz, QuizAttempt
 from exams.models import Exam, ExamAttempt
 
@@ -193,3 +193,54 @@ class LectureProgressTest(TestCase):
         resp = self.client.get(reverse('courses:dashboard'))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, self.course.title)
+
+class StaleEnrollmentSyncTest(TestCase):
+    """A course moved to a different level must disappear from students of the old level."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.student = User.objects.create_user(
+            username='stale-student', password='pass', role='student',
+            department='CSC', academic_level='HND2')
+        cls.cat = Category.objects.create(name='StaleCat')
+
+    def _course(self, slug, level):
+        return Course.objects.create(
+            title=f'Course {slug}', slug=slug, description='',
+            category=self.cat, level=level, semester='1',
+            status='published', code=f'{slug.upper()}')
+
+    def test_level_change_removes_stale_enrollment(self):
+        course = self._course('stale-one', 'HND2')
+        Enrollment.sync_for_student(self.student)
+        self.assertTrue(Enrollment.objects.filter(student=self.student, course=course).exists())
+
+        # Admin moves the course to HND1
+        course.level = 'HND1'
+        course.save()
+
+        Enrollment.sync_for_student(self.student)
+        self.assertFalse(Enrollment.objects.filter(student=self.student, course=course).exists())
+
+    def test_department_change_keeps_other_dept_students(self):
+        course = self._course('stale-two', 'HND2')
+        CourseDepartment.objects.create(course=course, department='EE', is_home=True)
+        # student is CSC; the course is now EE-only
+        Enrollment.sync_for_student(self.student)
+        self.assertFalse(Enrollment.objects.filter(
+            student=self.student, course=course).exists())
+
+    def test_unpublished_course_removed_from_enrollments(self):
+        course = self._course('stale-three', 'HND2')
+        Enrollment.sync_for_student(self.student)
+        self.assertTrue(Enrollment.objects.filter(student=self.student, course=course).exists())
+        course.status = 'draft'
+        course.save()
+        Enrollment.sync_for_student(self.student)
+        self.assertFalse(Enrollment.objects.filter(student=self.student, course=course).exists())
+
+    def test_valid_enrollment_survives_sync(self):
+        course = self._course('stale-keep', 'HND2')
+        Enrollment.sync_for_student(self.student)
+        Enrollment.sync_for_student(self.student)
+        self.assertEqual(Enrollment.objects.filter(student=self.student).count(), 1)
