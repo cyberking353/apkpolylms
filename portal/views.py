@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.utils import timezone
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import Count, Avg, Q
 
 
@@ -493,32 +493,45 @@ def course_delete(request, pk):
     # this, but a production DB whose schema is behind the migrations can
     # still carry legacy foreign-key constraints without ON DELETE CASCADE,
     # which raises "FOREIGN KEY constraint failed" on a bare .delete().
-    with transaction.atomic():
-        ExamAnswer.objects.filter(attempt__exam__course=course).delete()
-        ExamViolation.objects.filter(attempt__exam__course=course).delete()
-        ExamAttempt.objects.filter(exam__course=course).delete()
-        ExamReschedule.objects.filter(exam__course=course).delete()
-        ExamChoice.objects.filter(question__exam__course=course).delete()
-        ExamQuestion.objects.filter(exam__course=course).delete()
-        Exam.objects.filter(course=course).delete()
+    # For SQLite we suspend FK enforcement around the operation (the pragma
+    # is a no-op inside a transaction, so it must run before it opens).
+    fk_restored = False
+    if connection.vendor == 'sqlite':
+        cursor = connection.cursor()
+        cursor.execute('PRAGMA foreign_keys')
+        if cursor.fetchone()[0]:
+            cursor.execute('PRAGMA foreign_keys = OFF')
+            fk_restored = True
+    try:
+        with transaction.atomic():
+            ExamAnswer.objects.filter(attempt__exam__course=course).delete()
+            ExamViolation.objects.filter(attempt__exam__course=course).delete()
+            ExamAttempt.objects.filter(exam__course=course).delete()
+            ExamReschedule.objects.filter(exam__course=course).delete()
+            ExamChoice.objects.filter(question__exam__course=course).delete()
+            ExamQuestion.objects.filter(exam__course=course).delete()
+            Exam.objects.filter(course=course).delete()
 
-        Answer.objects.filter(question__quiz__course=course).delete()
-        QuizAttempt.objects.filter(quiz__course=course).delete()
-        Choice.objects.filter(question__quiz__course=course).delete()
-        Question.objects.filter(quiz__course=course).delete()
-        Quiz.objects.filter(course=course).delete()
+            Answer.objects.filter(question__quiz__course=course).delete()
+            QuizAttempt.objects.filter(quiz__course=course).delete()
+            Choice.objects.filter(question__quiz__course=course).delete()
+            Question.objects.filter(quiz__course=course).delete()
+            Quiz.objects.filter(course=course).delete()
 
-        LectureProgress.objects.filter(lecture__module__course=course).delete()
-        Lecture.objects.filter(module__course=course).delete()
-        Module.objects.filter(course=course).delete()
+            LectureProgress.objects.filter(lecture__module__course=course).delete()
+            Lecture.objects.filter(module__course=course).delete()
+            Module.objects.filter(course=course).delete()
 
-        CourseMessageReply.objects.filter(thread__course=course).delete()
-        CourseMessage.objects.filter(course=course).delete()
-        Result.objects.filter(course=course).delete()
-        Enrollment.objects.filter(course=course).delete()
-        CourseDepartment.objects.filter(course=course).delete()
+            CourseMessageReply.objects.filter(thread__course=course).delete()
+            CourseMessage.objects.filter(course=course).delete()
+            Result.objects.filter(course=course).delete()
+            Enrollment.objects.filter(course=course).delete()
+            CourseDepartment.objects.filter(course=course).delete()
 
-        course.delete()
+            course.delete()
+    finally:
+        if fk_restored:
+            connection.cursor().execute('PRAGMA foreign_keys = ON')
 
     messages.success(request, f'"{title}" has been permanently deleted.')
     return redirect('portal:course_list')
