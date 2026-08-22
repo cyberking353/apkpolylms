@@ -380,10 +380,28 @@ def course_list(request):
     from courses.models import Course
     qs = Course.objects.select_related('lecturer', 'category').order_by('-created_at')
     status = request.GET.get('status', '')
-    if status: qs = qs.filter(status=status)
+    if status:
+        qs = qs.filter(status=status)
+    # Findability: free-text search across code/title/lecturer + level filter
+    q = request.GET.get('q', '').strip()
+    if q:
+        from django.db.models import Q as _Q
+        qs = qs.filter(
+            _Q(code__icontains=q)
+            | _Q(title__icontains=q)
+            | _Q(lecturer__first_name__icontains=q)
+            | _Q(lecturer__last_name__icontains=q)
+            | _Q(lecturer__username__icontains=q)
+        )
+    level = request.GET.get('level', '')
+    if level:
+        qs = qs.filter(level=level)
     return render(request, 'portal/course_list.html', {
         'courses': qs, 'active_status': status,
         'status_choices': Course.STATUS_CHOICES,
+        'q': q, 'active_level': level,
+        'level_choices': Course.LEVEL_CHOICES,
+        'total_count': Course.objects.count(),
     })
 
 

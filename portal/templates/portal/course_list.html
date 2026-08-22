@@ -5,14 +5,30 @@
 <a href="{% url 'portal:course_create' %}" class="btn btn-teal btn-sm">+ New Course</a>
 {% endblock %}
 {% block content %}
-<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
   {% for val,label in status_choices %}
-  <a href="?status={{ val }}" class="btn {% if active_status == val %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">{{ label }}</a>
+  <a href="?status={{ val }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if active_level %}&level={{ active_level }}{% endif %}" class="btn {% if active_status == val %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">{{ label }}</a>
   {% endfor %}
   <a href="?" class="btn {% if not active_status %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">All</a>
 </div>
+
+<!-- Search + level filter -->
+<form method="get" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+  {% if active_status %}<input type="hidden" name="status" value="{{ active_status }}">{% endif %}
+  <input type="text" name="q" value="{{ q }}" placeholder="Search by code, title or lecturer…"
+         style="flex:1;min-width:200px;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem">
+  <select name="level" style="padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-size:.85rem">
+    <option value="">All Levels</option>
+    {% for val,label in level_choices %}
+    <option value="{{ val }}" {% if active_level == val %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-ink btn-sm">Search</button>
+  {% if q or active_level %}<a href="{% if active_status %}?status={{ active_status }}{% endif %}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
+</form>
+
 <div class="portal-card">
-  <div class="portal-card-head"><h3>{{ courses.count }} course{{ courses.count|pluralize }}</h3></div>
+  <div class="portal-card-head"><h3>{{ courses.count }} of {{ total_count }} course{{ total_count|pluralize }}</h3></div>
   <div class="portal-card-body">
     <table class="portal-table">
       <thead><tr><th>Course Code</th><th>Course</th><th>Lecturer</th><th>Level</th><th>Sem</th><th>Status</th><th>Actions</th></tr></thead>
