@@ -473,14 +473,13 @@ def course_delete(request, pk):
     course = get_object_or_404(Course, pk=pk)
     title = course.title
 
-    # Courses that carry academic records are archived, never destroyed:
-    # results, attempts and progress are history that cannot be rebuilt.
+    # Only genuine academic RECORDS force archiving: grades and attempts are
+    # history that cannot be rebuilt. Watch-progress and Q&A threads are not
+    # enough to block deletion of an unwanted course.
     has_academic_data = (
         Result.objects.filter(course=course).exists()
         or QuizAttempt.objects.filter(quiz__course=course).exists()
         or ExamAttempt.objects.filter(exam__course=course).exists()
-        or LectureProgress.objects.filter(lecture__module__course=course).exists()
-        or CourseMessage.objects.filter(course=course).exists()
     )
     if has_academic_data:
         course.status = 'archived'

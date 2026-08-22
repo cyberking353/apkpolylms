@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.urls import reverse
-from .models import Course, Module, Lecture, LectureProgress, Enrollment, Notification, Category, CourseDepartment
+from .models import Course, Module, Lecture, LectureProgress, Enrollment, Notification, Category, CourseDepartment, CourseMessage, CourseMessageReply
 from quizzes.models import Quiz, QuizAttempt
 from exams.models import Exam, ExamAttempt
 
@@ -273,3 +273,115 @@ class CourseDeleteWithRelationsTest(TestCase):
         resp = self.client.post(reverse('portal:course_delete', args=[self.course.pk]))
         self.assertEqual(resp.status_code, 302)
         self.assertFalse(Course.objects.filter(pk=self.course.pk).exists())
+
+
+class CourseArchiveOnDeleteTest(TestCase):
+    """Courses with academic records are archived on delete; empty ones are truly deleted."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = User.objects.create_user(
+            username='arch-admin', password='pass', role='student', is_staff=True)
+        cls.student = User.objects.create_user(
+            username='arch-student', password='pass', role='student')
+        cls.cat = Category.objects.create(name='ArchCat')
+
+    def _course(self, slug):
+        return Course.objects.create(
+            title=f'Arch {slug}', slug=slug, description='',
+            category=self.cat, level='ND1', semester='1',
+            status='published', code=slug.upper())
+
+    def test_course_with_results_is_archived_not_deleted(self):
+        from results.models import Result
+        course = self._course('arch-res')
+        Enrollment.objects.create(student=self.student, course=course)
+        Result.objects.create(student=self.student, course=course,
+                              academic_year='2025/2026', semester='1')
+        self.client.force_login(self.admin)
+        resp = self.client.post(reverse('portal:course_delete', args=[course.pk]))
+        self.assertEqual(resp.status_code, 302)
+        course.refresh_from_db()
+        self.assertEqual(course.status, 'archived')
+        # records survive
+        self.assertTrue(Result.objects.filter(course=course).exists())
+        self.assertTrue(Enrollment.objects.filter(course=course).exists())
+
+    def test_archived_course_hidden_from_students_and_lecturer_lists(self):
+        from django.db.models import QuerySet
+        course = self._course('arch-hide')
+        course.status = 'archived'
+        course.save()
+        # student visibility query never returns archived
+        self.assertNotIn(course, list(Course.for_student(self.student)))
+        # lecturer lists exclude archived
+        lecturer = User.objects.create_user(username='arch-lect', password='x', role='lecturer')
+        course.lecturer = lecturer
+        course.save()
+        self.assertNotIn(course, list(Course.for_lecturer(lecturer)))
+
+    def test_empty_course_is_still_permanently_deleted(self):
+        course = self._course('arch-empty')
+        self.client.force_login(self.admin)
+        resp = self.client.post(reverse('portal:course_delete', args=[course.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(Course.objects.filter(pk=course.pk).exists())
+
+    def test_restore_returns_archived_course_to_draft(self):
+        course = self._course('arch-restore')
+        course.status = 'archived'
+        course.save()
+        self.client.force_login(self.admin)
+        resp = self.client.post(reverse('portal:course_restore', args=[course.pk]))
+        self.assertEqual(resp.status_code, 302)
+        course.refresh_from_db()
+        self.assertEqual(course.status, 'draft')
+
+    def test_quiz_attempt_counts_as_academic_data(self):
+        from quizzes.models import Quiz, Question, QuizAttempt
+        course = self._course('arch-quiz')
+        module = Module.objects.create(course=course, title='M1', week_number=1)
+        quiz = Quiz.objects.create(course=course, module=module, title='Q')
+        q = Question.objects.create(quiz=quiz, text='t', order=1)
+        QuizAttempt.objects.create(student=self.student, quiz=quiz)
+        self.client.force_login(self.admin)
+        resp = self.client.post(reverse('portal:course_delete', args=[course.pk]))
+        course.refresh_from_db()
+        self.assertEqual(course.status, 'archived')
+
+
+class CourseDeleteSoftSignalsTest(TestCase):
+    """Watch-progress and Q&A threads do NOT force archiving — only real records do."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = User.objects.create_user(
+            username='soft-admin', password='pass', role='student', is_staff=True)
+        cls.student = User.objects.create_user(
+            username='soft-student', password='pass', role='student')
+        cls.cat = Category.objects.create(name='SoftCat')
+
+    def test_lecture_progress_alone_still_deletes(self):
+        course = Course.objects.create(
+            title='Soft Prog', slug='soft-prog', description='',
+            category=self.cat, level='ND1', semester='1',
+            status='published', code='SFT1')
+        module = Module.objects.create(course=course, title='M1', week_number=1)
+        lecture = Lecture.objects.create(module=module, title='L1', order=1)
+        LectureProgress.objects.create(student=self.student, lecture=lecture)
+        self.client.force_login(self.admin)
+        resp = self.client.post(reverse('portal:course_delete', args=[course.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(Course.objects.filter(pk=course.pk).exists())
+
+    def test_course_message_alone_still_deletes(self):
+        course = Course.objects.create(
+            title='Soft Msg', slug='soft-msg', description='',
+            category=self.cat, level='ND1', semester='1',
+            status='published', code='SFT2')
+        msg = CourseMessage.objects.create(
+            course=course, student=self.student, subject='Broken video')
+        CourseMessageReply.objects.create(thread=msg, sender=self.student, body='+1')
+        self.client.force_login(self.admin)
+        resp = self.client.post(reverse('portal:course_delete', args=[course.pk]))
+        self.assertFalse(Course.objects.filter(pk=course.pk).exists())
