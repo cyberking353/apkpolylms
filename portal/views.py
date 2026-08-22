@@ -49,10 +49,11 @@ def portal_logout(request):
 
 @portal_required
 def dashboard(request):
-    from accounts.models import Student
+    from accounts.models import Student, ACADEMIC_LEVEL_CHOICES
     from courses.models import Course, Enrollment, AcademicSettings
+    from departments.models import Department
     from exams.models import Exam
-    from results.models import Result
+    from datetime import date
 
     settings_obj = AcademicSettings.get_current()
     students = Student.objects.filter(role='student')
@@ -63,22 +64,30 @@ def dashboard(request):
         'students':        students.count(),
         'lecturers':       lecturers.count(),
         'courses_live':    courses.filter(status='published').count(),
+        'courses_total':   courses.count(),
         'courses_pending': courses.filter(status='pending').count(),
         'exams_pending':   Exam.objects.filter(exam_status='pending').count(),
         'enrollments':     Enrollment.objects.count(),
     }
 
-    pending_courses = courses.filter(status='pending').select_related('lecturer', 'category')[:8]
-    pending_exams   = Exam.objects.filter(exam_status='pending').select_related('course')[:8]
-    recent_students = students.order_by('-date_joined')[:6]
+    pending_courses = courses.filter(status='pending').select_related('lecturer', 'category')[:6]
+    pending_exams   = Exam.objects.filter(exam_status='pending').select_related('course')[:6]
+    recent_students = students.order_by('-date_joined')[:5]
 
-    dept_breakdown = (students.values('department')
-                      .annotate(count=Count('id'))
-                      .order_by('-count'))
+    level_labels = dict(ACADEMIC_LEVEL_CHOICES)
+    dept_map = dict(Department.objects.values_list('code', 'name'))
 
-    level_breakdown = (students.values('academic_level')
-                       .annotate(count=Count('id'))
-                       .order_by('academic_level'))
+    dept_breakdown = [
+        {'label': dept_map.get(d['department']) or d['department'] or 'Unassigned', 'count': d['count']}
+        for d in students.values('department').annotate(count=Count('id')).order_by('-count')
+    ]
+    level_breakdown = [
+        {'label': level_labels.get(l['academic_level']) or l['academic_level'] or 'Unassigned', 'count': l['count']}
+        for l in students.values('academic_level').annotate(count=Count('id')).order_by('academic_level')
+    ]
+
+    import datetime as _dt
+    today = _dt.date.today()
 
     return render(request, 'portal/dashboard.html', {
         'stats': stats,
@@ -88,6 +97,7 @@ def dashboard(request):
         'dept_breakdown': dept_breakdown,
         'level_breakdown': level_breakdown,
         'settings': settings_obj,
+        'today': today,
     })
 
 
