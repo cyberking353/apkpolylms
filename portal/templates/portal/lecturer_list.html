@@ -3,8 +3,21 @@
 {% block page_title %}Lecturers{% endblock %}
 {% block topbar_actions %}<a href="{% url 'portal:lecturer_create' %}" class="btn btn-teal btn-sm">+ New Lecturer</a>{% endblock %}
 {% block content %}
+<form method="get" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search by name, email or staff ID…"
+         style="flex:1;min-width:200px;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem">
+  <select name="dept" style="padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-size:.85rem">
+    <option value="">All Departments</option>
+    {% for code,label in dept_choices %}
+    <option value="{{ code }}" {% if dept == code %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-ink btn-sm">Search</button>
+  {% if q or dept %}<a href="{% url 'portal:lecturer_list' %}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
+</form>
+
 <div class="portal-card">
-  <div class="portal-card-head"><h3>{{ lecturers.count }} lecturer{{ lecturers.count|pluralize }}</h3></div>
+  <div class="portal-card-head"><h3>{{ lecturers.count }} of {{ total_count }} lecturer{{ total_count|pluralize }}</h3></div>
   <div class="portal-card-body">
     <table class="portal-table">
       <thead><tr><th>Name</th><th>Staff ID</th><th>Department</th><th>Courses</th><th>Status</th><th></th></tr></thead>

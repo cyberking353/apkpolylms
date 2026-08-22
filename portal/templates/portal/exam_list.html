@@ -2,14 +2,23 @@
 {% block title %}Exams{% endblock %}
 {% block page_title %}Exams{% endblock %}
 {% block content %}
-<div style="display:flex;gap:8px;margin-bottom:16px">
-  <a href="?" class="btn {% if not active_status %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">All</a>
-  <a href="?status=draft" class="btn {% if active_status == 'draft' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">Draft</a>
-  <a href="?status=pending" class="btn {% if active_status == 'pending' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">Pending Approval</a>
-  <a href="?status=approved" class="btn {% if active_status == 'approved' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">Approved</a>
+<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+  <a href="{% if q %}?q={{ q|urlencode }}{% endif %}" class="btn {% if not active_status %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">All</a>
+  <a href="?status=draft{% if q %}&q={{ q|urlencode }}{% endif %}" class="btn {% if active_status == 'draft' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">Draft</a>
+  <a href="?status=pending{% if q %}&q={{ q|urlencode }}{% endif %}" class="btn {% if active_status == 'pending' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">Pending Approval</a>
+  <a href="?status=approved{% if q %}&q={{ q|urlencode }}{% endif %}" class="btn {% if active_status == 'approved' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">Approved</a>
 </div>
+
+<form method="get" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+  {% if active_status %}<input type="hidden" name="status" value="{{ active_status }}">{% endif %}
+  <input type="text" name="q" value="{{ q }}" placeholder="Search by course code, course or exam title…"
+         style="flex:1;min-width:200px;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem">
+  <button type="submit" class="btn btn-ink btn-sm">Search</button>
+  {% if q %}<a href="{% if active_status %}?status={{ active_status }}{% endif %}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
+</form>
+
 <div class="portal-card">
-  <div class="portal-card-head"><h3>{{ exams.count }} exam{{ exams.count|pluralize }}</h3></div>
+  <div class="portal-card-head"><h3>{{ exams.count }} of {{ total_count }} exam{{ total_count|pluralize }}</h3></div>
   <div class="portal-card-body">
     <table class="portal-table">
       <thead><tr><th>Exam</th><th>Course</th><th>Questions</th><th>Schedule</th><th>Status</th><th>Action</th></tr></thead>

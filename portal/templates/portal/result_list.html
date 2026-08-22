@@ -11,6 +11,8 @@
 {% block content %}
 <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
   <form method="get" style="display:contents">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search student / matric / course…"
+           style="min-width:200px;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem">
     <select name="dept">
       <option value="">All Departments</option>
       {% for code,label in dept_choices %}<option value="{{ code }}" {% if dept == code %}selected{% endif %}>{{ label }}</option>{% endfor %}

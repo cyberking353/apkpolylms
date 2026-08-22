@@ -5,9 +5,16 @@
 <a href="{% url 'portal:department_create' %}" class="btn btn-teal btn-sm">+ New Department</a>
 {% endblock %}
 {% block content %}
+<form method="get" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search departments…"
+         style="flex:1;min-width:200px;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem">
+  <button type="submit" class="btn btn-ink btn-sm">Search</button>
+  {% if q %}<a href="{% url 'portal:department_list' %}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
+</form>
+
 <div class="portal-card">
   <div class="portal-card-head">
-    <h3>{{ depts.count }} department{{ depts.count|pluralize }}</h3>
+    <h3>{{ depts.count }} of {{ total_count }} department{{ total_count|pluralize }}</h3>
     <span style="font-size:.78rem;color:var(--muted)">These appear in all dropdowns and checklists across the site.</span>
   </div>
   <div class="portal-card-body">

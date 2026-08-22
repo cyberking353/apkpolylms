@@ -277,9 +277,21 @@ def student_reset_password(request, pk):
 
 @portal_required
 def lecturer_list(request):
-    from accounts.models import Student
-    lecturers = Student.objects.filter(role='lecturer').order_by('last_name')
-    return render(request, 'portal/lecturer_list.html', {'lecturers': lecturers})
+    from accounts.models import Student, get_department_choices
+    qs = Student.objects.filter(role='lecturer').order_by('last_name')
+    q = request.GET.get('q', '').strip()
+    dept = request.GET.get('dept', '')
+    if q:
+        qs = qs.filter(
+            Q(first_name__icontains=q) | Q(last_name__icontains=q)
+            | Q(email__icontains=q) | Q(staff_id__icontains=q))
+    if dept:
+        qs = qs.filter(department=dept)
+    return render(request, 'portal/lecturer_list.html', {
+        'lecturers': qs, 'q': q, 'dept': dept,
+        'dept_choices': get_department_choices(),
+        'total_count': Student.objects.filter(role='lecturer').count(),
+    })
 
 
 @portal_required
@@ -677,9 +689,16 @@ def exam_list(request):
     from exams.models import Exam
     qs = Exam.objects.select_related('course').order_by('-course__created_at')
     status = request.GET.get('status', '')
-    if status: qs = qs.filter(exam_status=status)
+    if status:
+        qs = qs.filter(exam_status=status)
+    q = request.GET.get('q', '').strip()
+    if q:
+        qs = qs.filter(
+            Q(course__code__icontains=q) | Q(course__title__icontains=q)
+            | Q(title__icontains=q))
     return render(request, 'portal/exam_list.html', {
-        'exams': qs, 'active_status': status,
+        'exams': qs, 'active_status': status, 'q': q,
+        'total_count': Exam.objects.count(),
     })
 
 
@@ -737,6 +756,12 @@ def result_list(request):
     level = request.GET.get('level', '')
     yr    = request.GET.get('year', '')
     sem   = request.GET.get('sem', '')
+    q     = request.GET.get('q', '').strip()
+    if q:
+        qs = qs.filter(
+            Q(student__first_name__icontains=q) | Q(student__last_name__icontains=q)
+            | Q(student__matric_number__icontains=q)
+            | Q(course__title__icontains=q) | Q(course__code__icontains=q))
     if dept:  qs = qs.filter(student__department=dept)
     if level: qs = qs.filter(student__academic_level=level)
     if yr:    qs = qs.filter(academic_year=yr)
@@ -745,7 +770,7 @@ def result_list(request):
                     .distinct().order_by('-academic_year'))
     return render(request, 'portal/result_list.html', {
         'results': qs, 'dept': dept, 'level': level,
-        'yr': yr, 'sem': sem,
+        'yr': yr, 'sem': sem, 'q': q,
         'dept_choices': get_department_choices(),
         'level_choices': ACADEMIC_LEVEL_CHOICES,
         'year_choices': year_choices,
@@ -903,8 +928,14 @@ def academic_settings(request):
 @portal_required
 def announcement_list(request):
     from announcements.models import Announcement
-    items = Announcement.objects.select_related('created_by').all()
-    return render(request, 'portal/announcement_list.html', {'items': items})
+    qs = Announcement.objects.select_related('created_by').all()
+    q = request.GET.get('q', '').strip()
+    if q:
+        qs = qs.filter(Q(title__icontains=q) | Q(body__icontains=q))
+    return render(request, 'portal/announcement_list.html', {
+        'items': qs, 'q': q,
+        'total_count': Announcement.objects.count(),
+    })
 
 
 @portal_required
@@ -1087,8 +1118,14 @@ def exam_reschedule_delete(request, pk):
 @portal_required
 def department_list(request):
     from departments.models import Department
-    depts = Department.objects.all()
-    return render(request, 'portal/department_list.html', {'depts': depts})
+    qs = Department.objects.all()
+    q = request.GET.get('q', '').strip()
+    if q:
+        qs = qs.filter(Q(code__icontains=q) | Q(name__icontains=q))
+    return render(request, 'portal/department_list.html', {
+        'depts': qs, 'q': q,
+        'total_count': Department.objects.count(),
+    })
 
 
 @portal_required
