@@ -1,0 +1,33 @@
+<div class="portal-card">
+  <div class="portal-card-head"><h3>Gradebook — {{ course.code }} {{ course.title }}</h3></div>
+  <div class="portal-card-body" style="padding:14px 18px">
+    {% if stats.count %}
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <span class="chip c-teal">{{ stats.count }} student{{ stats.count|pluralize }}</span>
+      <span class="chip">Avg {{ stats.avg }}/100</span>
+      <span class="chip c-green">Highest {{ stats.high }}</span>
+      <span class="chip c-rose">Lowest {{ stats.low }}</span>
+      <span class="chip {% if stats.pass_rate >= 50 %}c-green{% else %}c-gold{% endif %}">Pass rate {{ stats.pass_rate }}%</span>
+    </div>
+    <table class="portal-table">
+      <thead><tr><th>#</th><th>Student</th><th>Matric No</th><th>Dept</th><th>CA (40)</th><th>Exam (60)</th><th>Total</th><th>Grade</th></tr></thead>
+      <tbody>
+        {% for r in results %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td style="font-weight:600">{{ r.student.display_name }}</td>
+          <td>{{ r.student.matric_number|default:"—" }}</td>
+          <td>{{ r.student.get_department_display|default:"—" }}</td>
+          <td>{{ r.ca_score|floatformat:1 }}</td>
+          <td>{{ r.exam_score|floatformat:1 }}</td>
+          <td><strong>{{ r.total|floatformat:1 }}</strong></td>
+          <td><span class="chip {% if r.grade == 'A' or r.grade == 'B' %}c-green{% elif r.grade == 'C' %}c-teal{% elif r.grade == 'D' or r.grade == 'E' %}c-gold{% else %}c-rose{% endif %}">{{ r.grade }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="text-align:center;color:var(--muted);padding:24px">No results match this filter for this course.</p>
+    {% endif %}
+  </div>
+</div>

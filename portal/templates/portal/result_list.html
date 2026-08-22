@@ -9,30 +9,5 @@
 </form>
 {% endblock %}
 {% block content %}
-<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-  <form method="get" style="display:contents">
-    <input type="text" name="q" value="{{ q }}" placeholder="Search student / matric / course…"
-         hx-get="{{ request.path }}" hx-target="#results-results" hx-swap="outerHTML" hx-include="closest form" hx-trigger="input changed delay:300ms, search"
-           style="min-width:200px;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem">
-    <select name="dept" hx-get="{{ request.path }}" hx-target="#results-results" hx-swap="outerHTML" hx-include="closest form" hx-trigger="change">
-      <option value="">All Departments</option>
-      {% for code,label in dept_choices %}<option value="{{ code }}" {% if dept == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
-    </select>
-    <select name="level" hx-get="{{ request.path }}" hx-target="#results-results" hx-swap="outerHTML" hx-include="closest form" hx-trigger="change">
-      <option value="">All Levels</option>
-      {% for code,label in level_choices %}<option value="{{ code }}" {% if level == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
-    </select>
-    <select name="year" hx-get="{{ request.path }}" hx-target="#results-results" hx-swap="outerHTML" hx-include="closest form" hx-trigger="change">
-      <option value="">All Years</option>
-      {% for y in year_choices %}<option value="{{ y }}" {% if yr == y %}selected{% endif %}>{{ y }}</option>{% endfor %}
-    </select>
-    <select name="sem" hx-get="{{ request.path }}" hx-target="#results-results" hx-swap="outerHTML" hx-include="closest form" hx-trigger="change">
-      <option value="">All Semesters</option>
-      {% for code,label in semester_choices %}<option value="{{ code }}" {% if sem == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
-    </select>
-    <a href="{% url 'portal:result_list' %}" class="btn btn-ghost btn-sm">Clear</a>
-  </form>
-</div>
-{% include "portal/_result_table.html" %}
-
+{% include "portal/_results_area.html" %}
 {% endblock %}

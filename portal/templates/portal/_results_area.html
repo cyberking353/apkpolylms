@@ -1,0 +1,58 @@
+{% load static %}<div id="results-area">
+  <!-- View toggle -->
+  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+    <a href="?view=course{% if yr %}&year={{ yr|urlencode }}{% endif %}{% if sem %}&sem={{ sem }}{% endif %}"
+       class="btn {% if view != 'student' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm"><i data-lucide="table"></i> By Course</a>
+    <a href="?view=student{% if yr %}&year={{ yr|urlencode }}{% endif %}{% if sem %}&sem={{ sem }}{% endif %}"
+       class="btn {% if view == 'student' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm"><i data-lucide="user"></i> By Student</a>
+    {% if course or student %}
+    <span style="font-size:.78rem;color:var(--muted)">
+      Viewing: <strong>{% if course %}{{ course.title }}{% else %}{{ student.display_name }}{% endif %}</strong>
+      — <a href="?view={{ view }}{% if yr %}&year={{ yr|urlencode }}{% endif %}{% if sem %}&sem={{ sem }}{% endif %}{% if dept %}&dept={{ dept }}{% endif %}{% if level %}&level={{ level }}{% endif %}" style="color:var(--primary-blue)">back to list</a>
+    </span>
+    {% endif %}
+  </div>
+
+  <!-- Filters -->
+  <form method="get" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+    <input type="hidden" name="view" value="{{ view }}">
+    <input type="text" name="q" value="{{ q }}" placeholder="{% if view == 'student' and not student %}Search student / matric…{% elif view == 'student' %}Filter…{% else %}Search course code or title…{% endif %}"
+       hx-get="{{ request.path }}" hx-target="#results-area" hx-swap="outerHTML" hx-include="closest form" hx-trigger="input changed delay:300ms, search"
+       style="flex:1;min-width:180px;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem">
+    <select name="dept" hx-get="{{ request.path }}" hx-target="#results-area" hx-swap="outerHTML" hx-include="closest form" hx-trigger="change">
+      <option value="">All Departments</option>
+      {% for code,label in dept_choices %}<option value="{{ code }}" {% if dept == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    {% if view == 'course' and not course %}
+    <select name="level" hx-get="{{ request.path }}" hx-target="#results-area" hx-swap="outerHTML" hx-include="closest form" hx-trigger="change">
+      <option value="">All Levels</option>
+      {% for code,label in level_choices %}<option value="{{ code }}" {% if level == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    {% endif %}
+    <select name="year" hx-get="{{ request.path }}" hx-target="#results-area" hx-swap="outerHTML" hx-include="closest form" hx-trigger="change">
+      <option value="">All Years</option>
+      {% for y in year_choices %}<option value="{{ y }}" {% if yr == y %}selected{% endif %}>{{ y }}</option>{% endfor %}
+    </select>
+    <select name="sem" hx-get="{{ request.path }}" hx-target="#results-area" hx-swap="outerHTML" hx-include="closest form" hx-trigger="change">
+      <option value="">All Semesters</option>
+      {% for code,label in semester_choices %}<option value="{{ code }}" {% if sem == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    {% if q or dept or level or yr or sem %}
+    <a href="?view={{ view }}" class="btn btn-ghost btn-sm">Clear</a>
+    {% endif %}
+  </form>
+
+  {% if view == 'student' %}
+    {% if student %}
+    {% include 'portal/_result_report.html' %}
+    {% else %}
+    {% include 'portal/_result_student_pick.html' %}
+    {% endif %}
+  {% else %}
+    {% if course %}
+    {% include 'portal/_result_gradebook.html' %}
+    {% else %}
+    {% include 'portal/_result_course_pick.html' %}
+    {% endif %}
+  {% endif %}
+</div>

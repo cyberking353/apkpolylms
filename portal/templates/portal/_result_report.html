@@ -1,0 +1,30 @@
+<div class="portal-card">
+  <div class="portal-card-head"><h3>Report Card — {{ student.display_name }} ({{ student.matric_number|default:"no matric" }})</h3></div>
+  <div class="portal-card-body" style="padding:14px 18px">
+    {% if results %}
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <span class="chip c-teal">{{ results|length }} course{{ results|length|pluralize }}</span>
+      {% if avg_total %}<span class="chip">Average {{ avg_total }}/100</span>{% endif %}
+    </div>
+    <table class="portal-table">
+      <thead><tr><th>Course</th><th>Code</th><th>Year</th><th>Sem</th><th>CA (40)</th><th>Exam (60)</th><th>Total</th><th>Grade</th></tr></thead>
+      <tbody>
+        {% for r in results %}
+        <tr>
+          <td style="font-weight:600">{{ r.course.title }}</td>
+          <td>{{ r.course.code }}</td>
+          <td>{{ r.academic_year }}</td>
+          <td>{{ r.semester }}</td>
+          <td>{{ r.ca_score|floatformat:1 }}</td>
+          <td>{{ r.exam_score|floatformat:1 }}</td>
+          <td><strong>{{ r.total|floatformat:1 }}</strong></td>
+          <td><span class="chip {% if r.grade == 'A' or r.grade == 'B' %}c-green{% elif r.grade == 'C' %}c-teal{% elif r.grade == 'D' or r.grade == 'E' %}c-gold{% else %}c-rose{% endif %}">{{ r.grade }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="text-align:center;color:var(--muted);padding:24px">No results match this filter for this student.</p>
+    {% endif %}
+  </div>
+</div>

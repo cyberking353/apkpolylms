@@ -1,0 +1,23 @@
+<div class="portal-card">
+  <div class="portal-card-head"><h3>{{ courses.count }} course{{ courses.count|pluralize }} with results</h3></div>
+  <div class="portal-card-body">
+    <table class="portal-table">
+      <thead><tr><th>Code</th><th>Course</th><th>Level</th><th>Sem</th><th>Results</th><th>Class Avg</th><th></th></tr></thead>
+      <tbody>
+        {% for c in courses %}
+        <tr>
+          <td style="font-weight:600">{{ c.code }}</td>
+          <td>{{ c.title }}</td>
+          <td>{{ c.get_level_display }}</td>
+          <td>{{ c.semester }}</td>
+          <td><span class="chip c-teal">{{ c.n_results }} result{{ c.n_results|pluralize }}</span></td>
+          <td>{% if c.avg_total %}<strong>{{ c.avg_total|floatformat:1 }}</strong>/100{% else %}—{% endif %}</td>
+          <td><a href="?view=course&course={{ c.pk }}{% if yr %}&year={{ yr|urlencode }}{% endif %}{% if sem %}&sem={{ sem }}{% endif %}" class="btn btn-teal btn-sm">Open Gradebook</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">No results recorded yet for this filter.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -765,36 +765,93 @@ def exam_review(request, pk):
 
 @portal_required
 def result_list(request):
+    """
+    Results explorer with two professional views instead of one endless table:
+      view=course  (default) -> pick a course, see its gradebook + class stats
+      view=student           -> pick a student, see their full report card
+    """
     from results.models import Result
-    from accounts.models import get_department_choices, ACADEMIC_LEVEL_CHOICES
-    from courses.models import SEMESTER_CHOICES
-    qs = Result.objects.select_related('student', 'course').order_by('-academic_year', 'course__title')
+    from accounts.models import Student, get_department_choices, ACADEMIC_LEVEL_CHOICES
+    from courses.models import Course, SEMESTER_CHOICES
+
+    view  = request.GET.get('view', 'course')
     dept  = request.GET.get('dept', '')
     level = request.GET.get('level', '')
     yr    = request.GET.get('year', '')
     sem   = request.GET.get('sem', '')
     q     = request.GET.get('q', '').strip()
-    if q:
-        qs = qs.filter(
-            Q(student__first_name__icontains=q) | Q(student__last_name__icontains=q)
-            | Q(student__matric_number__icontains=q)
-            | Q(course__title__icontains=q) | Q(course__code__icontains=q))
-    if dept:  qs = qs.filter(student__department=dept)
-    if level: qs = qs.filter(student__academic_level=level)
-    if yr:    qs = qs.filter(academic_year=yr)
-    if sem:   qs = qs.filter(semester=sem)
     year_choices = (Result.objects.values_list('academic_year', flat=True)
                     .distinct().order_by('-academic_year'))
+
     ctx = {
-        'results': qs, 'dept': dept, 'level': level,
+        'view': view, 'dept': dept, 'level': level,
         'yr': yr, 'sem': sem, 'q': q,
         'dept_choices': get_department_choices(),
         'level_choices': ACADEMIC_LEVEL_CHOICES,
         'year_choices': year_choices,
         'semester_choices': SEMESTER_CHOICES,
     }
+
+    if view == 'student':
+        sid = request.GET.get('student', '')
+        if sid:
+            student = get_object_or_404(Student, pk=sid, role='student')
+            results = (Result.objects.filter(student=student)
+                       .select_related('course').order_by('course__title'))
+            if yr: results = results.filter(academic_year=yr)
+            if sem: results = results.filter(semester=sem)
+            totals = list(results.values_list('total', flat=True))
+            ctx.update(
+                student=student, results=results,
+                avg_total=round(sum(totals) / len(totals), 1) if totals else None)
+        else:
+            students = (Student.objects.filter(role='student')
+                        .annotate(n_results=Count('results'))
+                        .filter(n_results__gt=0))
+            if q:
+                students = students.filter(
+                    Q(first_name__icontains=q) | Q(last_name__icontains=q)
+                    | Q(matric_number__icontains=q))
+            if dept:  students = students.filter(department=dept)
+            if level: students = students.filter(academic_level=level)
+            ctx['students'] = (students
+                               .order_by('last_name', 'first_name')[:200])
+    else:
+        cid = request.GET.get('course', '')
+        if cid:
+            course = get_object_or_404(Course, pk=cid)
+            results = (Result.objects.filter(course=course)
+                       .select_related('student').order_by('-total'))
+            if dept:  results = results.filter(student__department=dept)
+            if level: results = results.filter(student__academic_level=level)
+            if yr:    results = results.filter(academic_year=yr)
+            if sem:   results = results.filter(semester=sem)
+            totals = list(results.values_list('total', flat=True))
+            n = len(totals)
+            ctx.update(
+                course=course, results=results,
+                stats={
+                    'count': n,
+                    'avg': round(sum(totals) / n, 1) if n else 0,
+                    'high': max(totals) if n else 0,
+                    'low': min(totals) if n else 0,
+                    'pass_rate': round(100 * sum(1 for t in totals if t >= 50) / n) if n else 0,
+                })
+        else:
+            courses = (Course.objects
+                       .annotate(n_results=Count('results'),
+                                 avg_total=Avg('results__total'))
+                       .filter(n_results__gt=0))
+            if q:
+                courses = courses.filter(Q(code__icontains=q) | Q(title__icontains=q))
+            if dept:  courses = courses.filter(coursedepartment__department=dept).distinct()
+            if level: courses = courses.filter(level=level)
+            if yr:    courses = courses.filter(results__academic_year=yr).distinct()
+            if sem:   courses = courses.filter(semester=sem)
+            ctx['courses'] = courses.order_by('code')[:200]
+
     if _is_htmx(request):
-        return render(request, 'portal/_result_table.html', ctx)
+        return render(request, 'portal/_results_area.html', ctx)
     return render(request, 'portal/result_list.html', ctx)
 
 

@@ -1,0 +1,22 @@
+<div class="portal-card">
+  <div class="portal-card-head"><h3>{{ students.count }} student{{ students.count|pluralize }} with results</h3></div>
+  <div class="portal-card-body">
+    <table class="portal-table">
+      <thead><tr><th>Student</th><th>Matric No</th><th>Department</th><th>Level</th><th>Courses Graded</th><th></th></tr></thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td style="font-weight:600">{{ s.display_name }}</td>
+          <td>{{ s.matric_number|default:"—" }}</td>
+          <td>{{ s.get_department_display|default:"—" }}</td>
+          <td>{{ s.get_academic_level_display }}</td>
+          <td><span class="chip c-teal">{{ s.n_results }} result{{ s.n_results|pluralize }}</span></td>
+          <td><a href="?view=student&student={{ s.pk }}{% if yr %}&year={{ yr|urlencode }}{% endif %}{% if sem %}&sem={{ sem }}{% endif %}" class="btn btn-teal btn-sm">View Report Card</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No students with results match this filter.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
