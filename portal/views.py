@@ -17,6 +17,11 @@ def portal_required(view_func):
     return wrapper
 
 
+def _is_htmx(request):
+    """True when the request came from an htmx live-filter call."""
+    return request.headers.get('HX-Request') == 'true'
+
+
 # ── Auth ───────────────────────────────────────────────────────────────
 
 def portal_login(request):
@@ -98,11 +103,14 @@ def student_list(request):
     if dept:  qs = qs.filter(department=dept)
     if level: qs = qs.filter(academic_level=level)
     if q:     qs = qs.filter(Q(first_name__icontains=q)|Q(last_name__icontains=q)|Q(email__icontains=q)|Q(matric_number__icontains=q))
-    return render(request, 'portal/student_list.html', {
+    ctx = {
         'students': qs, 'dept': dept, 'level': level, 'q': q,
         'dept_choices': get_department_choices(),
         'level_choices': ACADEMIC_LEVEL_CHOICES,
-    })
+    }
+    if _is_htmx(request):
+        return render(request, 'portal/_student_table.html', ctx)
+    return render(request, 'portal/student_list.html', ctx)
 
 
 @portal_required
@@ -287,11 +295,14 @@ def lecturer_list(request):
             | Q(email__icontains=q) | Q(staff_id__icontains=q))
     if dept:
         qs = qs.filter(department=dept)
-    return render(request, 'portal/lecturer_list.html', {
+    ctx = {
         'lecturers': qs, 'q': q, 'dept': dept,
         'dept_choices': get_department_choices(),
         'total_count': Student.objects.filter(role='lecturer').count(),
-    })
+    }
+    if _is_htmx(request):
+        return render(request, 'portal/_lecturer_table.html', ctx)
+    return render(request, 'portal/lecturer_list.html', ctx)
 
 
 @portal_required
@@ -408,13 +419,16 @@ def course_list(request):
     level = request.GET.get('level', '')
     if level:
         qs = qs.filter(level=level)
-    return render(request, 'portal/course_list.html', {
+    ctx = {
         'courses': qs, 'active_status': status,
         'status_choices': Course.STATUS_CHOICES,
         'q': q, 'active_level': level,
         'level_choices': Course.LEVEL_CHOICES,
         'total_count': Course.objects.count(),
-    })
+    }
+    if _is_htmx(request):
+        return render(request, 'portal/_course_table.html', ctx)
+    return render(request, 'portal/course_list.html', ctx)
 
 
 def _youtube_embed_url(url):
@@ -696,10 +710,13 @@ def exam_list(request):
         qs = qs.filter(
             Q(course__code__icontains=q) | Q(course__title__icontains=q)
             | Q(title__icontains=q))
-    return render(request, 'portal/exam_list.html', {
+    ctx = {
         'exams': qs, 'active_status': status, 'q': q,
         'total_count': Exam.objects.count(),
-    })
+    }
+    if _is_htmx(request):
+        return render(request, 'portal/_exam_table.html', ctx)
+    return render(request, 'portal/exam_list.html', ctx)
 
 
 @portal_required
@@ -768,14 +785,17 @@ def result_list(request):
     if sem:   qs = qs.filter(semester=sem)
     year_choices = (Result.objects.values_list('academic_year', flat=True)
                     .distinct().order_by('-academic_year'))
-    return render(request, 'portal/result_list.html', {
+    ctx = {
         'results': qs, 'dept': dept, 'level': level,
         'yr': yr, 'sem': sem, 'q': q,
         'dept_choices': get_department_choices(),
         'level_choices': ACADEMIC_LEVEL_CHOICES,
         'year_choices': year_choices,
         'semester_choices': SEMESTER_CHOICES,
-    })
+    }
+    if _is_htmx(request):
+        return render(request, 'portal/_result_table.html', ctx)
+    return render(request, 'portal/result_list.html', ctx)
 
 
 @portal_required
@@ -932,10 +952,13 @@ def announcement_list(request):
     q = request.GET.get('q', '').strip()
     if q:
         qs = qs.filter(Q(title__icontains=q) | Q(body__icontains=q))
-    return render(request, 'portal/announcement_list.html', {
+    ctx = {
         'items': qs, 'q': q,
         'total_count': Announcement.objects.count(),
-    })
+    }
+    if _is_htmx(request):
+        return render(request, 'portal/_announcement_table.html', ctx)
+    return render(request, 'portal/announcement_list.html', ctx)
 
 
 @portal_required
@@ -1122,10 +1145,13 @@ def department_list(request):
     q = request.GET.get('q', '').strip()
     if q:
         qs = qs.filter(Q(code__icontains=q) | Q(name__icontains=q))
-    return render(request, 'portal/department_list.html', {
+    ctx = {
         'depts': qs, 'q': q,
         'total_count': Department.objects.count(),
-    })
+    }
+    if _is_htmx(request):
+        return render(request, 'portal/_department_table.html', ctx)
+    return render(request, 'portal/department_list.html', ctx)
 
 
 @portal_required

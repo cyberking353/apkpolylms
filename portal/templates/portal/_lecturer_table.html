@@ -1,0 +1,33 @@
+<div class="portal-card" id="lecturers-results">
+  <div class="portal-card-head"><h3>{{ lecturers.count }} of {{ total_count }} lecturer{{ total_count|pluralize }}</h3></div>
+  <div class="portal-card-body">
+    <table class="portal-table">
+      <thead><tr><th>Name</th><th>Staff ID</th><th>Department</th><th>Courses</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for l in lecturers %}
+        <tr>
+          <td>
+            <div style="font-weight:600">{{ l.display_name }}</div>
+            <div style="font-size:.72rem;color:var(--muted)">{{ l.email }}</div>
+          </td>
+          <td>{{ l.staff_id|default:"—" }}</td>
+          <td>{{ l.get_department_display|default:"—" }}</td>
+          <td>{{ l.courses_taught.count }}</td>
+          <td>{% if l.is_active %}<span class="chip c-green">Active</span>{% else %}<span class="chip c-rose">Inactive</span>{% endif %}</td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <a href="{% url 'portal:lecturer_edit' l.pk %}" class="btn btn-ghost btn-sm">Edit</a>
+              <a href="{% url 'portal:lecturer_reset_password' l.pk %}" class="btn btn-ghost btn-sm"><i data-lucide="key"></i> Reset Password</a>
+              <form method="post" action="{% url 'portal:lecturer_delete' l.pk %}">{% csrf_token %}
+                <button class="btn btn-danger btn-sm" data-confirm="Delete {{ l.display_name }}? This cannot be undone.">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No lecturers yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

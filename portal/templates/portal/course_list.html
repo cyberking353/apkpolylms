@@ -12,58 +12,24 @@
   <a href="?" class="btn {% if not active_status %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">All</a>
 </div>
 
-<!-- Search + level filter -->
-<form method="get" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+<!-- Live search + level filter (htmx: filters as you type) -->
+<form method="get" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center"
+      hx-boost="false">
   {% if active_status %}<input type="hidden" name="status" value="{{ active_status }}">{% endif %}
-  <input type="text" name="q" value="{{ q }}" placeholder="Search by code, title or lecturer…"
-         style="flex:1;min-width:200px;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem">
-  <select name="level" style="padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-size:.85rem">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search by code, title or lecturer…"
+         style="flex:1;min-width:200px;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem"
+         hx-get="{{ request.path }}" hx-trigger="input changed delay:300ms, search"
+         hx-target="#courses-results" hx-swap="outerHTML" hx-include="closest form">
+  <select name="level" style="padding:9px 11px;border:1.5px solid var(--line);border-radius:10px;font-size:.85rem"
+          hx-get="{{ request.path }}" hx-trigger="change"
+          hx-target="#courses-results" hx-swap="outerHTML" hx-include="closest form">
     <option value="">All Levels</option>
     {% for val,label in level_choices %}
     <option value="{{ val }}" {% if active_level == val %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
-  <button type="submit" class="btn btn-ink btn-sm">Search</button>
   {% if q or active_level %}<a href="{% if active_status %}?status={{ active_status }}{% endif %}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
 </form>
 
-<div class="portal-card">
-  <div class="portal-card-head"><h3>{{ courses.count }} of {{ total_count }} course{{ total_count|pluralize }}</h3></div>
-  <div class="portal-card-body">
-    <table class="portal-table">
-      <thead><tr><th>Course Code</th><th>Course</th><th>Lecturer</th><th>Level</th><th>Sem</th><th>Status</th><th>Actions</th></tr></thead>
-      <tbody>
-        {% for c in courses %}
-        <tr>
-          <td>{{ c.code }}</td>
-          <td>
-            <div style="font-weight:600">{{ c.title }}</div>
-            <div style="font-size:.72rem;color:var(--muted)">{{ c.category.name|default:"—" }}</div>
-          </td>
-          <td>{{ c.lecturer.display_name|default:"—" }}</td>
-          <td>{{ c.get_level_display }}</td>
-          <td>{{ c.semester }}</td>
-          <td>
-            <span class="chip {% if c.status == 'published' %}c-green{% elif c.status == 'pending' %}c-gold{% elif c.status == 'rejected' %}c-rose{% elif c.status == 'archived' %}c-ink{% endif %}">
-              {{ c.get_status_display }}
-            </span>
-          </td>
-          <td>
-            {% if c.status == 'pending' %}
-            <a href="{% url 'portal:course_review' c.pk %}" class="btn btn-teal btn-sm">Review</a>
-            {% elif c.status == 'archived' %}
-            <a href="{% url 'portal:course_restore' c.pk %}" class="btn btn-teal btn-sm"
-               data-confirm="Restore &quot;{{ c.title }}&quot; back to Draft?">Restore</a>
-            {% else %}
-            <a href="{% url 'portal:course_review' c.pk %}" class="btn btn-ghost btn-sm">View</a>
-            {% endif %}
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">No courses found.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
+{% include 'portal/_course_table.html' %}
 {% endblock %}

@@ -1,0 +1,25 @@
+<div class="portal-card" id="departments-results">
+  <div class="portal-card-head">
+    <h3>{{ depts.count }} of {{ total_count }} department{{ total_count|pluralize }}</h3>
+    <span style="font-size:.78rem;color:var(--muted)">These appear in all dropdowns and checklists across the site.</span>
+  </div>
+  <div class="portal-card-body">
+    <table class="portal-table">
+      <thead><tr><th>Code</th><th>Name</th><th>Order</th><th>Status</th><th>Students</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for d in depts %}
+        <tr>
+          <td><code style="background:var(--bg);padding:2px 7px;border-radius:4px;font-size:.8rem">{{ d.code }}</code></td>
+          <td style="font-weight:600">{{ d.name }}</td>
+          <td style="color:var(--muted)">{{ d.order }}</td>
+          <td>{% if d.is_active %}<span class="chip c-green">Active</span>{% else %}<span class="chip">Inactive</span>{% endif %}</td>
+          <td style="color:var(--muted)">—</td>
+          <td><a href="{% url 'portal:department_edit' d.pk %}" class="btn btn-ghost btn-sm">Edit</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No departments yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,38 @@
+<div class="portal-card" id="exams-results">
+  <div class="portal-card-head"><h3>{{ exams.count }} of {{ total_count }} exam{{ total_count|pluralize }}</h3></div>
+  <div class="portal-card-body">
+    <table class="portal-table">
+      <thead><tr><th>Exam</th><th>Course</th><th>Questions</th><th>Schedule</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for e in exams %}
+        <tr>
+          <td style="font-weight:600">{{ e.title }}</td>
+          <td style="font-size:.8rem;color:var(--muted)">{{ e.course.title }}</td>
+          <td>{{ e.question_count }}</td>
+          <td style="font-size:.76rem">
+            {% if e.open_at %}{{ e.open_at|date:"d M Y H:i" }} <i data-lucide="arrow-right"></i> {{ e.close_at|date:"d M Y H:i" }}
+            {% else %}Not scheduled{% endif %}
+          </td>
+          <td>
+            <span class="chip {% if e.exam_status == 'approved' %}c-green{% elif e.exam_status == 'pending' %}c-gold{% else %}{% endif %}">
+              {{ e.get_exam_status_display }}
+            </span>
+          </td>
+          <td>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <a href="{% url 'portal:exam_review' e.pk %}" class="btn {% if e.exam_status == 'pending' %}btn-gold{% else %}btn-ghost{% endif %} btn-sm">
+              {% if e.exam_status == 'pending' %}Approve{% else %}View{% endif %}
+            </a>
+            {% if e.exam_status == 'approved' %}
+            <a href="{% url 'portal:exam_reschedule_list' e.pk %}" class="btn btn-teal btn-sm">Reschedule</a>
+            {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No exams found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

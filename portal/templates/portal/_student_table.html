@@ -1,0 +1,44 @@
+<div class="portal-card" id="students-results">
+  <div class="portal-card-head">
+    <h3>{{ students.count }} student{{ students.count|pluralize }}</h3>
+  </div>
+  <div class="portal-card-body">
+    <table class="portal-table">
+      <thead><tr>
+        <th>Name</th><th>Matric No.</th><th>Department</th><th>Level</th><th>Status</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td>
+            <div style="font-weight:600">{{ s.get_full_name }}</div>
+            <div style="font-size:.72rem;color:var(--muted)">{{ s.email }}</div>
+          </td>
+          <td>{{ s.matric_number|default:"—" }}
+            {% if s.is_sms_synced %}<span class="chip c-teal" style="margin-left:4px">SMS</span>{% endif %}
+          </td>
+          <td>{{ s.get_department_display|default:"—" }}</td>
+          <td>{{ s.get_academic_level_display|default:"—" }}</td>
+          <td>
+            {% if s.is_active %}<span class="chip c-green">Active</span>
+            {% else %}<span class="chip c-rose">Inactive</span>{% endif %}
+          </td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <a href="{% url 'portal:student_edit' s.pk %}" class="btn btn-ghost btn-sm">Edit</a>
+              <a href="{% url 'portal:student_reset_password' s.pk %}" class="btn btn-ghost btn-sm"><i data-lucide="key"></i> Reset Password</a>
+              {% if s.next_academic_level %}
+              <form method="post" action="{% url 'portal:student_promote' s.pk %}">{% csrf_token %}
+                <button class="btn btn-gold btn-sm" data-confirm="Promote {{ s.get_full_name }} to {{ s.next_academic_level }}?">Promote</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No students found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

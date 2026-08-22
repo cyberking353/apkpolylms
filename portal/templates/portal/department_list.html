@@ -7,36 +7,13 @@
 {% block content %}
 <form method="get" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
   <input type="text" name="q" value="{{ q }}" placeholder="Search departments…"
+         hx-get="{{ request.path }}" hx-target="#departments-results" hx-swap="outerHTML" hx-include="closest form" hx-trigger="input changed delay:300ms, search"
          style="flex:1;min-width:200px;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem">
-  <button type="submit" class="btn btn-ink btn-sm">Search</button>
   {% if q %}<a href="{% url 'portal:department_list' %}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
 </form>
 
-<div class="portal-card">
-  <div class="portal-card-head">
-    <h3>{{ depts.count }} of {{ total_count }} department{{ total_count|pluralize }}</h3>
-    <span style="font-size:.78rem;color:var(--muted)">These appear in all dropdowns and checklists across the site.</span>
-  </div>
-  <div class="portal-card-body">
-    <table class="portal-table">
-      <thead><tr><th>Code</th><th>Name</th><th>Order</th><th>Status</th><th>Students</th><th>Action</th></tr></thead>
-      <tbody>
-        {% for d in depts %}
-        <tr>
-          <td><code style="background:var(--bg);padding:2px 7px;border-radius:4px;font-size:.8rem">{{ d.code }}</code></td>
-          <td style="font-weight:600">{{ d.name }}</td>
-          <td style="color:var(--muted)">{{ d.order }}</td>
-          <td>{% if d.is_active %}<span class="chip c-green">Active</span>{% else %}<span class="chip">Inactive</span>{% endif %}</td>
-          <td style="color:var(--muted)">—</td>
-          <td><a href="{% url 'portal:department_edit' d.pk %}" class="btn btn-ghost btn-sm">Edit</a></td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No departments yet.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
+{% include "portal/_department_table.html" %}
+
 
 <div style="margin-top:16px;padding:14px 18px;background:var(--gold-bg);border:1px solid var(--gold);border-radius:var(--r-md);font-size:.82rem">
   <i data-lucide="triangle-alert"></i> <strong>Important:</strong> The <strong>Code</strong> field cannot be changed after creation — it is the internal identifier linked to students and courses. You can safely rename the <strong>Name</strong> at any time and it will update everywhere on the site immediately.

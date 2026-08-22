@@ -12,47 +12,11 @@
 <form method="get" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
   {% if active_status %}<input type="hidden" name="status" value="{{ active_status }}">{% endif %}
   <input type="text" name="q" value="{{ q }}" placeholder="Search by course code, course or exam title…"
+         hx-get="{{ request.path }}" hx-target="#exams-results" hx-swap="outerHTML" hx-include="closest form" hx-trigger="input changed delay:300ms, search"
          style="flex:1;min-width:200px;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem">
-  <button type="submit" class="btn btn-ink btn-sm">Search</button>
   {% if q %}<a href="{% if active_status %}?status={{ active_status }}{% endif %}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
 </form>
 
-<div class="portal-card">
-  <div class="portal-card-head"><h3>{{ exams.count }} of {{ total_count }} exam{{ total_count|pluralize }}</h3></div>
-  <div class="portal-card-body">
-    <table class="portal-table">
-      <thead><tr><th>Exam</th><th>Course</th><th>Questions</th><th>Schedule</th><th>Status</th><th>Action</th></tr></thead>
-      <tbody>
-        {% for e in exams %}
-        <tr>
-          <td style="font-weight:600">{{ e.title }}</td>
-          <td style="font-size:.8rem;color:var(--muted)">{{ e.course.title }}</td>
-          <td>{{ e.question_count }}</td>
-          <td style="font-size:.76rem">
-            {% if e.open_at %}{{ e.open_at|date:"d M Y H:i" }} <i data-lucide="arrow-right"></i> {{ e.close_at|date:"d M Y H:i" }}
-            {% else %}Not scheduled{% endif %}
-          </td>
-          <td>
-            <span class="chip {% if e.exam_status == 'approved' %}c-green{% elif e.exam_status == 'pending' %}c-gold{% else %}{% endif %}">
-              {{ e.get_exam_status_display }}
-            </span>
-          </td>
-          <td>
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <a href="{% url 'portal:exam_review' e.pk %}" class="btn {% if e.exam_status == 'pending' %}btn-gold{% else %}btn-ghost{% endif %} btn-sm">
-              {% if e.exam_status == 'pending' %}Approve{% else %}View{% endif %}
-            </a>
-            {% if e.exam_status == 'approved' %}
-            <a href="{% url 'portal:exam_reschedule_list' e.pk %}" class="btn btn-teal btn-sm">Reschedule</a>
-            {% endif %}
-            </div>
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No exams found.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
+{% include "portal/_exam_table.html" %}
+
 {% endblock %}

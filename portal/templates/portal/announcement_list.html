@@ -7,57 +7,11 @@
 {% block content %}
 <form method="get" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
   <input type="text" name="q" value="{{ q }}" placeholder="Search announcements…"
+         hx-get="{{ request.path }}" hx-target="#announcements-results" hx-swap="outerHTML" hx-include="closest form" hx-trigger="input changed delay:300ms, search"
          style="flex:1;min-width:200px;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem">
-  <button type="submit" class="btn btn-ink btn-sm">Search</button>
   {% if q %}<a href="{% url 'portal:announcement_list' %}" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
 </form>
 
-<div class="portal-card">
-  <div class="portal-card-head"><h3>{{ items.count }} of {{ total_count }} announcement{{ total_count|pluralize }}</h3></div>
-  <div class="portal-card-body">
-    <table class="portal-table">
-      <thead><tr><th>Title</th><th>Audience</th><th>Priority</th><th>Posted</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead>
-      <tbody>
-        {% for a in items %}
-        <tr>
-          <td>
-            <div style="font-weight:600">{{ a.title }}</div>
-            <div style="font-size:.75rem;color:var(--muted)">{{ a.body|truncatewords:12 }}</div>
-          </td>
-          <td style="font-size:.8rem">
-            {% if a.audience == 'all' %}Everyone
-            {% elif a.audience == 'dept' %}Dept: {{ a.departments }}
-            {% else %}Level: {{ a.levels }}{% endif %}
-          </td>
-          <td>
-            {% if a.priority == 'urgent' %}
-            <span class="chip c-rose"><i data-lucide="circle"></i> Urgent</span>
-            {% else %}
-            <span class="chip">Normal</span>
-            {% endif %}
-          </td>
-          <td style="font-size:.78rem">{{ a.created_at|date:"d M Y" }}</td>
-          <td style="font-size:.78rem">{{ a.expires_at|date:"d M Y"|default:"Never" }}</td>
-          <td>
-            {% if a.is_active %}<span class="chip c-green">Active</span>
-            {% else %}<span class="chip">Inactive</span>{% endif %}
-          </td>
-          <td>
-            <div style="display:flex;gap:6px">
-              <form method="post" action="{% url 'portal:announcement_toggle' a.pk %}">{% csrf_token %}
-                <button class="btn btn-ghost btn-sm">{% if a.is_active %}Deactivate{% else %}Activate{% endif %}</button>
-              </form>
-              <form method="post" action="{% url 'portal:announcement_delete' a.pk %}">{% csrf_token %}
-                <button class="btn btn-danger btn-sm" data-confirm="Delete this announcement?">Delete</button>
-              </form>
-            </div>
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">No announcements yet.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
+{% include "portal/_announcement_table.html" %}
+
 {% endblock %}
