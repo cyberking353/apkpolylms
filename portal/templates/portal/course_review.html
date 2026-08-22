@@ -197,7 +197,7 @@
         <a href="{% url 'portal:course_edit' course.pk %}" class="btn btn-ghost btn-full" style="margin-bottom:8px"><i data-lucide="pencil"></i> Edit Course</a>
         <a href="{% url 'portal:course_list' %}" class="btn btn-ghost btn-full" style="margin-bottom:8px"><i data-lucide="arrow-left"></i> Back to Courses</a>
         <a href="{% url 'portal:course_delete' course.pk %}" class="btn btn-danger btn-full"
-           onclick="return confirm('Permanently delete «{{ course.title }}»?\n\nThis action cannot be undone. All modules, lectures, quizzes, exams, enrollments and results will be removed.')"><i data-lucide="trash"></i> Delete Course</a>
+           onclick="return confirm('Delete or archive «{{ course.title }}»?\n\nIf this course has results, quiz/exam attempts or student progress, it will be ARCHIVED (hidden but records preserved). Otherwise it will be permanently deleted.')"><i data-lucide="trash"></i> Delete / Archive Course</a>
       </div>
     </div>
 

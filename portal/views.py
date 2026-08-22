@@ -473,6 +473,23 @@ def course_delete(request, pk):
     course = get_object_or_404(Course, pk=pk)
     title = course.title
 
+    # Courses that carry academic records are archived, never destroyed:
+    # results, attempts and progress are history that cannot be rebuilt.
+    has_academic_data = (
+        Result.objects.filter(course=course).exists()
+        or QuizAttempt.objects.filter(quiz__course=course).exists()
+        or ExamAttempt.objects.filter(exam__course=course).exists()
+        or LectureProgress.objects.filter(lecture__module__course=course).exists()
+        or CourseMessage.objects.filter(course=course).exists()
+    )
+    if has_academic_data:
+        course.status = 'archived'
+        course.save(update_fields=['status', 'updated_at'])
+        messages.info(request,
+            f'"{title}" has been archived. Its results, attempts and progress '
+            f'are preserved; use Restore to bring it back.')
+        return redirect('portal:course_list')
+
     # Delete deepest dependencies first. Django's CASCADE normally handles
     # this, but a production DB whose schema is behind the migrations can
     # still carry legacy foreign-key constraints without ON DELETE CASCADE,
@@ -505,6 +522,18 @@ def course_delete(request, pk):
         course.delete()
 
     messages.success(request, f'"{title}" has been permanently deleted.')
+    return redirect('portal:course_list')
+
+
+@portal_required
+def course_restore(request, pk):
+    """Bring an archived course back as a draft so it can be edited/re-published."""
+    from courses.models import Course
+    course = get_object_or_404(Course, pk=pk)
+    if course.status == 'archived':
+        course.status = 'draft'
+        course.save(update_fields=['status', 'updated_at'])
+        messages.success(request, f'"{course.title}" has been restored to Draft.')
     return redirect('portal:course_list')
 
 

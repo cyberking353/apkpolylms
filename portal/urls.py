@@ -25,6 +25,7 @@ urlpatterns = [
     path('courses/<int:pk>/edit/',  views.course_edit,       name='course_edit'),
     path('courses/<int:pk>/review/', views.course_review,   name='course_review'),
     path('courses/<int:pk>/delete/', views.course_delete,   name='course_delete'),
+    path('courses/<int:pk>/restore/', views.course_restore, name='course_restore'),
     path('course-messages/',        views.course_message_list, name='course_message_list'),
     # Exams
     path('exams/',                  views.exam_list,         name='exam_list'),

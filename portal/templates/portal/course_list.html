@@ -28,13 +28,16 @@
           <td>{{ c.get_level_display }}</td>
           <td>{{ c.semester }}</td>
           <td>
-            <span class="chip {% if c.status == 'published' %}c-green{% elif c.status == 'pending' %}c-gold{% elif c.status == 'rejected' %}c-rose{% else %}{% endif %}">
+            <span class="chip {% if c.status == 'published' %}c-green{% elif c.status == 'pending' %}c-gold{% elif c.status == 'rejected' %}c-rose{% elif c.status == 'archived' %}c-ink{% endif %}">
               {{ c.get_status_display }}
             </span>
           </td>
           <td>
             {% if c.status == 'pending' %}
             <a href="{% url 'portal:course_review' c.pk %}" class="btn btn-teal btn-sm">Review</a>
+            {% elif c.status == 'archived' %}
+            <a href="{% url 'portal:course_restore' c.pk %}" class="btn btn-teal btn-sm"
+               data-confirm="Restore &quot;{{ c.title }}&quot; back to Draft?">Restore</a>
             {% else %}
             <a href="{% url 'portal:course_review' c.pk %}" class="btn btn-ghost btn-sm">View</a>
             {% endif %}

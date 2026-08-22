@@ -11,6 +11,7 @@ COURSE_STATUS_CHOICES = [
     ('pending',   'Pending Review'),   # lecturer submitted, waiting on admin
     ('published', 'Published'),        # admin approved — visible to students
     ('rejected',  'Rejected'),         # admin sent it back; lecturer can edit and resubmit
+    ('archived',  'Archived'),         # retired but kept: has academic records that must survive
 ]
 
 
@@ -285,8 +286,8 @@ class Course(models.Model):
 
     @classmethod
     def for_lecturer(cls, lecturer):
-        """Every course this lecturer created/teaches, regardless of status (draft, pending, published, rejected)."""
-        return cls.objects.filter(lecturer=lecturer)
+        """Every course this lecturer created/teaches (archived courses are hidden — they are retired)."""
+        return cls.objects.filter(lecturer=lecturer).exclude(status='archived')
 
 
 class Module(models.Model):
