@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.contrib import messages
 from django.utils import timezone
 from django.urls import reverse
 from .models import Course, Module, Lecture, LectureProgress, Enrollment, Notification, Category, CourseDepartment, CourseMessage, CourseMessageReply
@@ -385,3 +386,52 @@ class CourseDeleteSoftSignalsTest(TestCase):
         self.client.force_login(self.admin)
         resp = self.client.post(reverse('portal:course_delete', args=[course.pk]))
         self.assertFalse(Course.objects.filter(pk=course.pk).exists())
+
+
+class HtmxNoMessageLeakTest(TestCase):
+    """htmx module/lecture actions must not queue django messages — the partial
+    has no messages block, so queued ones would surface on unrelated pages."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.lecturer = User.objects.create_user(
+            username='leak-lecturer', password='pass', role='lecturer')
+        cls.cat = Category.objects.create(name='LeakCat')
+        cls.course = Course.objects.create(
+            title='Leak Course', slug='leak-course', description='',
+            category=cls.cat, lecturer=cls.lecturer,
+            level='ND1', semester='1', status='draft')
+        cls.module = Module.objects.create(course=cls.course, title='M1', week_number=1)
+
+    def setUp(self):
+        self.client.force_login(self.lecturer)
+        # clear any queued messages between tests
+        list(messages.get_messages(self.client))
+
+    def _queued(self):
+        return list(messages.get_messages(self.client))
+
+    def test_htmx_module_create_leaves_no_message(self):
+        resp = self.client.post(
+            reverse('courses:lecturer_module_create', args=[self.course.slug]),
+            {'title': 'New Module'}, HTTP_HX_REQUEST='true')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('New Module', resp.content.decode())   # feedback shown inline
+        self.assertEqual(list(self._queued()), [])           # nothing leaked
+
+    def test_htmx_lecture_delete_leaves_no_message(self):
+        lec = Lecture.objects.create(module=self.module, title='Temp', order=1)
+        resp = self.client.post(
+            reverse('courses:lecturer_lecture_delete', args=[self.course.slug, lec.id]),
+            HTTP_HX_REQUEST='true')
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Lecture.objects.filter(pk=lec.pk).exists())
+        self.assertEqual(list(self._queued()), [])
+
+    def test_non_htmx_fallback_still_flashes(self):
+        resp = self.client.post(
+            reverse('courses:lecturer_module_create', args=[self.course.slug]),
+            {'title': 'Fallback Module'}, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        msgs = [str(m) for m in resp.context['messages']]
+        self.assertTrue(any('Fallback Module' in m for m in msgs))

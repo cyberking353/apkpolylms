@@ -396,15 +396,18 @@ def lecturer_module_create(request, slug):
                 week_number=next_week, order=next_week,
                 description=request.POST.get('description', '').strip(),
             )
-            messages.success(request, f'Module "{title}" added.')
             feedback = ('success', f'Module "{title}" added.')
         else:
-            messages.error(request, 'Module title is required.')
             feedback = ('error', 'Module title is required.')
 
     if request.headers.get('HX-Request'):
+        # htmx swap: feedback is rendered inside the partial. Do NOT touch
+        # django messages here - this response has no messages block, so
+        # anything queued would leak out onto an unrelated future page.
         modules = course.modules.prefetch_related('lectures')
         return render(request, 'courses/_modules_list.html', {'course': course, 'modules': modules, 'feedback': feedback})
+    if feedback:
+        getattr(messages, feedback[0])(request, feedback[1])
     return redirect('courses:lecturer_course_edit', slug=slug)
 
 
@@ -426,15 +429,18 @@ def lecturer_lecture_create(request, slug, module_id):
             if request.FILES.get('notes'):
                 lec.notes = request.FILES['notes']
                 lec.save()
-            messages.success(request, f'Lecture "{title}" added.')
             feedback = ('success', f'Lecture "{title}" added.')
         else:
-            messages.error(request, 'Lecture title is required.')
             feedback = ('error', 'Lecture title is required.')
 
     if request.headers.get('HX-Request'):
+        # htmx swap: feedback is rendered inside the partial. Do NOT touch
+        # django messages here - this response has no messages block, so
+        # anything queued would leak out onto an unrelated future page.
         modules = course.modules.prefetch_related('lectures')
         return render(request, 'courses/_modules_list.html', {'course': course, 'modules': modules, 'feedback': feedback})
+    if feedback:
+        getattr(messages, feedback[0])(request, feedback[1])
     return redirect('courses:lecturer_course_edit', slug=slug)
 
 
@@ -450,15 +456,18 @@ def lecturer_module_edit(request, slug, module_id):
             module.title = title
             module.description = request.POST.get('description', '').strip()
             module.save()
-            messages.success(request, f'Module "{title}" updated.')
             feedback = ('success', f'Module "{title}" updated.')
         else:
-            messages.error(request, 'Module title is required.')
             feedback = ('error', 'Module title is required.')
 
     if request.headers.get('HX-Request'):
+        # htmx swap: feedback is rendered inside the partial. Do NOT touch
+        # django messages here - this response has no messages block, so
+        # anything queued would leak out onto an unrelated future page.
         modules = course.modules.prefetch_related('lectures')
         return render(request, 'courses/_modules_list.html', {'course': course, 'modules': modules, 'feedback': feedback})
+    if feedback:
+        getattr(messages, feedback[0])(request, feedback[1])
     return redirect('courses:lecturer_course_edit', slug=slug)
 
 
@@ -471,12 +480,16 @@ def lecturer_module_delete(request, slug, module_id):
     if request.method == 'POST':
         title = module.title
         module.delete()
-        messages.success(request, f'Module "{title}" deleted.')
         feedback = ('success', f'Module "{title}" deleted.')
 
     if request.headers.get('HX-Request'):
+        # htmx swap: feedback is rendered inside the partial. Do NOT touch
+        # django messages here - this response has no messages block, so
+        # anything queued would leak out onto an unrelated future page.
         modules = course.modules.prefetch_related('lectures')
         return render(request, 'courses/_modules_list.html', {'course': course, 'modules': modules, 'feedback': feedback})
+    if feedback:
+        getattr(messages, feedback[0])(request, feedback[1])
     return redirect('courses:lecturer_course_edit', slug=slug)
 
 
@@ -495,15 +508,18 @@ def lecturer_lecture_edit(request, slug, lecture_id):
             if request.FILES.get('notes'):
                 lecture.notes = request.FILES['notes']
             lecture.save()
-            messages.success(request, f'Lecture "{title}" updated.')
             feedback = ('success', f'Lecture "{title}" updated.')
         else:
-            messages.error(request, 'Lecture title is required.')
             feedback = ('error', 'Lecture title is required.')
 
     if request.headers.get('HX-Request'):
+        # htmx swap: feedback is rendered inside the partial. Do NOT touch
+        # django messages here - this response has no messages block, so
+        # anything queued would leak out onto an unrelated future page.
         modules = course.modules.prefetch_related('lectures')
         return render(request, 'courses/_modules_list.html', {'course': course, 'modules': modules, 'feedback': feedback})
+    if feedback:
+        getattr(messages, feedback[0])(request, feedback[1])
     return redirect('courses:lecturer_course_edit', slug=slug)
 
 
@@ -516,12 +532,16 @@ def lecturer_lecture_delete(request, slug, lecture_id):
     if request.method == 'POST':
         title = lecture.title
         lecture.delete()
-        messages.success(request, f'Lecture "{title}" deleted.')
         feedback = ('success', f'Lecture "{title}" deleted.')
 
     if request.headers.get('HX-Request'):
+        # htmx swap: feedback is rendered inside the partial. Do NOT touch
+        # django messages here - this response has no messages block, so
+        # anything queued would leak out onto an unrelated future page.
         modules = course.modules.prefetch_related('lectures')
         return render(request, 'courses/_modules_list.html', {'course': course, 'modules': modules, 'feedback': feedback})
+    if feedback:
+        getattr(messages, feedback[0])(request, feedback[1])
     return redirect('courses:lecturer_course_edit', slug=slug)
 
 
