@@ -11,6 +11,18 @@ def get_item(d, key):
 
 LUCIDE_MAP = {
     '📚': 'book-open',
+    '🔬': 'microscope',
+    '📐': 'shapes',
+    '⚗️': 'flask-conical',
+    '⚗': 'flask-conical',
+    '🌍': 'globe',
+    '🎨': 'palette',
+    '🧠': 'brain',
+    '⚖️': 'scale',
+    '⚖': 'scale',
+    '🔐': 'lock-keyhole',
+    '🧮': 'calculator',
+    '🤖': 'bot',
     '📝': 'clipboard-list',
     '📄': 'file-text',
     '🎓': 'graduation-cap',

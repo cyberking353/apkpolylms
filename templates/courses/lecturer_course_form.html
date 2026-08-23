@@ -52,7 +52,10 @@
         {% if not is_new %}
         <a href="{% url 'courses:lecturer_course_preview' course.slug %}" class="btn btn-ghost btn-sm"><i data-lucide="eye"></i> Preview as Student</a>
         {% endif %}
-        {% if not is_new and course.status != 'pending' %}
+        {% if not is_new and course.status == 'published' %}
+        <span class="chip c-green"><i data-lucide="circle-check-big"></i> Live — edits save instantly</span>
+        {% endif %}
+        {% if not is_new and course.status == 'draft' or not is_new and course.status == 'rejected' %}
         <form method="post" action="{% url 'courses:lecturer_course_submit' course.slug %}">
           {% csrf_token %}
           <button class="btn btn-teal btn-sm"
