@@ -1,0 +1,170 @@
+{% load static %}
+<div id="progress-area">
+  <!-- Tabs -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+    <a href="?tab=students" class="btn {% if tab == 'students' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm"><i data-lucide="users"></i> Students</a>
+    <a href="?tab=attention" class="btn {% if tab == 'attention' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm">
+      <i data-lucide="flag"></i> Needs Attention
+      {% if flags.not_started or flags.stalled or flags.struggling %}
+      <span class="chip c-rose" style="margin-left:4px">{{ flags.not_started|add:flags.stalled|add:flags.struggling }}</span>
+      {% endif %}
+    </a>
+    <a href="?tab=quizzes" class="btn {% if tab == 'quizzes' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm"><i data-lucide="clipboard-list"></i> Quiz Analytics</a>
+    <span style="flex:1"></span>
+    <a href="{% url 'courses:lecturer_progress_export' course.slug %}" class="btn btn-success btn-sm"><i data-lucide="download"></i> Export CSV</a>
+  </div>
+
+  {% if tab == 'students' %}
+  <!-- Search -->
+  <form method="get" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <input type="hidden" name="tab" value="students">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search student name or matric…"
+           hx-get="{{ request.path }}" hx-trigger="input changed delay:300ms, search"
+           hx-target="#progress-area" hx-swap="outerHTML" hx-include="closest form"
+           style="flex:1;min-width:200px;padding:9px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:.86rem;background:#fff">
+  </form>
+
+  <div class="portal-card" style="margin-bottom:20px">
+    <div class="portal-card-head"><h3>{{ rows|length }} student{{ rows|length|pluralize }} enrolled</h3></div>
+    <div class="portal-card-body" style="overflow-x:auto">
+      <table class="portal-table" style="min-width:760px">
+        <thead><tr><th>Student</th><th style="min-width:170px">Lecture Progress</th><th>Modules</th><th>Quizzes Taken</th><th>Passed</th><th>Avg Score</th><th>Last Active</th><th></th></tr></thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>
+              <div style="font-weight:600">{{ r.student.display_name }}</div>
+              <div style="font-size:.72rem;color:var(--muted)">{{ r.student.matric_number|default:"—" }}</div>
+            </td>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;height:8px;background:var(--neutral-100,#F1F5F9);border-radius:99px;overflow:hidden">
+                  <div style="height:100%;width:{{ r.pct }}%;border-radius:99px;background:{% if r.pct >= 70 %}var(--green){% elif r.pct >= 30 %}var(--gold){% else %}var(--rose){% endif %}"></div>
+                </div>
+                <span style="font-size:.74rem;font-weight:700">{{ r.pct }}%</span>
+              </div>
+              <div style="font-size:.68rem;color:var(--muted);margin-top:2px">{{ r.watched }}/{{ r.lectures_total }} lectures</div>
+            </td>
+            <td>{{ r.modules_done }}/{{ r.modules_total }}</td>
+            <td>{{ r.quiz_attempts }}</td>
+            <td>{{ r.quizzes_passed }}</td>
+            <td>{% if r.avg_score is not None %}<strong>{{ r.avg_score }}</strong>%{% else %}<span style="color:var(--muted)">—</span>{% endif %}</td>
+            <td style="font-size:.76rem">{% if r.last_active %}{{ r.last_active|date:"d M, H:i" }}{% else %}<span class="chip c-gold">Not started</span>{% endif %}</td>
+            <td><a href="{% url 'courses:lecturer_student_progress' course.slug r.student.id %}" class="btn btn-teal btn-sm">Details</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:30px">No students enrolled yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% elif tab == 'attention' %}
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px" class="flag-grid">
+    <div class="portal-card" style="margin:0"><div class="portal-card-body" style="padding:16px;display:flex;align-items:center;gap:12px">
+      <div style="width:42px;height:42px;border-radius:12px;background:#FDF2F2;color:var(--rose);display:flex;align-items:center;justify-content:center"><i data-lucide="play-circle"></i></div>
+      <div><div style="font-size:1.3rem;font-weight:800;font-family:'Manrope',sans-serif">{{ flags.not_started }}</div><div style="font-size:.72rem;color:var(--muted);font-weight:600">Never started</div></div>
+    </div></div>
+    <div class="portal-card" style="margin:0"><div class="portal-card-body" style="padding:16px;display:flex;align-items:center;gap:12px">
+      <div style="width:42px;height:42px;border-radius:12px;background:#FEF3C7;color:#B7791F;display:flex;align-items:center;justify-content:center"><i data-lucide="pause-circle"></i></div>
+      <div><div style="font-size:1.3rem;font-weight:800;font-family:'Manrope',sans-serif">{{ flags.stalled }}</div><div style="font-size:.72rem;color:var(--muted);font-weight:600">Stalled 7+ days</div></div>
+    </div></div>
+    <div class="portal-card" style="margin:0"><div class="portal-card-body" style="padding:16px;display:flex;align-items:center;gap:12px">
+      <div style="width:42px;height:42px;border-radius:12px;background:#FEF2F2;color:var(--rose);display:flex;align-items:center;justify-content:center"><i data-lucide="trending-down"></i></div>
+      <div><div style="font-size:1.3rem;font-weight:800;font-family:'Manrope',sans-serif">{{ flags.struggling }}</div><div style="font-size:.72rem;color:var(--muted);font-weight:600">Struggling with quizzes</div></div>
+    </div></div>
+  </div>
+
+  <div class="portal-card">
+    <div class="portal-card-head"><h3>Flagged students (most urgent first)</h3></div>
+    <div class="portal-card-body" style="overflow-x:auto">
+      <table class="portal-table" style="min-width:700px">
+        <thead><tr><th>Student</th><th>Reason</th><th>Progress</th><th>Quizzes</th><th>Last Active</th><th></th></tr></thead>
+        <tbody>
+          {% for r in rows %}{% if r.flag %}
+          <tr>
+            <td>
+              <div style="font-weight:600">{{ r.student.display_name }}</div>
+              <div style="font-size:.72rem;color:var(--muted)">{{ r.student.matric_number|default:"—" }}</div>
+            </td>
+            <td>
+              {% if r.flag == 'not_started' %}<span class="chip c-gold">Never started</span>
+              {% elif r.flag == 'stalled' %}<span class="chip c-gold">Stalled 7+ days</span>
+              {% else %}<span class="chip c-rose">Avg score below 50%</span>{% endif %}
+            </td>
+            <td>{{ r.pct }}% ({{ r.watched }}/{{ r.lectures_total }})</td>
+            <td>{{ r.quiz_attempts }} taken · {{ r.quizzes_passed }} passed{% if r.avg_score is not None %} · avg {{ r.avg_score }}%{% endif %}</td>
+            <td style="font-size:.78rem">{% if r.last_active %}{{ r.last_active|date:"d M, H:i" }}{% else %}—{% endif %}</td>
+            <td><a href="{% url 'courses:lecturer_student_progress' course.slug r.student.id %}" class="btn btn-teal btn-sm">Details</a></td>
+          </tr>
+          {% endif %}{% empty %}
+          <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px"><i data-lucide="party-popper"></i> Nobody needs attention right now.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% elif tab == 'quizzes' %}
+
+  {% for qz in quizzes %}
+  <div class="portal-card" style="margin-bottom:20px">
+    <div class="portal-card-head">
+      <h3><i data-lucide="clipboard-list"></i> {{ qz.quiz.title }}</h3>
+      {% if qz.attempts %}
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span class="chip c-teal">{{ qz.attempts }} attempt{{ qz.attempts|pluralize }}</span>
+        <span class="chip">avg {{ qz.avg }}%</span>
+        <span class="chip {% if qz.pass_rate >= 50 %}c-green{% else %}c-gold{% endif %}">{{ qz.pass_rate }}% pass rate</span>
+      </div>
+      {% endif %}
+    </div>
+    <div class="portal-card-body" style="padding:14px 18px">
+      {% if not qz.attempts %}
+        <p style="color:var(--muted);font-size:.82rem;margin:0">No attempts yet — analytics will appear once students take this quiz.</p>
+      {% else %}
+        {% if qz.hardest %}
+        <div style="margin-bottom:14px;padding:10px 13px;background:var(--primary-blue-subtle);border-radius:10px;font-size:.8rem">
+          <strong>Re-teach suggestion:</strong>
+          {% for hq in qz.hardest %}{% if not forloop.first %}, {% endif %}"{{ hq.text|truncatechars:60 }}" ({{
+            hq.pct }}% correct){% endfor %}
+        </div>
+        {% endif %}
+        <div style="overflow-x:auto">
+        <table class="portal-table" style="min-width:560px">
+          <thead><tr><th>Question</th><th>Answers</th><th>Correct</th><th style="min-width:150px">% Correct</th></tr></thead>
+          <tbody>
+            {% for question in qz.questions %}
+            <tr>
+              <td style="max-width:320px">{{ question.text|truncatechars:90 }}</td>
+              <td>{{ question.total }}</td>
+              <td>{{ question.correct }}</td>
+              <td>
+                {% if question.pct is not None %}
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="flex:1;height:8px;background:var(--bg);border-radius:99px;overflow:hidden">
+                    <div style="height:100%;width:{{ question.pct }}%;background:{% if question.pct >= 70 %}var(--green){% elif question.pct >= 40 %}var(--gold){% else %}var(--rose){% endif %};border-radius:99px"></div>
+                  </div>
+                  <span style="font-size:.74rem;font-weight:700">{{ question.pct }}%</span>
+                </div>
+                {% else %}<span style="color:var(--muted)">—</span>{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" style="color:var(--muted)">This quiz has no questions.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="portal-card"><div class="portal-card-body" style="padding:30px;text-align:center;color:var(--muted)">
+    No quizzes created yet for this course.
+  </div></div>
+  {% endfor %}
+  {% endif %}
+</div>

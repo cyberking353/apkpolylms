@@ -12,6 +12,8 @@ from .models import (
 )
 from quizzes.models import QuizAttempt
 from exams.models import ExamAttempt
+from accounts.models import Student
+from results.models import Result
 
 
 def lecturer_or_staff_required(view_func):
@@ -939,3 +941,227 @@ def lecturer_notifications(request):
     return render(request, 'courses/lecturer_notifications.html', {
         'notifications': notify_list,
     })
+
+
+# ── Student progress monitoring ────────────────────────────────────────
+
+def _course_progress_rows(course, students):
+    """
+    One monitoring row per enrolled student: lecture watching, module
+    completion, quiz performance and last activity — computed in bulk.
+    """
+    from django.db.models import Count, Max, Avg, Q
+    from datetime import timedelta
+
+    modules = list(course.modules.prefetch_related('lectures'))
+    lectures = [l for m in modules for l in m.lectures.all()]
+    lecture_ids = [l.id for l in lectures]
+    lectures_per_module = {m.id: m.lectures.count() for m in modules}
+    lecture_count = len(lectures)
+    quizzes = list(course.quizzes.all())
+    quiz_ids = [qz.id for qz in quizzes]
+    student_ids = [s.id for s in students]
+
+    watched = (LectureProgress.objects.filter(
+                   completed=True, lecture_id__in=lecture_ids,
+                   student_id__in=student_ids)
+               .values('student_id')
+               .annotate(n=Count('id'), last_seen=Max('watched_at')))
+    watched_map = {w['student_id']: w for w in watched}
+
+    attempt_stats = (QuizAttempt.objects.filter(
+                         quiz_id__in=quiz_ids, student_id__in=student_ids)
+                     .values('student_id')
+                     .annotate(n=Count('id'),
+                               passed_n=Count('id', filter=Q(passed=True)),
+                               avg_score=Avg('score'),
+                               last_seen=Max('submitted_at')))
+    attempt_map = {a['student_id']: a for a in attempt_stats}
+
+    now = timezone.now()
+    stalled_after = now - timedelta(days=7)
+
+    rows = []
+    for s in students:
+        w = watched_map.get(s.id, {})
+        a = attempt_map.get(s.id, {})
+        n_watched = w.get('n', 0) or 0
+        pct = round(100 * n_watched / lecture_count) if lecture_count else 0
+
+        # modules fully completed = all their lectures watched
+        done_modules = 0
+        if n_watched:
+            seen = set(LectureProgress.objects.filter(
+                completed=True, student=s,
+                lecture_id__in=lecture_ids).values_list('lecture_id', flat=True))
+            for m in modules:
+                lids = [l.id for l in m.lectures.all()]
+                if lids and all(lid in seen for lid in lids):
+                    done_modules += 1
+
+        last_seen = max(filter(None, [w.get('last_seen'), a.get('last_seen')]),
+                        default=None)
+        n_attempts = a.get('n', 0) or 0
+
+        flag = None
+        if n_attempts >= 3 and (a.get('avg_score') or 0) < 50:
+            flag = 'struggling'
+        elif n_watched == 0 and n_attempts == 0:
+            flag = 'not_started'
+        elif lecture_count and 0 < n_watched < lecture_count and (
+                last_seen is None or last_seen < stalled_after):
+            flag = 'stalled'
+
+        rows.append({
+            'student': s,
+            'watched': n_watched,
+            'lectures_total': lecture_count,
+            'pct': pct,
+            'modules_done': done_modules,
+            'modules_total': len(modules),
+            'quiz_attempts': n_attempts,
+            'quizzes_passed': a.get('passed_n', 0) or 0,
+            'avg_score': round(a['avg_score']) if a.get('avg_score') is not None else None,
+            'last_active': last_seen,
+            'flag': flag,
+        })
+    return rows
+
+
+@lecturer_or_staff_required
+def lecturer_course_progress(request, slug):
+    """Progress monitor for one course: students, needs-attention flags and quiz analytics."""
+    course = _course_for_user(slug, request.user)
+    tab = request.GET.get('tab', 'students')
+    q = request.GET.get('q', '').strip()
+
+    enrollments = (Enrollment.objects.filter(course=course)
+                   .select_related('student'))
+    students = sorted({e.student for e in enrollments},
+                      key=lambda s: (s.last_name or '', s.first_name or ''))
+    if q:
+        ql = q.lower()
+        students = [s for s in students if ql in (s.display_name or '').lower()
+                    or ql in (s.matric_number or '').lower()]
+
+    rows = _course_progress_rows(course, students)
+
+    # Quiz analytics (per weekly quiz + per question)
+    quizzes = []
+    for qz in course.quizzes.prefetch_related('questions__choices'):
+        attempts = QuizAttempt.objects.filter(quiz=qz)
+        n_att = attempts.count()
+        from django.db.models import Avg
+        avg = attempts.aggregate(v=Avg('score'))['v']
+        passed_n = attempts.filter(passed=True).count()
+        questions = []
+        for question in qz.questions.all():
+            answers = question.answer_set.select_related('selected_choice')
+            total = answers.count()
+            correct = sum(1 for a in answers
+                          if a.selected_choice and a.selected_choice.is_correct)
+            questions.append({
+                'text': question.text,
+                'total': total,
+                'correct': correct,
+                'pct': round(100 * correct / total) if total else None,
+            })
+        hardest = sorted([x for x in questions if x['pct'] is not None],
+                         key=lambda x: x['pct'])[:3]
+        quizzes.append({
+            'quiz': qz, 'module': getattr(qz.module, 'title', ''),
+            'attempts': n_att, 'avg': round(avg) if avg is not None else None,
+            'pass_rate': round(100 * passed_n / n_att) if n_att else None,
+            'question_count': qz.questions.count(),
+            'questions': questions, 'hardest': hardest,
+        })
+
+    ctx = {
+        'course': course, 'tab': tab, 'q': q,
+        'rows': rows, 'students_count': len(students),
+        'quizzes': quizzes,
+        'flags': {
+            'not_started': sum(1 for r in rows if r['flag'] == 'not_started'),
+            'stalled': sum(1 for r in rows if r['flag'] == 'stalled'),
+            'struggling': sum(1 for r in rows if r['flag'] == 'struggling'),
+        },
+    }
+    if request.headers.get('HX-Request'):
+        return render(request, 'courses/_progress_area.html', ctx)
+    return render(request, 'courses/lecturer_progress.html', ctx)
+
+
+@lecturer_or_staff_required
+def lecturer_student_progress(request, slug, student_id):
+    """Full drill-down: everything one student has done inside this course."""
+    from exams.models import Exam
+    course = _course_for_user(slug, request.user)
+    student = get_object_or_404(Student, pk=student_id)
+
+    enrollment = Enrollment.objects.filter(course=course, student=student).first()
+    modules = list(course.modules.prefetch_related('lectures'))
+    lectures = [l for m in modules for l in m.lectures.all()]
+    lecture_ids = [l.id for l in lectures]
+
+    watched = {p.lecture_id: p for p in LectureProgress.objects.filter(
+        student=student, lecture_id__in=lecture_ids)}
+
+    lecture_items = [{
+        'lecture': l, 'done': l.id in watched,
+        'at': watched[l.id].watched_at if l.id in watched else None,
+    } for l in lectures]
+
+    attempts = (QuizAttempt.objects.filter(student=student, quiz__course=course)
+                .select_related('quiz').order_by('-started_at'))
+
+    exam = Exam.objects.filter(course=course).first()
+    exam_attempt = ExamAttempt.objects.filter(student=student, exam=exam).first() if exam else None
+    result = Result.objects.filter(student=student, course=course).first()
+
+    done_n = sum(1 for li in lecture_items if li['done'])
+    pct = round(100 * done_n / len(lectures)) if lectures else 0
+
+    return render(request, 'courses/lecturer_student_progress.html', {
+        'course': course, 'student': student, 'enrollment': enrollment,
+        'lecture_items': lecture_items, 'lectures_total': len(lectures),
+        'done_n': done_n, 'pct': pct,
+        'attempts': attempts, 'exam': exam, 'exam_attempt': exam_attempt,
+        'result': result,
+    })
+
+
+@lecturer_or_staff_required
+def lecturer_progress_export(request, slug):
+    """CSV export of the per-student progress table."""
+    import csv
+    from django.http import HttpResponse
+
+    course = _course_for_user(slug, request.user)
+    enrollments = Enrollment.objects.filter(course=course).select_related('student')
+    students = sorted({e.student for e in enrollments},
+                      key=lambda s: (s.last_name or '', s.first_name or ''))
+    rows = _course_progress_rows(course, students)
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = (
+        f'attachment; filename="progress-{course.code or course.slug}.csv"')
+    writer = csv.writer(response)
+    writer.writerow(['Student', 'Matric No', 'Department', 'Level',
+                     'Lectures Watched', 'Lectures Total', 'Progress %',
+                     'Modules Done', 'Modules Total',
+                     'Quiz Attempts', 'Quizzes Passed', 'Avg Quiz Score',
+                     'Flag', 'Last Active'])
+    for r in rows:
+        writer.writerow([
+            r['student'].display_name,
+            r['student'].matric_number or '',
+            r['student'].get_department_display() or '',
+            r['student'].get_academic_level_display() or '',
+            r['watched'], r['lectures_total'], f"{r['pct']}%",
+            r['modules_done'], r['modules_total'],
+            r['quiz_attempts'], r['quizzes_passed'],
+            r['avg_score'] if r['avg_score'] is not None else '',
+            r['flag'] or '',
+            r['last_active'].strftime('%Y-%m-%d %H:%M') if r['last_active'] else 'never',
+        ])
+    return response

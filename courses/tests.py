@@ -435,3 +435,145 @@ class HtmxNoMessageLeakTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         msgs = [str(m) for m in resp.context['messages']]
         self.assertTrue(any('Fallback Module' in m for m in msgs))
+
+
+class LecturerProgressMonitorTest(TestCase):
+    """Progress dashboard, needs-attention flags, quiz analytics and drill-down."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.lecturer = User.objects.create_user(
+            username='prog-lect', password='pass', role='lecturer')
+        cls.cat = Category.objects.create(name='ProgCat')
+        cls.course = Course.objects.create(
+            title='Prog Course', slug='prog-course', description='',
+            category=cls.cat, lecturer=cls.lecturer,
+            level='ND1', semester='1', status='published')
+        cls.m1 = Module.objects.create(course=cls.course, title='W1', week_number=1)
+        cls.m2 = Module.objects.create(course=cls.course, title='W2', week_number=2)
+        cls.l1 = Lecture.objects.create(module=cls.m1, title='L1', order=1)
+        cls.l2 = Lecture.objects.create(module=cls.m2, title='L2', order=1)
+        cls.quiz = Quiz.objects.create(course=cls.course, module=cls.m1,
+                                       title='W1 Quiz')
+        from quizzes.models import Question, Choice
+        cls.q1 = Question.objects.create(quiz=cls.quiz, text='Q one', order=1)
+        Choice.objects.create(question=cls.q1, text='Right', is_correct=True, order=1)
+        Choice.objects.create(question=cls.q1, text='Wrong', is_correct=False, order=2)
+
+        cls.eager = User.objects.create_user(
+            username='eager@student', password='pass', role='student',
+            matric_number='EAG/001')
+        cls.stalled = User.objects.create_user(
+            username='stalled@student', password='pass', role='student',
+            matric_number='STL/001')
+        cls.struggling = User.objects.create_user(
+            username='strug@student', password='pass', role='student',
+            matric_number='STR/001')
+        for s in (cls.eager, cls.stalled, cls.struggling):
+            Enrollment.objects.create(student=s, course=cls.course)
+
+        # eager: watched everything
+        LectureProgress.objects.create(student=cls.eager, lecture=cls.l1, completed=True)
+        LectureProgress.objects.create(student=cls.eager, lecture=cls.l2, completed=True)
+
+    def _login(self):
+        self.client.force_login(self.lecturer)
+
+    def test_progress_dashboard_shows_rows_and_stats(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        QuizAttempt.objects.create(
+            student=self.eager, quiz=self.quiz, score=80, passed=True,
+            attempt_number=1, submitted_at=timezone.now())
+        # stalled: watched one lecture 10 days ago
+        LectureProgress.objects.create(
+            student=self.stalled, lecture=self.l1, completed=True,
+            watched_at=timezone.now() - timedelta(days=10))
+
+        self._login()
+        resp = self.client.get(
+            reverse('courses:lecturer_course_progress', args=[self.course.slug]))
+        html = resp.content.decode()
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('EAG/001', html)
+        self.assertEqual(html.count('Details'), 3)
+
+    def test_attention_tab_flags(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        now = timezone.now()
+        # eager already watched both lectures (setUpTestData) — not flagged
+        # struggling: 4 attempts averaging below 50
+        for i, score in enumerate([30, 40, 20, 45], start=1):
+            a = QuizAttempt.objects.create(
+                student=self.struggling, quiz=self.quiz, score=score,
+                passed=False, attempt_number=i)
+            a.started_at = now - timedelta(days=i)
+            a.save()
+        # stalled: watched one lecture (setUp gave none) 10 days ago
+        LectureProgress.objects.create(
+            student=self.stalled, lecture=self.l1, completed=True,
+            watched_at=now - timedelta(days=10))
+
+        self._login()
+        resp = self.client.get(
+            reverse('courses:lecturer_course_progress', args=[self.course.slug]),
+            {'tab': 'attention'})
+        h = resp.content.decode()
+        self.assertIn('Stalled 7+ days', h)
+        self.assertIn('Avg score below 50%', h)
+        # eager is doing fine and must not be flagged
+        self.assertNotIn('EAG/001', h.split('Flagged students')[1])
+
+    def test_quiz_analytics_question_breakdown(self):
+        now = timezone.now()
+        from quizzes.models import QuizAttempt, Answer
+        for i in range(4):
+            attempt = QuizAttempt.objects.create(
+                student=self.eager if i < 2 else self.stalled,
+                quiz=self.quiz, score=60, passed=True,
+                attempt_number=i + 1)
+            correct_choice = self.q1.choices.get(is_correct=True)
+            wrong_choice = self.q1.choices.get(is_correct=False)
+            Answer.objects.create(
+                attempt=attempt, question=self.q1,
+                selected_choice=correct_choice if i % 2 == 0 else wrong_choice)
+        del now
+        self._login()
+        resp = self.client.get(
+            reverse('courses:lecturer_course_progress', args=[self.course.slug]),
+            {'tab': 'quizzes'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, '% Correct')
+        self.assertContains(resp, 'Re-teach suggestion')
+
+    def test_student_drill_down(self):
+        QuizAttempt.objects.create(student=self.eager, quiz=self.quiz,
+                                   score=90, passed=True, attempt_number=1)
+        self._login()
+        resp = self.client.get(reverse(
+            'courses:lecturer_student_progress', args=[self.course.slug, self.eager.id]))
+        h = resp.content.decode()
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('100%', h)                     # eager watched everything
+        self.assertIn('Watched', h)
+        self.assertIn('Passed', h)
+
+    def test_csv_export(self):
+        self._login()
+        resp = self.client.get(
+            reverse('courses:lecturer_progress_export', args=[self.course.slug]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'text/csv')
+        body = resp.content.decode()
+        self.assertIn('Lectures Watched', body)
+        self.assertIn('EAG/001', body)
+
+    def test_htmx_partial(self):
+        self._login()
+        resp = self.client.get(
+            reverse('courses:lecturer_course_progress', args=[self.course.slug]),
+            HTTP_HX_REQUEST='true')
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn(b'<html', resp.content)
+        self.assertContains(resp, 'progress-area')

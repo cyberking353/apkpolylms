@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}{{ student.display_name }} — Progress in {{ course.title }}{% endblock %}
+{% block nav_class %}dark{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="dash-shell">
+
+  <aside class="sb" id="sidebar">
+    <div class="sb-u">
+      <div class="sb-av">{{ student.initials }}</div>
+      <div class="sb-name">{{ student.display_name }}</div>
+      <div class="sb-role">{{ student.get_department_display|default:"—" }} · {{ student.get_academic_level_display|default:"—" }}</div>
+    </div>
+    <div class="sb-sec-lbl">This Course</div>
+    <a href="{% url 'courses:lecturer_course_progress' course.slug %}" class="sbl on">
+      <span class="ic"><i data-lucide="arrow-left"></i></span> Back to Progress
+    </a>
+    <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="sbl">
+      <span class="ic"><i data-lucide="pencil"></i></span> Edit Course
+    </a>
+  </aside>
+
+  <main class="dmain">
+    <div class="dsh" style="margin-bottom:6px">
+      <h2 style="font-size:1.15rem;margin:0">{{ student.display_name }}</h2>
+      {% if enrollment %}<span class="chip c-teal">Enrolled</span>{% else %}<span class="chip c-gold">Not enrolled</span>{% endif %}
+    </div>
+    <p style="font-size:.82rem;color:var(--muted);margin:0 0 18px">
+      {{ student.matric_number|default:"No matric" }} · {{ student.email }} — activity inside “{{ course.title }}”
+    </p>
+
+    <!-- Summary chips -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+      <div style="background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 16px;min-width:120px">
+        <div style="font-size:1.25rem;font-weight:800;font-family:'Manrope',sans-serif">{{ pct }}%</div>
+        <div style="font-size:.7rem;color:var(--muted);font-weight:600">COURSE COMPLETE</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 16px;min-width:120px">
+        <div style="font-size:1.25rem;font-weight:800;font-family:'Manrope',sans-serif">{{ done_n }}/{{ lectures_total }}</div>
+        <div style="font-size:.7rem;color:var(--muted);font-weight:600">LECTURES WATCHED</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 16px;min-width:120px">
+        <div style="font-size:1.25rem;font-weight:800;font-family:'Manrope',sans-serif">{{ attempts.count }}</div>
+        <div style="font-size:.7rem;color:var(--muted);font-weight:600">QUIZ ATTEMPTS</div>
+      </div>
+    </div>
+
+    <!-- Lectures -->
+    <div class="card cp-lg" style="margin-bottom:20px">
+      <h4 style="font-size:.9rem;font-weight:700;margin-bottom:12px"><i data-lucide="clapperboard"></i> Lectures</h4>
+      {% if lecture_items %}
+      <table class="portal-table">
+        <thead><tr><th>Lecture</th><th>Status</th><th>Watched On</th></tr></thead>
+        <tbody>
+          {% for li in lecture_items %}
+          <tr>
+            <td style="font-weight:500">{{ li.lecture.title }}</td>
+            <td>{% if li.done %}<span class="chip c-green"><i data-lucide="check"></i> Watched</span>{% else %}<span class="chip">Not yet</span>{% endif %}</td>
+            <td style="font-size:.78rem;color:var(--muted)">{% if li.at %}{{ li.at|date:"d M Y, H:i" }}{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="color:var(--muted);font-size:.83rem">This course has no lectures yet.</p>
+      {% endif %}
+    </div>
+
+    <!-- Quizzes -->
+    <div class="card cp-lg" style="margin-bottom:20px">
+      <h4 style="font-size:.9rem;font-weight:700;margin-bottom:12px"><i data-lucide="clipboard-list"></i> Quiz Attempts</h4>
+      {% if attempts %}
+      <table class="portal-table">
+        <thead><tr><th>Quiz</th><th>Attempt</th><th>Score</th><th>Result</th><th>Date</th></tr></thead>
+        <tbody>
+          {% for a in attempts %}
+          <tr>
+            <td style="font-weight:500">{{ a.quiz.title }}</td>
+            <td>#{{ a.attempt_number }}</td>
+            <td><strong>{{ a.score|floatformat:0 }}%</strong></td>
+            <td>{% if a.passed %}<span class="chip c-green">Passed</span>{% else %}<span class="chip c-rose">Failed</span>{% endif %}</td>
+            <td style="font-size:.78rem;color:var(--muted)">{{ a.started_at|date:"d M Y, H:i" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="color:var(--muted);font-size:.83rem">No quiz attempts yet.</p>
+      {% endif %}
+    </div>
+
+    <!-- Exam + result -->
+    <div class="card cp-lg">
+      <h4 style="font-size:.9rem;font-weight:700;margin-bottom:12px"><i data-lucide="graduation-cap"></i> Official Exam</h4>
+      {% if not exam %}
+      <p style="color:var(--muted);font-size:.83rem">No exam created for this course yet.</p>
+      {% elif not exam_attempt %}
+      <p style="color:var(--muted);font-size:.83rem">Student has not attempted the official exam.</p>
+      {% else %}
+      <table class="portal-table">
+        <tbody>
+          <tr><td>Status</td><td>{{ exam_attempt.status|title|default:"Attempted" }}</td>
+              <td>Score</td><td><strong>{{ exam_attempt.score|floatformat:1 }}</strong>/60</td></tr>
+          <tr><td>Violations</td><td>{{ exam_attempt.violation_count }}</td>
+              <td>Submitted</td><td>{{ exam_attempt.submitted_at|date:"d M Y, H:i"|default:"—" }}</td></tr>
+        </tbody>
+      </table>
+      {% endif %}
+      {% if result %}
+      <div style="margin-top:14px;padding:11px 14px;background:var(--primary-blue-subtle);border-radius:10px;font-size:.84rem">
+        Recorded result: CA {{ result.ca_score }}/40 · Exam {{ result.exam_score }}/60 ·
+        <strong>Total {{ result.total }} ({{ result.grade }})</strong>
+      </div>
+      {% endif %}
+    </div>
+
+  </main>
+</div>
+{% endblock %}

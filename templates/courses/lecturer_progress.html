@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}Progress: {{ course.title }} — Al-Hikma LMS{% endblock %}
+{% block nav_class %}dark{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="dash-shell">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sb" id="sidebar">
+    <div class="sb-u">
+      <div class="sb-av">{{ user.initials }}</div>
+      <div class="sb-name">{{ user.display_name }}</div>
+      <div class="sb-role">Lecturer · {{ user.get_department_display|default:"—" }}</div>
+    </div>
+    <div class="sb-sec-lbl">This Course</div>
+    <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="sbl">
+      <span class="ic"><i data-lucide="pencil"></i></span> Edit Course
+    </a>
+    <a href="{% url 'courses:lecturer_course_progress' course.slug %}" class="sbl on">
+      <span class="ic"><i data-lucide="chart-column"></i></span> Progress
+    </a>
+    {% if course.exam %}
+    <a href="{% url 'courses:lecturer_exam_manage' course.slug %}" class="sbl">
+      <span class="ic"><i data-lucide="clipboard-list"></i></span> Exam
+    </a>
+    {% endif %}
+    <div class="sb-sec-lbl" style="margin-top:8px">Lecturer</div>
+    <a href="{% url 'courses:lecturer_dashboard' %}" class="sbl">
+      <span class="ic"><i data-lucide="house"></i></span> My Courses
+    </a>
+    <a href="{% url 'accounts:profile' %}" class="sbl">
+      <span class="ic"><i data-lucide="user"></i></span> Profile
+    </a>
+    <a href="{% url 'accounts:logout' %}" class="sbl" style="color:var(--rose)">
+      <span class="ic"><i data-lucide="log-out"></i></span> Sign Out
+    </a>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="dmain">
+
+    <div class="dsh" style="margin-bottom:6px">
+      <h2 style="font-size:1.15rem;margin:0">Student Progress</h2>
+      <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="btn btn-ghost btn-sm"><i data-lucide="arrow-left"></i> Back to course</a>
+    </div>
+    <p style="font-size:.82rem;color:var(--muted);margin:0 0 18px">
+      {{ course.code }} {{ course.title }} — see who has started, how far they've gone, and where they're stuck.
+    </p>
+
+    {% include 'courses/_progress_area.html' %}
+
+  </main>
+</div>
+
+<style>
+  @media(max-width:900px){
+    .flag-grid{grid-template-columns:1fr !important}
+  }
+  @media(max-width:520px){
+    .flag-grid{grid-template-columns:1fr !important}
+  }
+</style>
+{% endblock %}

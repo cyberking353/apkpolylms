@@ -37,5 +37,8 @@ urlpatterns = [
     path('lecturer/course/<slug:slug>/preview/',                            views.lecturer_course_preview, name='lecturer_course_preview'),
     path('lecturer/course/<slug:slug>/preview/lecture/<int:lecture_id>/',   views.lecturer_lecture_preview, name='lecturer_lecture_preview'),
     path('lecturer/course/<slug:slug>/results/',                            views.lecturer_course_results, name='lecturer_course_results'),
+    path('lecturer/course/<slug:slug>/progress/',                           views.lecturer_course_progress,     name='lecturer_course_progress'),
+    path('lecturer/course/<slug:slug>/progress/export/',                    views.lecturer_progress_export,     name='lecturer_progress_export'),
+    path('lecturer/course/<slug:slug>/progress/<int:student_id>/',          views.lecturer_student_progress,    name='lecturer_student_progress'),
     path('lecturer/notifications/',                                          views.lecturer_notifications, name='lecturer_notifications'),
 ]
