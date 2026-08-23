@@ -320,6 +320,29 @@
   .cp-btn.selected{outline-color:var(--primary-blue);box-shadow:0 0 0 3px #fff inset}
   .preview-col{position:sticky;top:calc(var(--nav-h) + 16px)}
   .preview-col .cc-thumb{height:110px;display:flex;align-items:center;justify-content:center}
+
+  /* ── Modules & lectures mobile stacking ── */
+  .mod-view > span:nth-child(2){flex:1;min-width:120px}
+  @media(max-width:640px){
+    /* module header: title row then actions on their own line */
+    .mod-view{row-gap:8px}
+    .mod-view .row-actions{margin-left:0;width:100%;justify-content:flex-start;padding-top:2px}
+    .mod-view .row-actions .btn-sm{padding:5px 12px;font-size:.74rem}
+    /* module + lecture edit forms stack vertically, full-width fields */
+    .mod-edit,.lec-edit{flex-direction:column;align-items:stretch}
+    .mod-edit input,.lec-edit input,.lec-edit input[type="file"]{flex:none !important;width:100% !important;min-width:0}
+    .mod-edit .btn,.lec-edit .btn{width:100%;justify-content:center}
+    /* lecture rows wrap so action buttons never get crushed */
+    .lec-row{flex-wrap:wrap;row-gap:4px}
+    .lec-row > span:nth-child(2){flex:1;min-width:110px}
+    .lec-row .row-actions{margin-left:0;width:100%;justify-content:flex-end}
+    .lec-row .row-actions .btn-sm{padding:5px 11px;font-size:.72rem}
+    /* add-lecture inputs stack */
+    .lec-add-inputs{flex-direction:column}
+    .lec-add-inputs input{width:100% !important;flex:none !important}
+    #add-module-form{flex-direction:column}
+    #add-module-form input{width:100% !important;flex:none !important}
+  }
   #save-loader.htmx-request { opacity: 1 !important; pointer-events: auto !important; }
 </style>
 {% endblock %}

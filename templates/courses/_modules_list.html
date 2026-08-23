@@ -15,7 +15,7 @@
   <div style="border:1px solid var(--line);border-radius:var(--r-md);margin-bottom:12px;overflow:hidden">
 
     <!-- Module header: view mode -->
-    <div style="background:var(--bg);padding:10px 15px;display:flex;align-items:center;gap:10px" id="module-view-{{ module.id }}">
+    <div class="mod-view" style="background:var(--bg);padding:10px 15px;display:flex;align-items:center;gap:10px;flex-wrap:wrap" id="module-view-{{ module.id }}">
       <span style="background:var(--teal);color:#fff;border-radius:50%;width:24px;height:24px;
                    display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;flex-shrink:0;font-weight:700">
         {{ module.week_number }}
@@ -23,7 +23,7 @@
       <span style="font-weight:600;font-size:.88rem">{{ module.title }}</span>
       {% if module.description %}<span style="font-size:.76rem;color:var(--muted)">— {{ module.description }}</span>{% endif %}
       {% if request.user.is_staff or course.status != 'pending' %}
-      <div style="margin-left:auto;display:flex;gap:6px">
+      <div class="row-actions" style="margin-left:auto;display:flex;gap:6px">
         <button type="button" class="btn btn-ghost btn-sm" style="padding:3px 9px;font-size:.72rem"
           onclick="document.getElementById('module-view-{{ module.id }}').style.display='none';document.getElementById('module-edit-{{ module.id }}').style.display='flex'">
           <i data-lucide="pencil"></i> Edit
@@ -47,7 +47,7 @@
           hx-post="{% url 'courses:lecturer_module_edit' course.slug module.id %}"
           hx-target="#modules-list" hx-swap="outerHTML"
           hx-indicator="#save-loader"
-          id="module-edit-{{ module.id }}" style="display:none;background:var(--gold-bg);padding:10px 15px;gap:8px;flex-wrap:wrap;align-items:center">
+          id="module-edit-{{ module.id }}" class="mod-edit" style="display:none;background:var(--gold-bg);padding:10px 15px;gap:8px;flex-wrap:wrap;align-items:center">
       {% csrf_token %}
       <input type="text" name="title" value="{{ module.title }}" required style="flex:2;min-width:150px;font-size:.83rem">
       <input type="text" name="description" value="{{ module.description }}" placeholder="Description (optional)" style="flex:3;min-width:150px;font-size:.83rem">
@@ -62,14 +62,14 @@
     <div style="padding:10px 15px">
       <div id="lectures-{{ module.id }}">
         {% for lecture in module.lectures.all %}
-        <div style="padding:6px 0;font-size:.82rem;color:var(--ink);display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)"
+        <div class="lec-row" style="padding:6px 0;font-size:.82rem;color:var(--ink);display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)"
              id="lecture-view-{{ lecture.id }}">
           <span><i data-lucide="clapperboard"></i></span>
           <span>{{ lecture.title }}</span>
           {% if lecture.duration_minutes %}<span style="color:var(--muted)">{{ lecture.duration_minutes }}min</span>{% endif %}
           {% if lecture.notes %}<span title="Has notes attached"><i data-lucide="paperclip"></i></span>{% endif %}
           {% if request.user.is_staff or course.status != 'pending' %}
-          <div style="margin-left:auto;display:flex;gap:5px">
+          <div class="row-actions" style="margin-left:auto;display:flex;gap:5px">
             <button type="button" class="btn btn-ghost btn-sm" style="padding:2px 7px;font-size:.68rem" title="Edit lecture"
               onclick="document.getElementById('lecture-view-{{ lecture.id }}').style.display='none';document.getElementById('lecture-edit-{{ lecture.id }}').style.display='flex'">
               <i data-lucide="pencil"></i>
@@ -95,7 +95,7 @@
               hx-target="#modules-list" hx-swap="outerHTML"
               hx-indicator="#save-loader"
               enctype="multipart/form-data"
-              id="lecture-edit-{{ lecture.id }}" style="display:none;background:var(--gold-bg);padding:8px 10px;border-radius:var(--r-sm);margin:4px 0;flex-wrap:wrap;gap:6px;align-items:center">
+              id="lecture-edit-{{ lecture.id }}" class="lec-edit" style="display:none;background:var(--gold-bg);padding:8px 10px;border-radius:var(--r-sm);margin:4px 0;flex-wrap:wrap;gap:6px;align-items:center">
           {% csrf_token %}
           <input type="text" name="title" value="{{ lecture.title }}" required style="flex:2;min-width:130px;font-size:.8rem">
           <input type="text" name="video_url" value="{{ lecture.video_url }}" placeholder="YouTube URL" style="flex:2;min-width:130px;font-size:.8rem">
@@ -121,7 +121,7 @@
             method="post" action="{% url 'courses:lecturer_lecture_create' course.slug module.id %}"
             enctype="multipart/form-data" style="margin-top:10px">
         {% csrf_token %}
-        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:7px">
+        <div class="lec-add-inputs" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:7px">
           <input type="text" name="title" placeholder="Lecture title *" style="flex:2;min-width:150px;font-size:.82rem">
           <input type="text" name="video_url" placeholder="YouTube URL (optional)" style="flex:2;min-width:150px;font-size:.82rem">
           <input type="number" name="duration_minutes" placeholder="Min" style="width:68px;font-size:.82rem">
