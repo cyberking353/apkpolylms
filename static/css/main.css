@@ -279,6 +279,8 @@ button,input,select,textarea{font-family:inherit}
 .step-n{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Manrope',sans-serif;font-size:1.2rem;font-weight:800;margin:0 auto 18px;border:2px solid var(--neutral-200);background:var(--surface);color:var(--ink)}
 .step:nth-child(1) .step-n{background:var(--primary-blue);color:#fff;border-color:var(--primary-blue)}
 .step:nth-child(2) .step-n{background:var(--primary-red);color:#fff;border-color:var(--primary-red)}
+.step:nth-child(3) .step-n{background:var(--teal);color:#fff;border-color:var(--teal)}
+.step:nth-child(4) .step-n{background:var(--gold);color:#fff;border-color:var(--gold)}
 .step h3{font-family:'Manrope',sans-serif;font-weight:800;font-size:1.1rem;margin-bottom:9px}
 .step p{font-size:.83rem;color:var(--muted)}
 
@@ -495,7 +497,8 @@ button,input,select,textarea{font-family:inherit}
 
 /* ── RESPONSIVE: TABLET (≤900px) ── */
 @media(max-width:900px){
-  .hero-inner{grid-template-columns:1fr} .hero-panel{display:none}
+  .hero-inner{grid-template-columns:1fr}
+  .hero-panel{max-width:520px;margin-top:8px}
   .hero-h{font-size:clamp(2rem,6vw,3rem)}
   .hero-stats{flex-direction:column;gap:16px} .hs{border:none;padding:0}
 

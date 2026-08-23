@@ -63,8 +63,18 @@ def student_required(view_func):
 
 def landing(request):
     """Public marketing page. Shows a sample of published courses, not tied to any student."""
-    courses = Course.objects.filter(status='published')[:6]
-    return render(request, 'courses/landing.html', {'courses': courses})
+    from accounts.models import Student
+    published = Course.objects.filter(status='published')
+    stats = {
+        'students': Student.objects.filter(role='student', is_active=True).count(),
+        'courses': published.count(),
+        'lectures': Lecture.objects.filter(module__course__status='published').count(),
+    }
+    return render(request, 'courses/landing.html', {
+        'courses': published[:6],
+        'hero_courses': published[:4],
+        'stats': stats,
+    })
 
 
 @student_required
