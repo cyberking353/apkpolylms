@@ -5,6 +5,19 @@
 {% block footer %}{% endblock %}
 
 {% block content %}
+<style>
+  .card.cc{transition:transform .18s ease, box-shadow .18s ease}
+  .card.cc:hover{transform:translateY(-3px);box-shadow:var(--sh-lg)}
+  .enr-line{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:.74rem;color:var(--muted)}
+  .enr-line span{display:inline-flex;align-items:center;gap:5px}
+  .enr-line svg.lucide{width:13px;height:13px}
+  .cc-actions{display:flex;gap:6px;align-items:center}
+  .cc-actions a{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;
+                border-radius:10px;color:var(--ink);transition:all .12s ease}
+  .cc-actions a:hover{background:var(--primary-blue-subtle);color:var(--primary-blue)}
+  .cc-actions a svg.lucide{width:17px;height:17px}
+  .cc-muted{font-size:.76rem;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+</style>
 <div class="dash-shell">
 
   <!-- ── SIDEBAR ── -->
@@ -96,10 +109,14 @@
 
         <div class="cc-body">
           <h4>{{ course.title }}</h4>
-          <p>{{ course.description|truncatewords:14 }}</p>
-          <div style="font-size:.75rem;color:var(--muted)">
-            {{ course.get_level_display }} · Sem {{ course.semester }} · {{ course.total_modules }} module{{ course.total_modules|pluralize }}
-            {% if course.is_borrowed %} · <span style="color:var(--teal)">Borrowed</span>{% endif %}
+          <p>{{ course.description|truncatewords:14|default:"No description yet." }}</p>
+          <div class="enr-line">
+            <span><i data-lucide="layers"></i> {{ course.get_level_display }} · Sem {{ course.semester }}</span>
+            <span><i data-lucide="book-open"></i> {{ course.total_modules }} module{{ course.total_modules|pluralize }}</span>
+            {% if course.status == 'published' %}
+            <span><i data-lucide="users"></i> {{ course.enrolled_count }}</span>
+            {% endif %}
+            {% if course.is_borrowed %}<span style="color:var(--teal)">Borrowed</span>{% endif %}
           </div>
           {% if course.review_note and course.status == 'rejected' %}
           <div style="margin-top:8px;font-size:.75rem;color:var(--rose);background:var(--rose-bg);border-radius:var(--r-sm);padding:6px 9px">
@@ -109,13 +126,18 @@
         </div>
 
         <div class="cc-foot">
-          {% if course.status != 'pending' %}
-          <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="btn btn-ghost btn-sm" title="Edit course"><i data-lucide="pencil"></i></a>
-          <a href="{% url 'courses:lecturer_course_progress' course.slug %}" class="btn btn-ghost btn-sm" title="Student progress"><i data-lucide="chart-column"></i></a>
-          <a href="{% url 'courses:lecturer_course_preview' course.slug %}" class="btn btn-ghost btn-sm" title="Preview as student"><i data-lucide="eye"></i></a>
-          {% else %}
-          <span class="btn btn-ghost btn-sm" style="opacity:.4;cursor:default">Edit</span>
-          {% endif %}
+          <div class="cc-actions">
+            {% if course.status != 'pending' %}
+            <a href="{% url 'courses:lecturer_course_edit' course.slug %}" title="Edit course"><i data-lucide="pencil"></i></a>
+            <a href="{% url 'courses:lecturer_course_progress' course.slug %}" title="Student progress"><i data-lucide="chart-column"></i></a>
+            {% if course.status == 'published' %}
+            <a href="{% url 'courses:lecturer_course_results' course.slug %}" title="Results"><i data-lucide="award"></i></a>
+            {% endif %}
+            <a href="{% url 'courses:lecturer_course_preview' course.slug %}" title="Preview as student"><i data-lucide="eye"></i></a>
+            {% else %}
+            <span class="cc-muted"><i data-lucide="hourglass"></i> Awaiting admin review</span>
+            {% endif %}
+          </div>
 
           {% if course.status == 'draft' or course.status == 'rejected' %}
           <form method="post" action="{% url 'courses:lecturer_course_submit' course.slug %}">
@@ -125,14 +147,6 @@
               Submit <i data-lucide="arrow-right"></i>
             </button>
           </form>
-          {% elif course.status == 'published' %}
-          <span class="chip c-green">{{ course.enrolled_count }} enrolled</span>
-          <span style="display:flex;gap:6px;flex-wrap:wrap">
-            <a href="{% url 'courses:lecturer_course_progress' course.slug %}" class="chip c-teal" title="View student progress">Progress</a>
-            <a href="{% url 'courses:lecturer_course_results' course.slug %}" class="chip c-green" title="View results">Results</a>
-          </span>
-          {% else %}
-          <span class="chip c-gold">Under Review</span>
           {% endif %}
         </div>
       </article>
