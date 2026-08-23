@@ -128,8 +128,7 @@
         {% if qz.hardest %}
         <div style="margin-bottom:14px;padding:10px 13px;background:var(--primary-blue-subtle);border-radius:10px;font-size:.8rem">
           <strong>Re-teach suggestion:</strong>
-          {% for hq in qz.hardest %}{% if not forloop.first %}, {% endif %}"{{ hq.text|truncatechars:60 }}" ({{
-            hq.pct }}% correct){% endfor %}
+          {% for hq in qz.hardest %}{% if not forloop.first %}, {% endif %}"{{ hq.text|truncatechars:60 }}" ({{ hq.pct }}% correct){% endfor %}
         </div>
         {% endif %}
         <div style="overflow-x:auto">
