@@ -244,6 +244,31 @@ def lecturer_dashboard(request):
     return render(request, 'courses/lecturer_dashboard.html', context)
 
 
+# Preset gradients offered on the course form (color_start, color_end).
+COURSE_COLOR_PRESETS = [
+    ('#0D1F3C', '#1A3A6C'),  # deep navy
+    ('#134E4A', '#0F766E'),  # teal
+    ('#4C1D95', '#7C3AED'),  # purple
+    ('#7C2D12', '#EA580C'),  # sunset
+    ('#831843', '#DB2777'),  # rose
+    ('#14532D', '#16A34A'),  # forest
+]
+
+COURSE_ICON_CHOICES = ['📚', '💻', '🔬', '📐', '⚗️', '🌍', '🎨', '🧠', '⚖️', '🔐', '💬', '📊', '🧮', '⚡', '🔌', '🤖']
+
+
+def _course_form_context(user, **extra):
+    ctx = {
+        'departments': _department_choices(),
+        'levels': Course.LEVEL_CHOICES,
+        'categories': Category.objects.all(),
+        'icon_choices': COURSE_ICON_CHOICES,
+        'color_presets': COURSE_COLOR_PRESETS,
+    }
+    ctx.update(extra)
+    return ctx
+
+
 @lecturer_required
 def lecturer_course_create(request):
     """
@@ -256,14 +281,18 @@ def lecturer_course_create(request):
         title = request.POST.get('title', '').strip()
         if not title:
             messages.error(request, 'Please give the course a title.')
-            return render(request, 'courses/lecturer_course_form.html', {
-                'departments': _department_choices(), 'is_new': True, 'posted': request.POST,
-                'levels': Course.LEVEL_CHOICES, 'categories': Category.objects.all(),
-                'selected_departments': request.POST.getlist('departments'),
-            })
+            return render(request, 'courses/lecturer_course_form.html',
+                          _course_form_context(request.user, is_new=True,
+                                               posted=request.POST,
+                                               selected_departments=request.POST.getlist('departments')))
 
         slug = _unique_slug(title)
         category_id = request.POST.get('category') or None
+
+        cs = request.POST.get('color_start', '')
+        ce = request.POST.get('color_end', '')
+        if (cs, ce) not in COURSE_COLOR_PRESETS:
+            cs, ce = COURSE_COLOR_PRESETS[0]
 
         course = Course.objects.create(
             title=title,
@@ -274,6 +303,8 @@ def lecturer_course_create(request):
             level=request.POST.get('level', 'ND1'),
             semester=request.POST.get('semester', '1'),
             duration_hours=request.POST.get('duration_hours') or 0,
+            color_start=cs,
+            color_end=ce,
             lecturer=request.user,
             status='draft',
         )
@@ -282,13 +313,10 @@ def lecturer_course_create(request):
         messages.success(request, f'"{course.title}" created as a draft. Add modules and lectures, then submit it for review when ready.')
         return redirect('courses:lecturer_course_edit', slug=course.slug)
 
-    return render(request, 'courses/lecturer_course_form.html', {
-        'departments': _department_choices(), 'is_new': True,
-        'default_department': request.user.department,
-        'levels': Course.LEVEL_CHOICES,
-        'categories': Category.objects.all(),
-        'selected_departments': [request.user.department] if request.user.department else [],
-    })
+    return render(request, 'courses/lecturer_course_form.html',
+                  _course_form_context(request.user, is_new=True,
+                                       default_department=request.user.department,
+                                       selected_departments=[request.user.department] if request.user.department else []))
 
 
 @lecturer_or_staff_required
@@ -304,6 +332,10 @@ def lecturer_course_edit(request, slug):
         course.level = request.POST.get('level', course.level)
         course.semester = request.POST.get('semester', course.semester)
         course.duration_hours = request.POST.get('duration_hours') or 0
+        cs = request.POST.get('color_start', '')
+        ce = request.POST.get('color_end', '')
+        if (cs, ce) in COURSE_COLOR_PRESETS:
+            course.color_start, course.color_end = cs, ce
         # Rejected courses go back to draft so the lecturer can fix and resubmit.
         # Published courses stay published — minor edits don't need re-approval.
         if course.status == 'rejected':
@@ -315,13 +347,10 @@ def lecturer_course_edit(request, slug):
         return redirect('courses:lecturer_course_edit', slug=course.slug)
 
     modules = course.modules.prefetch_related('lectures')
-    return render(request, 'courses/lecturer_course_form.html', {
-        'course': course, 'modules': modules, 'is_new': False,
-        'departments': _department_choices(),
-        'selected_departments': course.department_list,
-        'levels': Course.LEVEL_CHOICES,
-        'categories': Category.objects.all(),
-    })
+    return render(request, 'courses/lecturer_course_form.html',
+                  _course_form_context(request.user, course=course, modules=modules,
+                                       is_new=False,
+                                       selected_departments=course.department_list))
 
 
 @lecturer_or_staff_required

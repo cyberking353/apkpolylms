@@ -79,84 +79,155 @@
     <!-- ── Course details form ── -->
     {% if is_new or course.status != 'pending' %}
     <div class="card cp-lg" style="margin-bottom:22px">
-      <h4 style="font-size:.9rem;font-weight:700;margin-bottom:16px">Course Details</h4>
-      <form method="post" action="{% if is_new %}{% url 'courses:lecturer_course_create' %}{% else %}{% url 'courses:lecturer_course_edit' course.slug %}{% endif %}">
-        {% csrf_token %}
+      <h4 style="font-size:.9rem;font-weight:700;margin-bottom:4px">
+        {% if is_new %}Create a New Course{% else %}Course Details{% endif %}
+      </h4>
+      <p style="font-size:.8rem;color:var(--muted);margin-bottom:18px">
+        {% if is_new %}Fill in the basics — you'll add modules and lectures on the next screen.{% else %}Update the basics below. Your modules and lectures are untouched.{% endif %}
+      </p>
 
-        <div class="field">
-          <label>Course Title *</label>
-          <input type="text" name="title" value="{{ course.title|default:'' }}"
-                 required placeholder="e.g. Power Electronics Fundamentals">
-        </div>
+      <div class="course-form-grid">
+        <form method="post" action="{% if is_new %}{% url 'courses:lecturer_course_create' %}{% else %}{% url 'courses:lecturer_course_edit' course.slug %}{% endif %}">
+          {% csrf_token %}
 
-        <div class="field">
-          <label>Description</label>
-          <textarea name="description" rows="3"
-                    placeholder="Briefly describe what this course covers and who it's for.">{{ course.description|default:'' }}</textarea>
-        </div>
+          <!-- Section 1 -->
+          <div class="cf-section">
+            <div class="cf-step">1</div>
+            <div>
+              <div class="cf-title">What's the course called?</div>
+              <div class="field" style="margin-top:10px">
+                <label>Course Title *</label>
+                <input type="text" name="title" id="id_title" value="{{ course.title|default:'' }}"
+                       required maxlength="200" placeholder="e.g. Introduction to Programming"
+                       autocomplete="off">
+                <div class="cf-hint">Students see this name everywhere — keep it clear and official.</div>
+              </div>
+              <div class="field" style="margin-top:12px">
+                <label>Short Description <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+                <textarea name="description" id="id_description" rows="3"
+                          placeholder="One or two sentences about what this course covers.">{{ course.description|default:'' }}</textarea>
+              </div>
+            </div>
+          </div>
 
-        <div class="field-row">
-          <div class="field">
-            <label>Level</label>
-            <select name="level">
-              {% for val, label in levels %}
-              <option value="{{ val }}" {% if val == course.level|default:'ND1' %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="field">
-            <label>Semester</label>
-            <select name="semester">
-              <option value="1" {% if course.semester|default:'1' == '1' %}selected{% endif %}>Semester 1</option>
-              <option value="2" {% if course.semester == '2' %}selected{% endif %}>Semester 2</option>
-            </select>
-          </div>
-        </div>
+          <!-- Section 2: look & feel -->
+          <div class="cf-section">
+            <div class="cf-step">2</div>
+            <div style="flex:1">
+              <div class="cf-title">Pick how it looks <span style="font-weight:400;color:var(--muted);font-size:.78rem">(you can change this anytime)</span></div>
 
-        <div class="field-row">
-          <div class="field">
-            <label>Category</label>
-            <select name="category">
-              <option value="">— None —</option>
-              {% for cat in categories %}
-              <option value="{{ cat.id }}" {% if cat.id == course.category_id %}selected{% endif %}>{{ cat.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="field">
-            <label>Duration (hours)</label>
-            <input type="number" name="duration_hours" value="{{ course.duration_hours|default:0 }}" min="0">
-          </div>
-          <div class="field">
-            <label>Icon (emoji)</label>
-            <input type="text" name="icon" value="{{ course.icon|default:'📚' }}" maxlength="4">
-          </div>
-        </div>
+              <input type="hidden" name="icon" id="id_icon" value="{{ course.icon|default:'📚' }}">
+              <div class="icon-picker" id="iconPicker">
+                {% for ic in icon_choices %}
+                <button type="button" class="ip-btn {% if ic == course.icon|default:'📚' %}selected{% elif not course and forloop.first %}selected{% endif %}" data-icon="{{ ic }}">{{ ic }}</button>
+                {% endfor %}
+                {% if course.icon and course.icon not in icon_choices %}
+                <button type="button" class="ip-btn selected" data-icon="{{ course.icon }}">{{ course.icon }}</button>
+                {% endif %}
+              </div>
 
-        <!-- Department checklist -->
-        <div class="field">
-          <label>Which department(s) take this course?</label>
-          <p style="font-size:.78rem;color:var(--muted);margin:-4px 0 10px">
-            Tick your own department for a normal course. Tick additional departments to mark it as a borrowed/shared course.
-            Leave all unticked for a course shared by every department at this level.
-          </p>
-          <div class="dept-pills-wrap">
-            {% for code, label in departments %}
-            <label class="dept-pill {% if code in selected_departments %}selected{% endif %}">
-              <input type="checkbox" name="departments" value="{{ code }}" {% if code in selected_departments %}checked{% endif %}>
-              <span>{{ label }}{% if code == user.department %} <span style="font-size:.68rem;color:var(--teal);font-weight:600">(your dept)</span>{% endif %}</span>
-            </label>
-            {% endfor %}
+              <input type="hidden" name="color_start" id="id_color_start" value="{{ course.color_start|default:'#0D1F3C' }}">
+              <input type="hidden" name="color_end" id="id_color_end" value="{{ course.color_end|default:'#1A3A6C' }}">
+              <div class="color-picker" id="colorPicker" style="margin-top:12px">
+                {% for cs, ce in color_presets %}
+                <button type="button" class="cp-btn {% if cs == course.color_start|default:'#0D1F3C' and ce == course.color_end|default:'#1A3A6C' %}selected{% elif not course and forloop.first %}selected{% endif %}"
+                        data-cs="{{ cs }}" data-ce="{{ ce }}"
+                        style="background:linear-gradient(135deg,{{ cs }},{{ ce }})"
+                        aria-label="Colour option"></button>
+                {% endfor %}
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div style="margin-top:8px">
-          <button type="submit" class="btn btn-ink">{% if is_new %}Create Course{% else %}Save Changes{% endif %}</button>
-          {% if not is_new %}
-          <a href="{% url 'courses:lecturer_dashboard' %}" class="btn btn-ghost" style="margin-left:8px">Cancel</a>
-          {% endif %}
+          <!-- Section 3: classification -->
+          <div class="cf-section">
+            <div class="cf-step">3</div>
+            <div style="flex:1">
+              <div class="cf-title">Who and when is it for?</div>
+              <div class="field-row" style="margin-top:10px">
+                <div class="field">
+                  <label>Level</label>
+                  <select name="level" id="id_level">
+                    {% for val, label in levels %}
+                    <option value="{{ val }}" {% if val == course.level|default:'ND1' %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Semester</label>
+                  <select name="semester" id="id_semester">
+                    <option value="1" {% if course.semester|default:'1' == '1' %}selected{% endif %}>Semester 1</option>
+                    <option value="2" {% if course.semester == '2' %}selected{% endif %}>Semester 2</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label>Category <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+                  <select name="category" id="id_category">
+                    <option value="">— None —</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if cat.id == course.category_id %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Duration (hours)</label>
+                  <input type="number" name="duration_hours" id="id_duration" value="{{ course.duration_hours|default:0 }}" min="0">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4: departments -->
+          <div class="cf-section">
+            <div class="cf-step">4</div>
+            <div style="flex:1">
+              <div class="cf-title">Which department(s) take this course?</div>
+              <p class="cf-hint" style="margin:6px 0 10px">
+                Your own department is pre-ticked. Tick others only if they're borrowing this course.
+                Untick everything to share it with every department at this level.
+              </p>
+              <div class="dept-pills-wrap">
+                {% for code, label in departments %}
+                <label class="dept-pill {% if code in selected_departments %}selected{% endif %}">
+                  <input type="checkbox" name="departments" value="{{ code }}" {% if code in selected_departments %}checked{% endif %}>
+                  <span>{{ label }}{% if code == user.department %} <span style="font-size:.68rem;color:var(--teal);font-weight:600">(your dept)</span>{% endif %}</span>
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <button type="submit" class="btn btn-ink">{% if is_new %}Create Course <i data-lucide="arrow-right"></i>{% else %}Save Changes{% endif %}</button>
+            {% if is_new %}
+            <span style="font-size:.76rem;color:var(--muted)">Saved as a draft — nothing goes to students until admin approves.</span>
+            {% else %}
+            <a href="{% url 'courses:lecturer_dashboard' %}" class="btn btn-ghost">Back to My Courses</a>
+            {% endif %}
+          </div>
+        </form>
+
+        <!-- Live preview column -->
+        <div class="preview-col">
+          <div style="font-size:.7rem;font-weight:800;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Live Preview</div>
+          <article class="card cc" style="margin:0">
+            <div class="cc-thumb" id="pv-thumb" style="background:linear-gradient(135deg,{{ course.color_start|default:'#0D1F3C' }},{{ course.color_end|default:'#1A3A6C' }})">
+              <span id="pv-icon" style="font-size:2.6rem;line-height:1">{{ course.icon|default:'📚' }}</span>
+            </div>
+            <div class="cc-body">
+              <div style="margin-bottom:8px"><span class="chip c-teal" id="pv-category">General</span></div>
+              <h4 id="pv-title" style="font-size:.95rem;margin:0 0 6px">{{ course.title|default:'Your Course Title' }}</h4>
+              <div class="cc-meta">
+                <span id="pv-level">{{ course.get_level_display|default:'ND Year 1' }}</span>
+                <span id="pv-sem">Sem {{ course.semester|default:'1' }}</span>
+              </div>
+            </div>
+          </article>
+          <p style="font-size:.72rem;color:var(--muted);margin-top:10px;text-align:center">This is how students will see your course card.</p>
         </div>
-      </form>
+      </div>
     </div>
     {% endif %}
 
@@ -228,8 +299,75 @@
 
 {% block extra_css %}
 <style>
-#save-loader.htmx-request { opacity: 1 !important; pointer-events: auto !important; }
+  .course-form-grid{display:grid;grid-template-columns:1fr 280px;gap:24px;align-items:start}
+  .course-form-grid > form{min-width:0}
+  @media(max-width:900px){.course-form-grid{grid-template-columns:1fr}.preview-col{order:-1}}
+  .cf-section{display:flex;gap:14px;padding:18px 0;border-bottom:1px dashed var(--line)}
+  .cf-section:last-of-type{border-bottom:none}
+  .cf-step{width:26px;height:26px;border-radius:50%;background:var(--primary-blue-subtle);color:var(--primary-blue);
+           display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.8rem;flex-shrink:0;margin-top:2px}
+  .cf-title{font-size:.88rem;font-weight:700;color:var(--ink)}
+  .cf-hint{font-size:.75rem;color:var(--muted);margin-top:5px}
+  .icon-picker{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+  .ip-btn{width:42px;height:42px;border-radius:11px;border:1.5px solid var(--line);background:#fff;font-size:1.25rem;
+          cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s ease}
+  .ip-btn:hover{border-color:var(--primary-blue);transform:translateY(-1px)}
+  .ip-btn.selected{border-color:var(--primary-blue);background:var(--primary-blue-subtle);box-shadow:0 0 0 2px var(--primary-blue-subtle)}
+  .color-picker{display:flex;flex-wrap:wrap;gap:9px}
+  .cp-btn{width:38px;height:38px;border-radius:50%;border:2px solid #fff;outline:2px solid transparent;
+          cursor:pointer;transition:all .12s ease}
+  .cp-btn:hover{transform:scale(1.08)}
+  .cp-btn.selected{outline-color:var(--primary-blue);box-shadow:0 0 0 3px #fff inset}
+  .preview-col{position:sticky;top:calc(var(--nav-h) + 16px)}
+  .preview-col .cc-thumb{height:110px;display:flex;align-items:center;justify-content:center}
+  #save-loader.htmx-request { opacity: 1 !important; pointer-events: auto !important; }
 </style>
 {% endblock %}
 {% block extra_js %}
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var iconInput = $('id_icon'), csInput = $('id_color_start'), ceInput = $('id_color_end');
+
+  // Icon picker
+  document.querySelectorAll('#iconPicker .ip-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#iconPicker .ip-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      iconInput.value = btn.dataset.icon;
+      $('pv-icon').textContent = btn.dataset.icon;
+    });
+  });
+
+  // Colour picker
+  document.querySelectorAll('#colorPicker .cp-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#colorPicker .cp-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      csInput.value = btn.dataset.cs;
+      ceInput.value = btn.dataset.ce;
+      $('pv-thumb').style.background = 'linear-gradient(135deg,' + btn.dataset.cs + ',' + btn.dataset.ce + ')';
+    });
+  });
+
+  // Live title / category / level preview
+  var catSel = $('id_category');
+  function updatePreview() {
+    var t = $('id_title').value.trim();
+    $('pv-title').textContent = t || 'Your Course Title';
+    if (catSel) {
+      var opt = catSel.options[catSel.selectedIndex];
+      $('pv-category').textContent = (catSel.value && opt.text !== '— None —') ? opt.text : 'General';
+    }
+    var lvl = $('id_level');
+    $('pv-level').textContent = lvl.options[lvl.selectedIndex].text;
+    $('pv-sem').textContent = 'Sem ' + $('id_semester').value;
+  }
+  ['id_title', 'id_category', 'id_level', 'id_semester'].forEach(function (id) {
+    var el = $(id);
+    if (el) el.addEventListener('input', updatePreview);
+    if (el) el.addEventListener('change', updatePreview);
+  });
+})();
+</script>
 {% endblock %}
