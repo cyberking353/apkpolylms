@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/main.css' %}?v=8">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}?v=9">
   <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
   {% block extra_css %}{% endblock %}
 </head>
@@ -72,8 +72,9 @@
   <div class="messages-container">
     {% for message in messages %}
     <div class="flash flash-{{ message.tags }}">
-      <span>{{ message }}</span>
-      <button class="flash-close" onclick="this.parentElement.remove()"><i data-lucide="x"></i></button>
+      <span class="flash-icon"><i data-lucide="{% if message.tags == 'success' %}circle-check{% elif message.tags == 'error' %}circle-x{% elif message.tags == 'warning' %}triangle-alert{% else %}info{% endif %}"></i></span>
+      <span class="flash-body">{{ message }}</span>
+      <button class="flash-close" onclick="this.parentElement.remove()" aria-label="Dismiss"><i data-lucide="x"></i></button>
     </div>
     {% endfor %}
   </div>

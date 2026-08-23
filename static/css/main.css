@@ -139,15 +139,33 @@ button,input,select,textarea{font-family:inherit}
 .pw-eye{position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--faint);font-size:.9rem;padding:2px}
 
 /* ── FLASH MESSAGES ── */
-.messages-container{position:fixed;top:calc(var(--nav-h) + 14px);right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:340px}
-.flash{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-radius:14px;font-size:.85rem;font-weight:600;box-shadow:var(--sh-lg);animation:flashIn .25s var(--ease);border-left:4px solid rgba(255,255,255,.5)}
-@keyframes flashIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
-.flash-success{background:var(--green);color:#fff}
-.flash-error{background:var(--rose);color:#fff}
-.flash-warning{background:var(--gold);color:#fff}
-.flash-info{background:var(--primary-blue-deep);color:#fff}
-.flash-close{background:none;border:none;color:inherit;cursor:pointer;opacity:.7;font-size:1rem;padding:0;line-height:1}
-.flash-close:hover{opacity:1}
+.messages-container{position:fixed;top:calc(var(--nav-h) + 14px);right:16px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:360px}
+.flash{position:relative;display:flex;align-items:flex-start;gap:11px;padding:13px 14px 15px;border-radius:13px;
+       background:#fff;border:1px solid var(--line);border-left-width:4px;color:var(--ink);
+       box-shadow:0 12px 30px -8px rgba(15,23,42,.16);
+       font-size:.83rem;font-weight:600;line-height:1.45;overflow:hidden;
+       animation:flashIn .32s cubic-bezier(.21,1.02,.73,1)}
+.flash-icon{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.flash-icon svg.lucide{width:15px;height:15px}
+.flash-body{flex:1;padding-top:4px}
+.flash-close{background:none;border:none;color:var(--muted);cursor:pointer;padding:2px;line-height:1;flex-shrink:0;border-radius:6px}
+.flash-close:hover{color:var(--ink);background:rgba(15,23,42,.06)}
+.flash-close svg.lucide{width:15px;height:15px;display:block}
+.flash::after{content:'';position:absolute;left:0;bottom:0;height:3px;width:100%;transform-origin:left;animation:flashTimer 4s linear forwards}
+.flash-success{border-left-color:var(--green)}
+.flash-success .flash-icon{background:var(--green-bg);color:var(--green)}
+.flash-success::after{background:var(--green)}
+.flash-error{border-left-color:var(--rose)}
+.flash-error .flash-icon{background:var(--rose-bg);color:var(--rose)}
+.flash-error::after{background:var(--rose)}
+.flash-warning{border-left-color:var(--gold)}
+.flash-warning .flash-icon{background:var(--gold-bg);color:var(--gold)}
+.flash-warning::after{background:var(--gold)}
+.flash-info{border-left-color:var(--primary-blue)}
+.flash-info .flash-icon{background:var(--primary-blue-subtle);color:var(--primary-blue)}
+.flash-info::after{background:var(--primary-blue)}
+@keyframes flashIn{from{opacity:0;transform:translateX(24px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes flashTimer{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 
 /* ── NAV ── */
 .nav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);background:rgba(255,255,255,.94);backdrop-filter:blur(16px);border-bottom:1px solid var(--neutral-200);z-index:500;display:flex;align-items:center}
