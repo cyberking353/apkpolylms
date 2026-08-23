@@ -6,6 +6,12 @@
   <title>{% block title %}Admin Portal{% endblock %} — Al-Hikma</title>
   <!-- version: 2025-verify-001 -->
   {% load static %}
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#0D1F3C">
+  <link rel="apple-touch-icon" href="/static/images/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
   <link rel="stylesheet" href="{% static 'css/main.css' %}?v=9">
   <style>
     .portal-shell { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
@@ -177,7 +183,7 @@
 <script>
   document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
 </script>
-<script src="{% static 'js/main.js' %}?v=3"></script>
+<script src="{% static 'js/main.js' %}?v=4"></script>
 
 <script>
 (function(){

@@ -246,4 +246,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   } catch (err) { console.error('Navbar scroll effect setup failed:', err); }
 
+  /* ── PWA: register service worker ── */
+  try {
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      // only register over https (or localhost during development)
+      if (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ||
+          !/^\d+\.\d+\.\d+\.\d+$/.test(location.hostname)) {
+        navigator.serviceWorker.register('/sw.js').catch(err => {
+          console.warn('Service worker registration skipped:', err);
+        });
+      }
+    }
+  } catch (err) { console.error('Service worker setup failed:', err); }
+
 });
