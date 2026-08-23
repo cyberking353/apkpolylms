@@ -50,7 +50,7 @@
     <div class="card cp-lg" style="margin-bottom:20px">
       <h4 style="font-size:.9rem;font-weight:700;margin-bottom:12px"><i data-lucide="clapperboard"></i> Lectures</h4>
       {% if lecture_items %}
-      <table class="portal-table">
+      <div style="overflow-x:auto"><table class="portal-table" style="min-width:520px">
         <thead><tr><th>Lecture</th><th>Status</th><th>Watched On</th></tr></thead>
         <tbody>
           {% for li in lecture_items %}
@@ -61,7 +61,7 @@
           </tr>
           {% endfor %}
         </tbody>
-      </table>
+      </table></div>
       {% else %}
       <p style="color:var(--muted);font-size:.83rem">This course has no lectures yet.</p>
       {% endif %}
@@ -71,7 +71,7 @@
     <div class="card cp-lg" style="margin-bottom:20px">
       <h4 style="font-size:.9rem;font-weight:700;margin-bottom:12px"><i data-lucide="clipboard-list"></i> Quiz Attempts</h4>
       {% if attempts %}
-      <table class="portal-table">
+      <div style="overflow-x:auto"><table class="portal-table" style="min-width:560px">
         <thead><tr><th>Quiz</th><th>Attempt</th><th>Score</th><th>Result</th><th>Date</th></tr></thead>
         <tbody>
           {% for a in attempts %}
@@ -84,7 +84,7 @@
           </tr>
           {% endfor %}
         </tbody>
-      </table>
+      </table></div>
       {% else %}
       <p style="color:var(--muted);font-size:.83rem">No quiz attempts yet.</p>
       {% endif %}

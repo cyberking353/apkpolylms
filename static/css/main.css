@@ -280,7 +280,7 @@ button,input,select,textarea{font-family:inherit}
 .cc-body h4{font-family:'Manrope',sans-serif;font-size:.98rem;margin-bottom:5px;color:var(--ink);line-height:1.3}
 .cc-body p{font-size:.78rem;color:var(--muted);margin-bottom:12px;line-height:1.6}
 .cc-meta{display:flex;gap:12px;font-size:.72rem;color:var(--faint)}
-.cc-foot{padding:12px 19px;border-top:1px solid var(--neutral-200);display:flex;align-items:center;justify-content:space-between;margin-top:auto}
+.cc-foot{padding:12px 19px;border-top:1px solid var(--neutral-200);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:auto}
 .instr{display:flex;align-items:center;gap:7px;font-size:.78rem;font-weight:500;color:var(--neutral-700)}
 .iav{width:24px;height:24px;border-radius:50%;background:var(--primary-blue-light);display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;color:var(--primary-blue);flex-shrink:0}
 

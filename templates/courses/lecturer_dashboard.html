@@ -110,9 +110,9 @@
 
         <div class="cc-foot">
           {% if course.status != 'pending' %}
-          <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="btn btn-ghost btn-sm">Edit</a>
-          <a href="{% url 'courses:lecturer_course_progress' course.slug %}" class="btn btn-ghost btn-sm" aria-label="Student progress"><i data-lucide="chart-column"></i></a>
-          <a href="{% url 'courses:lecturer_course_preview' course.slug %}" class="btn btn-ghost btn-sm" aria-label="Preview"><i data-lucide="eye"></i></a>
+          <a href="{% url 'courses:lecturer_course_edit' course.slug %}" class="btn btn-ghost btn-sm" title="Edit course"><i data-lucide="pencil"></i></a>
+          <a href="{% url 'courses:lecturer_course_progress' course.slug %}" class="btn btn-ghost btn-sm" title="Student progress"><i data-lucide="chart-column"></i></a>
+          <a href="{% url 'courses:lecturer_course_preview' course.slug %}" class="btn btn-ghost btn-sm" title="Preview as student"><i data-lucide="eye"></i></a>
           {% else %}
           <span class="btn btn-ghost btn-sm" style="opacity:.4;cursor:default">Edit</span>
           {% endif %}
@@ -126,8 +126,11 @@
             </button>
           </form>
           {% elif course.status == 'published' %}
-          <a href="{% url 'courses:lecturer_course_results' course.slug %}" class="btn btn-ghost btn-sm"><i data-lucide="chart-column"></i> Results</a>
           <span class="chip c-green">{{ course.enrolled_count }} enrolled</span>
+          <span style="display:flex;gap:6px;flex-wrap:wrap">
+            <a href="{% url 'courses:lecturer_course_progress' course.slug %}" class="chip c-teal" title="View student progress">Progress</a>
+            <a href="{% url 'courses:lecturer_course_results' course.slug %}" class="chip c-green" title="View results">Results</a>
+          </span>
           {% else %}
           <span class="chip c-gold">Under Review</span>
           {% endif %}
