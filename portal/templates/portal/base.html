@@ -80,6 +80,37 @@
   </style>
 </head>
 <body>
+
+  <!-- ── PWA cold-start splash (standalone mode only) ── -->
+  <div id="app-splash" style="display:none">
+    <style>
+      #app-splash{position:fixed;inset:0;z-index:99999;background:linear-gradient(160deg,#0D1F3C 0%,#123B73 55%,#0F766E 130%);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+        transition:opacity .35s ease}
+      #app-splash.hide{opacity:0;pointer-events:none}
+      #app-splash img{width:96px;height:96px;border-radius:22px;box-shadow:0 18px 50px -12px rgba(0,0,0,.5)}
+      #app-splash .sp-name{font-family:'Manrope',sans-serif;font-size:1.25rem;font-weight:800;color:#fff}
+      #app-splash .sp-motto{font-size:.68rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.65)}
+    </style>
+    <img src="/static/images/icon-512.png" alt="">
+    <div class="sp-name">Al-Hikma LMS</div>
+    <div class="sp-motto">Innovation &middot; Creativity</div>
+    <script>
+      (function () {
+        var el = document.getElementById('app-splash');
+        var standalone = window.matchMedia('(display-mode: standalone)').matches ||
+                         window.navigator.standalone === true;
+        if (!standalone && el) { el.remove(); return; }
+        if (!el) return;
+        setTimeout(function () {
+          el.classList.add('hide');
+          setTimeout(function () { if (el.parentNode) el.remove(); }, 400);
+        }, 700);
+        setTimeout(function () { if (el.parentNode) el.remove(); }, 1800);
+      })();
+    </script>
+  </div>
+
 <div class="portal-shell">
 
   <!-- Sidebar -->

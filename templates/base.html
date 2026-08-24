@@ -21,6 +21,55 @@
 </head>
 <body class="{% block body_class %}{% endblock %}">
 
+  <!-- ── PWA cold-start splash (standalone/installed mode only) ── -->
+  <div id="app-splash" style="display:none">
+    <style>
+      #app-splash{position:fixed;inset:0;z-index:99999;background:linear-gradient(160deg,#0D1F3C 0%,#123B73 55%,#0F766E 130%);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+        opacity:1;transition:opacity .35s ease}
+      #app-splash.hide{opacity:0;pointer-events:none}
+      #app-splash img{width:96px;height:96px;border-radius:22px;box-shadow:0 18px 50px -12px rgba(0,0,0,.5);
+        animation:splashPop .6s cubic-bezier(.2,1.1,.4,1) both}
+      #app-splash .sp-name{font-family:'Manrope',sans-serif;font-size:1.25rem;font-weight:800;color:#fff;
+        letter-spacing:.02em;animation:splashUp .5s .15s ease both}
+      #app-splash .sp-motto{font-size:.68rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+        color:rgba(255,255,255,.65);animation:splashUp .5s .3s ease both}
+      #app-splash .sp-bar{width:120px;height:3px;border-radius:99px;background:rgba(255,255,255,.15);
+        overflow:hidden;margin-top:8px}
+      #app-splash .sp-bar i{display:block;height:100%;width:40%;border-radius:99px;background:#fff;
+        animation:splashSlide .9s ease-in-out infinite}
+      @keyframes splashPop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+      @keyframes splashUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+      @keyframes splashSlide{0%{transform:translateX(-140%)}100%{transform:translateX(320%)}}
+    </style>
+    <img src="/static/images/icon-512.png" alt="Al-Hikma Polytechnic crest">
+    <div class="sp-name">Al-Hikma LMS</div>
+    <div class="sp-motto">Innovation &middot; Creativity</div>
+    <div class="sp-bar"><i></i></div>
+    <script>
+      (function () {
+        var el = document.getElementById('app-splash');
+        // only installed-app cold starts get the splash; browser tabs skip instantly
+        var standalone = window.matchMedia('(display-mode: standalone)').matches ||
+                         window.navigator.standalone === true;
+        var force = location.search.indexOf('splashtest') !== -1;
+        if (!standalone && !force && el) { el.remove(); return; }
+        var hidden = false;
+        function hide() {
+          if (hidden || !el || !el.parentNode) return;
+          hidden = true;
+          el.classList.add('hide');
+          setTimeout(function () { if (el.parentNode) el.remove(); }, 400);
+        }
+        if (el) {
+          window.addEventListener('load', function () { setTimeout(hide, 450); });
+          setTimeout(hide, 1800);   // hard cap — never blocks
+        }
+      })();
+    </script>
+  </div>
+
+
   <!-- ── NAVBAR ── -->
   <nav class="nav {% block nav_class %}{% endblock %}" id="main-nav">
     <div class="wrap">
