@@ -10,9 +10,17 @@
       {% endif %}
     </a>
     <a href="?tab=quizzes" class="btn {% if tab == 'quizzes' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm"><i data-lucide="clipboard-list"></i> Quiz Analytics</a>
+    <a href="?tab=activity" class="btn {% if tab == 'activity' %}btn-ink{% else %}btn-ghost{% endif %} btn-sm"><i data-lucide="activity"></i> Activity</a>
     <span style="flex:1"></span>
     <a href="{% url 'courses:lecturer_progress_export' course.slug %}" class="btn btn-success btn-sm"><i data-lucide="download"></i> Export CSV</a>
   </div>
+
+  {% if nudge_feedback %}
+  <div class="flash flash-{% if nudge_feedback.0 == 'success' %}success{% else %}info{% endif %}" style="position:relative;margin-bottom:14px">
+    <span class="flash-icon"><i data-lucide="{% if nudge_feedback.0 == 'success' %}circle-check{% else %}info{% endif %}"></i></span>
+    <span class="flash-body">{{ nudge_feedback.1 }}</span>
+  </div>
+  {% endif %}
 
   {% if tab == 'students' %}
   <!-- Search -->
@@ -38,7 +46,7 @@
             </td>
             <td>
               <div style="display:flex;align-items:center;gap:8px">
-                <div style="flex:1;height:8px;background:var(--neutral-100,#F1F5F9);border-radius:99px;overflow:hidden">
+                <div style="flex:1;height:8px;background:var(--bg);border-radius:99px;overflow:hidden">
                   <div style="height:100%;width:{{ r.pct }}%;border-radius:99px;background:{% if r.pct >= 70 %}var(--green){% elif r.pct >= 30 %}var(--gold){% else %}var(--rose){% endif %}"></div>
                 </div>
                 <span style="font-size:.74rem;font-weight:700">{{ r.pct }}%</span>
@@ -62,9 +70,10 @@
 
   {% elif tab == 'attention' %}
 
+  <!-- Summary cards -->
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px" class="flag-grid">
     <div class="portal-card" style="margin:0"><div class="portal-card-body" style="padding:16px;display:flex;align-items:center;gap:12px">
-      <div style="width:42px;height:42px;border-radius:12px;background:#FDF2F2;color:var(--rose);display:flex;align-items:center;justify-content:center"><i data-lucide="play-circle"></i></div>
+      <div style="width:42px;height:42px;border-radius:12px;background:#FEF3C7;color:#B7791F;display:flex;align-items:center;justify-content:center"><i data-lucide="play-circle"></i></div>
       <div><div style="font-size:1.3rem;font-weight:800;font-family:'Manrope',sans-serif">{{ flags.not_started }}</div><div style="font-size:.72rem;color:var(--muted);font-weight:600">Never started</div></div>
     </div></div>
     <div class="portal-card" style="margin:0"><div class="portal-card-body" style="padding:16px;display:flex;align-items:center;gap:12px">
@@ -72,16 +81,29 @@
       <div><div style="font-size:1.3rem;font-weight:800;font-family:'Manrope',sans-serif">{{ flags.stalled }}</div><div style="font-size:.72rem;color:var(--muted);font-weight:600">Stalled 7+ days</div></div>
     </div></div>
     <div class="portal-card" style="margin:0"><div class="portal-card-body" style="padding:16px;display:flex;align-items:center;gap:12px">
-      <div style="width:42px;height:42px;border-radius:12px;background:#FEF2F2;color:var(--rose);display:flex;align-items:center;justify-content:center"><i data-lucide="trending-down"></i></div>
+      <div style="width:42px;height:42px;border-radius:12px;background:#FDF2F2;color:var(--rose);display:flex;align-items:center;justify-content:center"><i data-lucide="trending-down"></i></div>
       <div><div style="font-size:1.3rem;font-weight:800;font-family:'Manrope',sans-serif">{{ flags.struggling }}</div><div style="font-size:.72rem;color:var(--muted);font-weight:600">Struggling with quizzes</div></div>
     </div></div>
   </div>
 
   <div class="portal-card">
-    <div class="portal-card-head"><h3>Flagged students (most urgent first)</h3></div>
+    <div class="portal-card-head">
+      <h3>Flagged students (most urgent first)</h3>
+      {% if flags.not_started or flags.stalled or flags.struggling %}
+      <form method="post" action="{% url 'courses:lecturer_nudge_all' course.slug %}"
+            hx-post="{% url 'courses:lecturer_nudge_all' course.slug %}"
+            hx-target="#progress-area" hx-swap="outerHTML">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-gold btn-sm"
+                data-confirm="Send a reminder notification to every flagged student ({{ flags.not_started|add:flags.stalled|add:flags.struggling }})?">
+          <i data-lucide="send"></i> Remind All Flagged
+        </button>
+      </form>
+      {% endif %}
+    </div>
     <div class="portal-card-body" style="overflow-x:auto">
-      <table class="portal-table" style="min-width:700px">
-        <thead><tr><th>Student</th><th>Reason</th><th>Progress</th><th>Quizzes</th><th>Last Active</th><th></th></tr></thead>
+      <table class="portal-table" style="min-width:820px">
+        <thead><tr><th>Student</th><th>Reason</th><th>Progress</th><th>Quizzes</th><th>Last Active</th><th>Last Reminded</th><th></th></tr></thead>
         <tbody>
           {% for r in rows %}{% if r.flag %}
           <tr>
@@ -97,10 +119,23 @@
             <td>{{ r.pct }}% ({{ r.watched }}/{{ r.lectures_total }})</td>
             <td>{{ r.quiz_attempts }} taken · {{ r.quizzes_passed }} passed{% if r.avg_score is not None %} · avg {{ r.avg_score }}%{% endif %}</td>
             <td style="font-size:.78rem">{% if r.last_active %}{{ r.last_active|date:"d M, H:i" }}{% else %}—{% endif %}</td>
-            <td><a href="{% url 'courses:lecturer_student_progress' course.slug r.student.id %}" class="btn btn-teal btn-sm">Details</a></td>
+            <td style="font-size:.76rem;color:var(--muted)">
+              {% if r.nudged_at %}{{ r.nudged_at|date:"d M, H:i" }}{% else %}—{% endif %}
+            </td>
+            <td>
+              <div style="display:flex;gap:6px;align-items:center">
+                <form method="post" action="{% url 'courses:lecturer_nudge_student' course.slug r.student.id %}"
+                      hx-post="{% url 'courses:lecturer_nudge_student' course.slug r.student.id %}"
+                      hx-target="#progress-area" hx-swap="outerHTML">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-gold btn-sm" title="Send reminder notification"><i data-lucide="send"></i></button>
+                </form>
+                <a href="{% url 'courses:lecturer_student_progress' course.slug r.student.id %}" class="btn btn-teal btn-sm">Details</a>
+              </div>
+            </td>
           </tr>
           {% endif %}{% empty %}
-          <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px"><i data-lucide="party-popper"></i> Nobody needs attention right now.</td></tr>
+          <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px"><i data-lucide="party-popper"></i> Nobody needs attention right now.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -165,5 +200,32 @@
     No quizzes created yet for this course.
   </div></div>
   {% endfor %}
+
+  {% elif tab == 'activity' %}
+
+  <div class="portal-card">
+    <div class="portal-card-head"><h3>Recent student activity — last 14 days</h3></div>
+    <div class="portal-card-body" style="padding:6px 0">
+      {% for ev in activity %}
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--line)">
+        <span style="width:32px;height:32px;border-radius:50%;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;
+                     background:{% if ev.kind == 'watched' %}var(--primary-blue-subtle){% elif ev.kind == 'passed' %}#EAF7F0{% elif ev.kind == 'failed' %}var(--rose-bg){% else %}#FEF3C7{% endif %};
+                     color:{% if ev.kind == 'watched' %}var(--primary-blue){% elif ev.kind == 'passed' %}var(--green){% elif ev.kind == 'failed' %}var(--rose){% else %}#B7791F{% endif %}">
+          <i data-lucide="{{ ev.icon }}"></i>
+        </span>
+        <div style="flex:1;font-size:.83rem">
+          <strong>{{ ev.student.display_name }}</strong>
+          <span style="color:var(--muted)">{{ ev.text }}</span>
+        </div>
+        <span style="font-size:.72rem;color:var(--faint);white-space:nowrap">{{ ev.at|date:"d M, H:i" }}</span>
+      </div>
+      {% empty %}
+      <div style="text-align:center;color:var(--muted);padding:30px;font-size:.85rem">
+        No student activity in the last 14 days.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
   {% endif %}
 </div>

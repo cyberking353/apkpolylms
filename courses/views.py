@@ -1,4 +1,5 @@
 from functools import wraps
+from datetime import timedelta
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
@@ -1035,62 +1036,17 @@ def lecturer_course_progress(request, slug):
     tab = request.GET.get('tab', 'students')
     q = request.GET.get('q', '').strip()
 
-    enrollments = (Enrollment.objects.filter(course=course)
-                   .select_related('student'))
-    students = sorted({e.student for e in enrollments},
-                      key=lambda s: (s.last_name or '', s.first_name or ''))
-    if q:
-        ql = q.lower()
-        students = [s for s in students if ql in (s.display_name or '').lower()
-                    or ql in (s.matric_number or '').lower()]
+    ctx = _progress_context(course, tab=tab if tab in ('students', 'attention',
+                                                       'quizzes', 'activity') else 'students',
+                            q=q)
+    ctx['q'] = q
 
-    rows = _course_progress_rows(course, students)
-
-    # Quiz analytics (per weekly quiz + per question)
-    quizzes = []
-    for qz in course.quizzes.prefetch_related('questions__choices'):
-        attempts = QuizAttempt.objects.filter(quiz=qz)
-        n_att = attempts.count()
-        from django.db.models import Avg
-        avg = attempts.aggregate(v=Avg('score'))['v']
-        passed_n = attempts.filter(passed=True).count()
-        questions = []
-        for question in qz.questions.all():
-            answers = question.answer_set.select_related('selected_choice')
-            total = answers.count()
-            correct = sum(1 for a in answers
-                          if a.selected_choice and a.selected_choice.is_correct)
-            questions.append({
-                'text': question.text,
-                'total': total,
-                'correct': correct,
-                'pct': round(100 * correct / total) if total else None,
-            })
-        hardest = sorted([x for x in questions if x['pct'] is not None],
-                         key=lambda x: x['pct'])[:3]
-        quizzes.append({
-            'quiz': qz, 'module': getattr(qz.module, 'title', ''),
-            'attempts': n_att, 'avg': round(avg) if avg is not None else None,
-            'pass_rate': round(100 * passed_n / n_att) if n_att else None,
-            'question_count': qz.questions.count(),
-            'questions': questions, 'hardest': hardest,
-        })
-
-    ctx = {
-        'course': course, 'tab': tab, 'q': q,
-        'rows': rows, 'students_count': len(students),
-        'quizzes': quizzes,
-        'flags': {
-            'not_started': sum(1 for r in rows if r['flag'] == 'not_started'),
-            'stalled': sum(1 for r in rows if r['flag'] == 'stalled'),
-            'struggling': sum(1 for r in rows if r['flag'] == 'struggling'),
-        },
-    }
     if request.headers.get('HX-Request'):
         return render(request, 'courses/_progress_area.html', ctx)
     return render(request, 'courses/lecturer_progress.html', ctx)
 
 
+@lecturer_or_staff_required
 @lecturer_or_staff_required
 def lecturer_student_progress(request, slug, student_id):
     """Full drill-down: everything one student has done inside this course."""
@@ -1165,3 +1121,218 @@ def lecturer_progress_export(request, slug):
             r['last_active'].strftime('%Y-%m-%d %H:%M') if r['last_active'] else 'never',
         ])
     return response
+
+
+def _nudge_message(course, flag):
+    """Pre-written reminder tailored to why the student was flagged."""
+    if flag == 'not_started':
+        return (f'Reminder: you have not yet started "{course.title}". '
+                f'Please log in to the LMS and begin Week 1 today.')
+    if flag == 'struggling':
+        return (f'Keep going with "{course.title}"! Your recent quiz scores show '
+                f'you need more practice — review the module lessons and try again. '
+                f'Ask questions in the course message board if anything is unclear.')
+    return (f'Reminder: it has been a while since you worked on "{course.title}". '
+            f'Please log in to the LMS and continue where you left off.')
+
+
+def _nudge_student(course, student, flag):
+    """Create the reminder notification for one flagged student."""
+    from .models import Notification
+    message = _nudge_message(course, flag)
+    return Notification.objects.create(
+        recipient=student,
+        message=message,
+        link=f'/courses/{course.slug}/',
+    )
+
+
+def _last_nudged_map(course, students):
+    """Latest reminder timestamp per student (matched by course code in text)."""
+    from .models import Notification
+    code = course.code or course.title
+    qs = (Notification.objects
+          .filter(recipient__in=students,
+                  message__icontains=code)
+          .order_by('-created_at'))
+    out = {}
+    for n in qs:
+        out.setdefault(n.recipient_id, n.created_at)
+    return out
+
+
+@lecturer_or_staff_required
+def lecturer_nudge_student(request, slug, student_id):
+    """Send a reminder notification to one flagged student."""
+    course = _course_for_user(slug, request.user)
+    student = get_object_or_404(Student, pk=student_id)
+    rows = _course_progress_rows(course, [student])
+    row = rows[0] if rows else None
+    flag = row['flag'] if row else None
+
+    feedback = ('success', f'Reminder sent to {student.display_name}.')
+    if not flag:
+        feedback = ('info', f'{student.display_name} is no longer flagged — no reminder sent.')
+    elif request.method == 'POST':
+        custom = request.POST.get('message', '').strip()
+        if custom:
+            from .models import Notification
+            Notification.objects.create(
+                recipient=student,
+                message=custom,
+                link=f'/courses/{course.slug}/',
+            )
+        else:
+            _nudge_student(course, student, flag)
+    else:
+        # GET: just viewing, nothing to do
+        return redirect('courses:lecturer_course_progress', slug=slug)
+
+    if request.headers.get('HX-Request'):
+        # re-render the attention tab inline; never queue django messages here
+        return _progress_response(request, course, tab='attention',
+                                  extra={'nudge_feedback': feedback})
+    getattr(messages, {'success': 'success', 'info': 'info'}.get(feedback[0], 'info'))(
+        request, feedback[1])
+    return redirect('courses:lecturer_course_progress', slug=slug)
+
+
+@lecturer_or_staff_required
+def lecturer_nudge_all(request, slug):
+    """Send reminders to every currently flagged student at once."""
+    course = _course_for_user(slug, request.user)
+    enrollments = Enrollment.objects.filter(course=course).select_related('student')
+    students = sorted({e.student for e in enrollments},
+                      key=lambda s: (s.last_name or '', s.first_name or ''))
+    flagged = [r for r in _course_progress_rows(course, students) if r['flag']]
+
+    for row in flagged:
+        _nudge_student(course, row['student'], row['flag'])
+
+    feedback = ('success', f'Reminders sent to {len(flagged)} student{"" if len(flagged) == 1 else "s"}.')
+    if request.headers.get('HX-Request'):
+        return _progress_response(request, course, tab='attention',
+                                  extra={'nudge_feedback': feedback})
+    messages.success(request, feedback[1])
+    return redirect('courses:lecturer_course_progress', slug=slug)
+
+
+def _progress_response(request, course, tab='students', extra=None):
+    """Shared render helper so htmx gets the partial and normal requests the page."""
+    ctx = _progress_context(course, tab=tab, q=request.GET.get('q', '').strip())
+    if extra:
+        ctx.update(extra)
+    if request.headers.get('HX-Request'):
+        return render(request, 'courses/_progress_area.html', ctx)
+    return render(request, 'courses/lecturer_progress.html', ctx)
+
+
+def _progress_context(course, tab='students', q=''):
+    """Everything the progress area template needs (shared by view + nudges + activity)."""
+    from django.db.models import Avg
+
+    enrollments = (Enrollment.objects.filter(course=course)
+                   .select_related('student'))
+    students = sorted({e.student for e in enrollments},
+                      key=lambda s: (s.last_name or '', s.first_name or ''))
+    ql = q.lower()
+    if q:
+        students = [s for s in students if ql in (s.display_name or '').lower()
+                    or ql in (s.matric_number or '').lower()]
+
+    rows = _course_progress_rows(course, students)
+
+    quizzes = []
+    if tab == 'quizzes':
+        quizzes = _quiz_analytics(course)
+
+    activity = []
+    if tab == 'attention':
+        flagged_students = [r['student'] for r in rows if r['flag']]
+        nudged = _last_nudged_map(course, flagged_students) if flagged_students else {}
+        for r in rows:
+            r['nudged_at'] = nudged.get(r['student'].id)
+    elif tab == 'activity':
+        activity = _recent_activity(course)
+
+    return {
+        'course': course, 'tab': tab, 'q': q,
+        'rows': rows, 'students_count': len(students),
+        'quizzes': quizzes, 'activity': activity,
+        'flags': {
+            'not_started': sum(1 for r in rows if r['flag'] == 'not_started'),
+            'stalled': sum(1 for r in rows if r['flag'] == 'stalled'),
+            'struggling': sum(1 for r in rows if r['flag'] == 'struggling'),
+        },
+    }
+
+
+def _quiz_analytics(course):
+    """Per-quiz attempt stats and per-question correct-rate breakdown."""
+    from django.db.models import Avg
+    quizzes = []
+    for qz in course.quizzes.prefetch_related('questions__choices'):
+        attempts = QuizAttempt.objects.filter(quiz=qz)
+        n_att = attempts.count()
+        avg = attempts.aggregate(v=Avg('score'))['v']
+        passed_n = attempts.filter(passed=True).count()
+        questions = []
+        for question in qz.questions.all():
+            answers = question.answer_set.select_related('selected_choice')
+            total = answers.count()
+            correct = sum(1 for a in answers
+                          if a.selected_choice and a.selected_choice.is_correct)
+            questions.append({
+                'text': question.text,
+                'total': total,
+                'correct': correct,
+                'pct': round(100 * correct / total) if total else None,
+            })
+        hardest = sorted([x for x in questions if x['pct'] is not None],
+                         key=lambda x: x['pct'])[:3]
+        quizzes.append({
+            'quiz': qz, 'module': getattr(qz.module, 'title', ''),
+            'attempts': n_att, 'avg': round(avg) if avg is not None else None,
+            'pass_rate': round(100 * passed_n / n_att) if n_att else None,
+            'question_count': qz.questions.count(),
+            'questions': questions, 'hardest': hardest,
+        })
+    return quizzes
+
+
+def _recent_activity(course, limit=60, days=14):
+    """Merged timeline of student activity inside this course."""
+    since = timezone.now() - timedelta(days=days)
+    events = []
+
+    watched = (LectureProgress.objects
+               .filter(lecture__module__course=course, watched_at__gte=since)
+               .select_related('student', 'lecture')
+               .order_by('-watched_at')[:limit])
+    for w in watched:
+        events.append({'student': w.student, 'at': w.watched_at, 'kind': 'watched',
+                       'icon': 'play-circle',
+                       'text': f'watched “{w.lecture.title}”'})
+
+    attempts = (QuizAttempt.objects
+                .filter(quiz__course=course, submitted_at__gte=since)
+                .select_related('student', 'quiz')
+                .order_by('-submitted_at')[:limit])
+    for a in attempts:
+        events.append({'student': a.student, 'at': a.submitted_at,
+                       'kind': 'passed' if a.passed else 'failed',
+                       'icon': 'clipboard-check' if a.passed else 'clipboard-x',
+                       'text': (f'scored {a.score:.0f}% on “{a.quiz.title}”'
+                                + (' — passed' if a.passed else ' — failed'))})
+
+    exams = (ExamAttempt.objects
+             .filter(exam__course=course, submitted_at__gte=since)
+             .select_related('student', 'exam')
+             .order_by('-submitted_at')[:limit])
+    for e in exams:
+        events.append({'student': e.student, 'at': e.submitted_at, 'kind': 'exam',
+                       'icon': 'graduation-cap',
+                       'text': f'submitted the official exam ({e.score:.0f}/60)'})
+
+    events.sort(key=lambda ev: ev['at'], reverse=True)
+    return events[:limit]

@@ -577,3 +577,84 @@ class LecturerProgressMonitorTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertNotIn(b'<html', resp.content)
         self.assertContains(resp, 'progress-area')
+
+
+class NudgeAndActivityTest(TestCase):
+    """Reminders for flagged students + the activity feed tab."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.lecturer = User.objects.create_user(
+            username='nudge-lect', password='pass', role='lecturer')
+        cls.cat = Category.objects.create(name='NudgeCat')
+        cls.course = Course.objects.create(
+            title='Nudge Course', slug='nudge-course', description='',
+            category=cls.cat, lecturer=cls.lecturer,
+            level='ND1', semester='1', status='published', code='NDG101')
+        cls.m1 = Module.objects.create(course=cls.course, title='W1', week_number=1)
+        cls.l1 = Lecture.objects.create(module=cls.m1, title='NL1', order=1)
+        cls.never = User.objects.create_user(
+            username='never@student', password='pass', role='student',
+            matric_number='NV/001')
+        cls.active = User.objects.create_user(
+            username='active@student', password='pass', role='student',
+            matric_number='AC/001')
+        for s in (cls.never, cls.active):
+            Enrollment.objects.create(student=s, course=cls.course)
+
+    def setUp(self):
+        self.client.force_login(self.lecturer)
+        list(messages.get_messages(self.client))
+
+    def test_nudge_creates_notification(self):
+        resp = self.client.post(reverse(
+            'courses:lecturer_nudge_student', args=[self.course.slug, self.never.id]),
+            HTTP_HX_REQUEST='true')
+        self.assertEqual(resp.status_code, 200)
+        from announcements.models import Announcement  # noqa — ensure app ready
+        from courses.models import Notification
+        n = Notification.objects.filter(recipient=self.never).latest('created_at')
+        self.assertIn('Nudge Course', n.message)
+        # htmx response must not queue django messages
+        self.assertEqual(list(messages.get_messages(self.client)), [])
+
+    def test_remind_all_only_flags_flagged(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        LectureProgress.objects.create(student=self.active, lecture=self.l1, completed=True)
+        LectureProgress.objects.create(
+            student=self.never if False else self.never, lecture=self.l1,
+            completed=True) if False else None
+        # never → not_started flag; active watched everything? l2 doesn't exist; active watched l1 only
+        # give active a second lecture to watch so they're complete
+        l2 = Lecture.objects.create(module=self.m1, title='NL2', order=2)
+        LectureProgress.objects.create(student=self.active, lecture=l2, completed=True)
+        # make 'never' stalled instead by giving them an old watch
+        LectureProgress.objects.create(
+            student=self.never, lecture=l2, completed=True,
+            watched_at=timezone.now() - timedelta(days=10))
+
+        resp = self.client.post(reverse(
+            'courses:lecturer_nudge_all', args=[self.course.slug]),
+            HTTP_HX_REQUEST='true')
+        self.assertEqual(resp.status_code, 200)
+        from courses.models import Notification
+        recipients = set(Notification.objects.values_list('recipient_id', flat=True))
+        self.assertNotIn(self.active.id, recipients)   # doing fine → not nudged
+
+    def test_activity_tab_shows_events(self):
+        from django.utils import timezone
+        from quizzes.models import Quiz, Question, QuizAttempt
+        quiz = Quiz.objects.create(course=self.course, module=self.m1, title='NW1')
+        Question.objects.create(quiz=quiz, text='t', order=1)
+        QuizAttempt.objects.create(student=self.active, quiz=quiz,
+                                   score=70, passed=True, attempt_number=1,
+                                   submitted_at=timezone.now())
+        LectureProgress.objects.create(student=self.never, lecture=self.l1, completed=True)
+        resp = self.client.get(reverse(
+            'courses:lecturer_course_progress', args=[self.course.slug]),
+            {'tab': 'activity'})
+        h = resp.content.decode()
+        self.assertContains(resp, 'Recent student activity')
+        self.assertIn('watched', h)
+        self.assertIn('scored 70%', h)
