@@ -246,16 +246,88 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   } catch (err) { console.error('Navbar scroll effect setup failed:', err); }
 
-  /* ── PWA: register service worker ── */
+  /* ── PWA: service worker, install banner, update toast ── */
   try {
-    if ('serviceWorker' in navigator && location.protocol === 'https:') {
-      // only register over https (or localhost during development)
-      if (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ||
-          !/^\d+\.\d+\.\d+\.\d+$/.test(location.hostname)) {
-        navigator.serviceWorker.register('/sw.js').catch(err => {
-          console.warn('Service worker registration skipped:', err);
+    const swSupported = 'serviceWorker' in navigator && location.protocol === 'https:';
+    const isRawIp = /^\d+\.\d+\.\d+\.\d+$/.test(location.hostname) &&
+                    !['127.0.0.1'].includes(location.hostname);
+
+    if (swSupported && !isRawIp) {
+
+      /* — custom install banner — */
+      let deferredPrompt = null;
+      const DISMISS_KEY = 'pwa-install-dismissed-at';
+      window.addEventListener('beforeinstallprompt', e => {
+        e.preventDefault();
+        deferredPrompt = e;
+        const standalone = window.matchMedia('(display-mode: standalone)').matches ||
+                           navigator.standalone;
+        if (standalone) return;
+        const last = parseInt(localStorage.getItem(DISMISS_KEY) || '0', 10);
+        if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return;   // dismissed recently
+        setTimeout(() => {
+          if (!deferredPrompt || document.querySelector('.pwa-banner')) return;
+          const el = document.createElement('div');
+          el.className = 'pwa-banner';
+          el.innerHTML =
+            '<img class="pwa-banner-ic" src="/static/images/icon-192.png" alt="">' +
+            '<div class="pwa-banner-tx"><b>Al-Hikma LMS</b>' +
+            '<span>Install the app on your phone</span></div>' +
+            '<button type="button" class="pwa-banner-ok">Install</button>' +
+            '<button type="button" class="pwa-banner-x" aria-label="Dismiss">&times;</button>';
+          document.body.appendChild(el);
+          requestAnimationFrame(() => el.classList.add('show'));
+          el.querySelector('.pwa-banner-ok').addEventListener('click', async () => {
+            deferredPrompt.prompt();
+            await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            el.classList.remove('show');
+            setTimeout(() => el.remove(), 300);
+          });
+          el.querySelector('.pwa-banner-x').addEventListener('click', () => {
+            localStorage.setItem(DISMISS_KEY, String(Date.now()));
+            el.classList.remove('show');
+            setTimeout(() => el.remove(), 300);
+          });
+        }, 4000);
+      });
+      window.addEventListener('appinstalled', () => { deferredPrompt = null; });
+
+      /* — update toast + registration — */
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) { window.location.reload(); refreshing = false; }
+      });
+
+      function showUpdateToast(worker) {
+        if (document.querySelector('.pwa-toast')) return;
+        const el = document.createElement('div');
+        el.className = 'pwa-toast';
+        el.innerHTML = '<span>\uD83D\uDD04 New version available</span>' +
+                       '<button type="button">Refresh</button>';
+        document.body.appendChild(el);
+        requestAnimationFrame(() => el.classList.add('show'));
+        el.querySelector('button').addEventListener('click', () => {
+          if (worker) worker.postMessage({ type: 'SKIP_WAITING' });
+          refreshing = true;
+          el.classList.remove('show');
+          setTimeout(() => el.remove(), 300);
         });
       }
+
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        reg.addEventListener('updatefound', () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener('statechange', () => {
+            // only prompt when an old worker already controls the page
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              showUpdateToast(reg.waiting || nw);
+            }
+          });
+        });
+      }).catch(err => console.warn('Service worker registration skipped:', err));
+
     }
   } catch (err) { console.error('Service worker setup failed:', err); }
 

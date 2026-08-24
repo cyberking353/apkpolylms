@@ -13,9 +13,15 @@ def service_worker(request):
                             headers={'Service-Worker-Allowed': '/'})
 
 
+def offline_page(request):
+    from django.shortcuts import render
+    return render(request, 'offline.html')
+
+
 urlpatterns = [
     path('portal-admin/',  admin.site.urls),
     path('sw.js',          service_worker),
+    path('offline/',       offline_page),
     path('portal/',        include('portal.urls')),
     path('api/',           include('api.urls')),
     path('sso/callback',   SsoCallbackView.as_view(), name='sso_callback'),

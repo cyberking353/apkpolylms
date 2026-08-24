@@ -2,7 +2,7 @@
  * Al-Hikma LMS service worker.
  * Strategy:
  *   - Static assets (css/js/images/fonts): cache-first (fast, versioned by ?v=)
- *   - Page navigations: network-first, fall back to the last cached copy offline
+ *   - Page navigations: network-first, fall back to last cached copy, then /offline/
  * Never caches POST requests or /api/ /portal-admin/ traffic.
  */
 const STATIC_CACHE = 'alhikma-static-v1';
@@ -14,6 +14,7 @@ const PRECACHE = [
     '/static/images/logo.png',
     '/static/images/icon-192.png',
     '/static/manifest.json',
+    '/offline/',
 ];
 
 self.addEventListener('install', event => {
@@ -34,6 +35,11 @@ self.addEventListener('activate', event => {
     );
 });
 
+// allow the page to trigger immediate activation of a new worker
+self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
@@ -50,13 +56,13 @@ self.addEventListener('fetch', event => {
                     const copy = resp.clone();
                     caches.open(STATIC_CACHE).then(c => c.put(event.request, copy));
                     return resp;
-                }).catch(() => cached)
+                })
             )
         );
         return;
     }
 
-    // page navigations: network-first with offline fallback to last seen copy
+    // page navigations: network-first with offline fallbacks
     if (event.request.mode === 'navigate') {
         event.respondWith(
             fetch(event.request).then(resp => {
@@ -64,8 +70,10 @@ self.addEventListener('fetch', event => {
                 caches.open(PAGE_CACHE).then(c => c.put(event.request, copy));
                 return resp;
             }).catch(() =>
-                caches.match(event.request).then(cached =>
-                    cached || caches.match('/'))
+                caches.match(event.request)
+                    .then(cached => cached ||
+                        caches.match('/offline/')
+                        .then(off => off || caches.match('/')))
             )
         );
     }
