@@ -55,6 +55,7 @@
         var force = location.search.indexOf('splashtest') !== -1;
         if (!standalone && !force && el) { el.remove(); return; }
         var hidden = false;
+        var hold = force ? 3500 : 450;   // ?splashtest=1 holds it so you can see it
         function hide() {
           if (hidden || !el || !el.parentNode) return;
           hidden = true;
@@ -62,8 +63,8 @@
           setTimeout(function () { if (el.parentNode) el.remove(); }, 400);
         }
         if (el) {
-          window.addEventListener('load', function () { setTimeout(hide, 450); });
-          setTimeout(hide, 1800);   // hard cap — never blocks
+          window.addEventListener('load', function () { setTimeout(hide, hold); });
+          setTimeout(hide, force ? 5000 : 1800);   // hard cap — never blocks
         }
       })();
     </script>
