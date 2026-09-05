@@ -226,10 +226,15 @@ MESSAGE_TAGS = {
 # Transport security (only enforced when DEBUG=false / behind TLS)
 # ---------------------------------------------------------------------------
 if not DJANGO_DEBUG_ENV:
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    # Secure cookies default ON in prod, but can be relaxed while testing over
+    # plain HTTP before TLS is installed (see DJANGO_SECURE_SSL_REDIRECT too).
+    _secure_cookies = _env_bool('DJANGO_SECURE_COOKIES', default=True)
+    SESSION_COOKIE_SECURE = _secure_cookies
+    CSRF_COOKIE_SECURE = _secure_cookies
     CSRF_COOKIE_HTTPONLY = True
-    SECURE_SSL_REDIRECT = True
+    # SSL redirect defaults ON in prod, but can be switched off while TLS
+    # certificates are not yet installed behind the reverse proxy.
+    SECURE_SSL_REDIRECT = _env_bool('DJANGO_SECURE_SSL_REDIRECT', default=True)
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
