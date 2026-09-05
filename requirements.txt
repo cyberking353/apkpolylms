@@ -1,4 +1,7 @@
-# Core web framework (pinned for reproducible deploys)
+# Core web framework (pinned for reproducible deploys).
+# NOTE for installs behind flaky networks: if pip reports
+# "Connection reset by peer" against PyPI, use a mirror instead, e.g.
+#   pip install -r requirements.txt -i https://mirrors.cloud.tencent.com/pypi/simple/
 Django==4.2.24
 
 # Image handling (avatars, course thumbnails)
@@ -12,3 +15,6 @@ requests==2.32.3
 
 # PostgreSQL driver (required for the VPS Postgres backend)
 psycopg2-binary==2.9.10
+
+# WSGI server (the container's CMD runs gunicorn)
+gunicorn==23.0.0
