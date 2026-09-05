@@ -40,3 +40,14 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model  = Student
         fields = ('first_name', 'last_name', 'matric_number', 'bio', 'avatar')
+
+    def clean_avatar(self):
+        avatar = self.cleaned_data.get('avatar')
+        if not avatar:
+            return avatar
+        try:
+            from alhikma_lms.uploads import validate_image_upload
+            validate_image_upload(avatar)
+        except ValueError as exc:
+            raise forms.ValidationError(str(exc)) from exc
+        return avatar

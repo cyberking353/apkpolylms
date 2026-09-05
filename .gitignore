@@ -13,6 +13,7 @@ venv/
 *.sqlite3-wal
 staticfiles/
 media/
+logs/
 .env
 
 # IDE
@@ -37,5 +38,5 @@ stats_*.csv
 load_tests/results/
 load_tests/students.csv
 
-# Env example (use .env instead)
-.env.example
+# Env real secrets stay gitignored; the example template is committed (.env.example)
+.env

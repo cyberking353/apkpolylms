@@ -16,6 +16,7 @@ SSO (user-facing):
 The Portal is the source of truth for identity + academic data; the LMS only
 mirrors what it is told and never creates or modifies Portal-owned data.
 """
+import hmac
 import json
 
 from django.conf import settings
@@ -34,18 +35,21 @@ from .sso import verify_jwt, ALLOWED_USER_TYPES
 from accounts.models import Student
 from courses.models import Enrollment
 
+# Reject absurd payloads before they reach the sync/SSO logic (DoS guard).
+MAX_SYNC_BODY_BYTES = 10 * 1024 * 1024  # 10 MB
+
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 def _token_ok(request):
-    """Check the shared server-to-server token (matches the Portal's LMS_API_TOKEN)."""
+    """Check the shared server-to-server token (constant-time to resist timing attacks)."""
     auth = request.headers.get('Authorization', '')
     expected = settings.LMS_API_TOKEN
     if not expected:
         return False
-    return auth == f'Bearer {expected}'
+    return hmac.compare_digest(auth, f'Bearer {expected}')
 
 
 def _parse_json_body(request):
@@ -53,6 +57,19 @@ def _parse_json_body(request):
         return json.loads(request.body or b'{}')
     except ValueError:
         return None
+
+
+def _body_too_large(request):
+    """Return True when Content-Length exceeds MAX_SYNC_BODY_BYTES (DoS guard).
+
+    Checks the header only (never forces request.body to be read); Django also
+    refuses to buffer bodies beyond DATA_UPLOAD_MAX_MEMORY_SIZE on its own.
+    """
+    try:
+        length = int(request.META.get('CONTENT_LENGTH') or 0)
+    except (TypeError, ValueError):
+        return False
+    return length > MAX_SYNC_BODY_BYTES
 
 
 def _bad_request(message, **extra):
@@ -78,6 +95,9 @@ class SyncAPIView(View):
     """Base view: requires the Portal's Bearer token on every sync request."""
 
     def dispatch(self, request, *args, **kwargs):
+        if _body_too_large(request):
+            return JsonResponse({'ok': False, 'success': False,
+                                 'error': 'Request body too large'}, status=413)
         if not _token_ok(request):
             return JsonResponse({'ok': False, 'success': False,
                                  'error': 'Unauthorized'}, status=401)
@@ -303,6 +323,9 @@ class SsoAuthView(View):
     """
 
     def post(self, request):
+        if _body_too_large(request):
+            return JsonResponse({'success': False, 'message': 'Request body too large'},
+                                status=413)
         data = _parse_json_body(request)
         if data is None or not isinstance(data, dict):
             return JsonResponse({'success': False, 'message': 'Invalid request'},

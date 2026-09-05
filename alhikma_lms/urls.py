@@ -2,7 +2,9 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.db import connection
+from django.views.decorators.http import require_GET
 from api.views import SsoCallbackView
 
 
@@ -13,6 +15,19 @@ def service_worker(request):
                             headers={'Service-Worker-Allowed': '/'})
 
 
+@require_GET
+def healthz(request):
+    """Lightweight liveness/readiness probe for the load balancer + uptime monitor."""
+    try:
+        connection.ensure_connection()
+        db_ok = True
+    except Exception:
+        db_ok = False
+    payload = {'status': 'ok' if db_ok else 'degraded', 'db': 'ok' if db_ok else 'down'}
+    return JsonResponse(payload,
+                        status=200 if db_ok else 503)
+
+
 def offline_page(request):
     from django.shortcuts import render
     return render(request, 'offline.html')
@@ -20,6 +35,7 @@ def offline_page(request):
 
 urlpatterns = [
     path('portal-admin/',  admin.site.urls),
+    path('healthz',        healthz, name='healthz'),
     path('sw.js',          service_worker),
     path('offline/',       offline_page),
     path('portal/',        include('portal.urls')),

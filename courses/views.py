@@ -422,17 +422,27 @@ def lecturer_lecture_create(request, slug, module_id):
     feedback = None
     if request.method == 'POST':
         title = request.POST.get('title', '').strip()
-        if title:
+        notes = request.FILES.get('notes')
+        upload_error = None
+        if notes:
+            try:
+                from alhikma_lms.uploads import validate_doc_upload
+                validate_doc_upload(notes)
+            except ValueError as exc:
+                upload_error = str(exc)
+        if title and not upload_error:
             next_order = (module.lectures.count() or 0) + 1
             lec = Lecture.objects.create(
                 module=module, title=title, order=next_order,
                 video_url=request.POST.get('video_url', '').strip(),
                 duration_minutes=request.POST.get('duration_minutes') or 0,
             )
-            if request.FILES.get('notes'):
-                lec.notes = request.FILES['notes']
+            if notes:
+                lec.notes = notes
                 lec.save()
             feedback = ('success', f'Lecture "{title}" added.')
+        elif upload_error:
+            feedback = ('error', upload_error)
         else:
             feedback = ('error', 'Lecture title is required.')
 
@@ -504,14 +514,24 @@ def lecturer_lecture_edit(request, slug, lecture_id):
     feedback = None
     if request.method == 'POST':
         title = request.POST.get('title', '').strip()
-        if title:
+        notes = request.FILES.get('notes')
+        upload_error = None
+        if notes:
+            try:
+                from alhikma_lms.uploads import validate_doc_upload
+                validate_doc_upload(notes)
+            except ValueError as exc:
+                upload_error = str(exc)
+        if title and not upload_error:
             lecture.title = title
             lecture.video_url = request.POST.get('video_url', '').strip()
             lecture.duration_minutes = request.POST.get('duration_minutes') or 0
-            if request.FILES.get('notes'):
-                lecture.notes = request.FILES['notes']
+            if notes:
+                lecture.notes = notes
             lecture.save()
             feedback = ('success', f'Lecture "{title}" updated.')
+        elif upload_error:
+            feedback = ('error', upload_error)
         else:
             feedback = ('error', 'Lecture title is required.')
 

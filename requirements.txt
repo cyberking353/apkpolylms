@@ -1,3 +1,14 @@
-Django
-Pillow>=10.0.0
-openpyxl
+# Core web framework (pinned for reproducible deploys)
+Django==4.2.24
+
+# Image handling (avatars, course thumbnails)
+Pillow==10.4.0
+
+# Spreadsheet import/export (portal/views.py)
+openpyxl==3.1.5
+
+# Portal <-> LMS pull commands (sync_portal / sync_*)
+requests==2.32.3
+
+# PostgreSQL driver (required for the VPS Postgres backend)
+psycopg2-binary==2.9.10
