@@ -12,6 +12,8 @@
 # into the image. DB_HOST/REDIS_URL are overridden here to the compose
 # service names because inside the stack those hosts are "db" and "redis".
 
+version: "3.8"
+
 services:
   db:
     image: postgres:16-alpine
