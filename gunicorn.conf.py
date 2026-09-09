@@ -1,11 +1,14 @@
 """Gunicorn configuration for the Dockerized web service."""
 import multiprocessing
+import os
 
 bind = "0.0.0.0:8000"
 
-# Docker container CPUs, not host CPUs — an integer so it's well-defined.
-# `max(2, cpu*2+1)` gives 5 workers on a 2-CPU box.
-workers = max(3, multiprocessing.cpu_count() * 2 + 1)
+# Tunable so small dev machines / low-RAM containers can cap worker count:
+#   GUNICORN_WORKERS=3
+# Defaults to `2*CPU+1` (5 workers on a 2-CPU box).
+_default_workers = max(3, multiprocessing.cpu_count() * 2 + 1)
+workers = int(os.environ.get('GUNICORN_WORKERS', _default_workers))
 threads = 2
 
 # Generous timeouts: sync webhooks and report exports can be slow.

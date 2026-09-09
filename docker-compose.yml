@@ -12,7 +12,7 @@
 # into the image. DB_HOST/REDIS_URL are overridden here to the compose
 # service names because inside the stack those hosts are "db" and "redis".
 
-version: "3.8"
+version: "3.7"
 
 services:
   db:
@@ -45,7 +45,11 @@ services:
     # Not published to the host either.
 
   web:
-    build: .
+    build:
+      context: .
+      args:
+        # Overridable in .env: PIP_INDEX_URL=https://some.mirror/simple
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
     restart: unless-stopped
     env_file: .env
     environment:
@@ -57,10 +61,8 @@ services:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - db
+      - redis
     healthcheck:
       test: ["CMD", "python", "-c",
              "import http.client,sys; c=http.client.HTTPConnection('127.0.0.1',8000,timeout=5); c.request('GET','/healthz'); r=c.getresponse().status; print('healthz:',r); sys.exit(0 if r<500 else 1)"]
@@ -80,8 +82,7 @@ services:
       - static_volume:/app/staticfiles:ro
       - media_volume:/app/media:ro
     depends_on:
-      web:
-        condition: service_healthy
+      - web
 
 volumes:
   pg_data:
