@@ -45,7 +45,8 @@ So deploying is mostly **configuration, not code changes**.
 ## 3. One-time VPS setup (about 30 minutes)
 
 ### 3.1 Provision the VPS
-- OVHcloud **VPS-2** (2 vCPU / 4 GB RAM / 40 GB NVMe) is enough to launch. ~€5–7/mo.
+- OVHcloud **VPS-2** (2 vCPU / 4 GB RAM / 40 GB NVMe) is enough to launch. 
+  .
 - Pick a region close to your users (e.g. EU).
 
 ### 3.2 First login + basic hardening
@@ -226,10 +227,3 @@ docker compose exec web python manage.py sync_portal            # pull data from
 3. Split Postgres/Redis onto their own nodes once the single box is genuinely overloaded.
 4. If uploads grow huge, move `media_volume` to object storage (S3-compatible). Not a launch concern.
 
----
-
-## 11. Open questions that affect prod (need an answer before switchover)
-
-1. **Domain name(s)** — still TBD. Needed for `ALLOWED_HOSTS`, TLS certs, and to point the Portal's SSO callback at the right URL.
-2. **SSO staff login** — lecturer accounts are created by the Portal's staff-sync, *not* auto-provisioned at SSO. Confirm the Portal has been pointed at this host's `/api/v1/sync` endpoints (sync already tested working) + keep `LMS_API_TOKEN` / `PORTAL_SSO_SECRET` identical to the Portal's config.
-3. **Backup destination** — where nightly dumps should go (S3/B2/OVH Object Storage).
