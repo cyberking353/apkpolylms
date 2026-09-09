@@ -35,8 +35,13 @@ Thumbs.db
 # Generated reports / stats
 report.html
 stats_*.csv
-load_tests/results/
-load_tests/students.csv
+
+# External integration reference docs / load-testing (not part of the app)
+load_tests/
+LMS_Database_Schema.html
+LMS_Integration_Guide.html
+SMS_INTEGRATION_TESTING_GUIDE.txt
+al_hikma_sms_lms_integration_contract_v2.pdf
 
 # Env real secrets stay gitignored; the example template is committed (.env.example)
 .env
