@@ -1,68 +1,47 @@
-# Al-Hikma LMS — Docker Compose stack
+# Al-Hikma LMS — Docker Compose stack (Dokploy / Traefik)
 #
-# Usage:
-#   cp .env.example .env   (then fill in real values)
-#   docker compose up -d          # build + start all containers
-#   docker compose ps             # check they're all healthy/running
-#   docker compose logs -f web    # follow app output
-#   docker compose down           # stop everything (keeps data volumes)
-#   docker compose down -v        # stop AND delete all data (DB, uploads, static)
+# Deployment target: Dokploy-managed Docker host. Traefik is the reverse
+# proxy / load balancer, so there is NO nginx service here. Postgres is
+# provisioned externally by the PaaS and provided via a single DATABASE_URL.
 #
-# Secrets come from the local .env file which is gitignored and NEVER baked
-# into the image. DB_HOST/REDIS_URL are overridden here to the compose
-# service names because inside the stack those hosts are "db" and "redis".
-
-version: "3.7"
+# Usage (local test):
+#   cp .env.example .env   (fill in values)
+#   docker compose up -d --build
+#
+# Usage (Dokploy): deploy from this compose file; set the env vars in the
+# PaaS UI. Dokploy attaches every service to the external 'dokploy-network'
+# so Traefik can route to it.
 
 services:
-  db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_NAME:-alhikma_lms}
-      POSTGRES_USER: ${DB_USER:-alhikma}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${DB_USER:-alhikma} -d $${DB_NAME:-alhikma_lms}"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-    # Not published to the host — only reachable inside the compose network.
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 6
-    # Not published to the host either.
-
-  web:
+  backend:
     build:
       context: .
       args:
-        # Overridable in .env: PIP_INDEX_URL=https://some.mirror/simple
+        # Overridable (env): PIP_INDEX_URL=https://some.mirror/simple
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
-    restart: unless-stopped
-    env_file: .env
+    container_name: alhikma_lms_backend
+    restart: always
+    ports:
+      - "${PORT:-8000}:${PORT:-8000}"
     environment:
-      # Compose service names override anything the operator set in .env.
-      DB_HOST: db
-      DB_PORT: "5432"
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-}
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-false}
+      DJANGO_SECURE_COOKIES: ${DJANGO_SECURE_COOKIES:-false}
+      PORT: ${PORT:-8000}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+      # Single connection string for the externally-provisioned database.
+      DATABASE_URL: ${DATABASE_URL:-}
+      # Portal <-> SMS integration secrets (must match the Portal's config).
+      PORTAL_BACKEND_URL: ${PORTAL_BACKEND_URL:-}
+      LMS_API_TOKEN: ${LMS_API_TOKEN:-}
+      PORTAL_SSO_SECRET: ${PORTAL_SSO_SECRET:-}
+      # Redis is part of this stack (cache + sessions).
       REDIS_URL: redis://redis:6379/0
-    volumes:
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
     depends_on:
-      - db
-      - redis
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c",
              "import http.client,sys; c=http.client.HTTPConnection('127.0.0.1',8000,timeout=5); c.request('GET','/healthz'); r=c.getresponse().status; print('healthz:',r); sys.exit(0 if r<500 else 1)"]
@@ -70,22 +49,28 @@ services:
       timeout: 5s
       retries: 5
       start_period: 40s
+    networks:
+      - dokploy-network
 
-  nginx:
-    image: nginx:1.27-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      # Domains/TLS come later; currently an HTTP reverse proxy.
+  redis:
+    image: redis:7-alpine
+    container_name: alhikma_lms_redis
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
     volumes:
-      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - static_volume:/app/staticfiles:ro
-      - media_volume:/app/media:ro
-    depends_on:
-      - web
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dokploy-network
+
+networks:
+  # Created by Dokploy/Traefik; must exist on the host before this stack starts.
+  dokploy-network:
+    external: true
 
 volumes:
-  pg_data:
   redis_data:
-  static_volume:
-  media_volume:

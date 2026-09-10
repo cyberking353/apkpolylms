@@ -16,5 +16,11 @@ requests==2.32.3
 # PostgreSQL driver (required for the VPS Postgres backend)
 psycopg2-binary==2.9.10
 
+# Parse the single DATABASE_URL connection string provided by the PaaS.
+dj-database-url==2.2.0
+
+# Serve static files from Django directly (no nginx in the PaaS stack).
+whitenoise==6.7.0
+
 # WSGI server (the container's CMD runs gunicorn)
 gunicorn==23.0.0

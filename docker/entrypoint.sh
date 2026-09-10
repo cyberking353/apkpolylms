@@ -11,16 +11,20 @@ import os
 import time
 import psycopg2
 
+dsn = os.environ.get('DATABASE_URL', '').strip()
 for attempt in range(30):
     try:
-        psycopg2.connect(
-            dbname=os.environ.get('DB_NAME', 'alhikma_lms'),
-            user=os.environ.get('DB_USER', 'alhikma'),
-            password=os.environ.get('DB_PASSWORD', ''),
-            host=os.environ.get('DB_HOST', 'db'),
-            port=int(os.environ.get('DB_PORT', '5432') or 5432),
-            connect_timeout=3,
-        ).close()
+        if dsn:
+            psycopg2.connect(dsn, connect_timeout=3).close()
+        else:
+            psycopg2.connect(
+                dbname=os.environ.get('DB_NAME', 'alhikma_lms'),
+                user=os.environ.get('DB_USER', 'alhikma'),
+                password=os.environ.get('DB_PASSWORD', ''),
+                host=os.environ.get('DB_HOST', 'db'),
+                port=int(os.environ.get('DB_PORT', '5432') or 5432),
+                connect_timeout=3,
+            ).close()
         print('database reachable')
         break
     except Exception as exc:

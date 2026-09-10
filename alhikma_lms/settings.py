@@ -109,6 +109,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'alhikma_lms.middleware.NoCacheHTMLMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -139,7 +140,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'alhikma_lms.wsgi.application'
 
-# Database: production (VPS) uses PostgreSQL via env-provided credentials.
+# Database: production (PaaS) uses PostgreSQL via a single DATABASE_URL
+# connection string provided by the platform. Legacy DB_HOST/DB_NAME/DB_USER/
+# DB_PASSWORD env vars are kept as a fallback for local/dev setups.
 # PythonAnywhere free tier has no Postgres — fall back to SQLite there.
 # DEV_DATABASE=sqlite can also be forced for a no-Postgres local experiment.
 DATABASES = {
@@ -149,7 +152,14 @@ DATABASES = {
     }
 }
 
-if not os.environ.get('DEV_DATABASE', '').lower() == 'sqlite' \
+_ENV_DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
+if _ENV_DATABASE_URL:
+    import dj_database_url
+    DATABASES['default'] = dj_database_url.parse(
+        _ENV_DATABASE_URL,
+        conn_max_age=int(os.environ.get('DB_CONN_MAX_AGE', '60')),
+    )
+elif not os.environ.get('DEV_DATABASE', '').lower() == 'sqlite' \
         and not os.environ.get('PYTHONANYWHERE_DOMAIN'):
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.postgresql',
@@ -207,6 +217,17 @@ USE_TZ        = True
 STATIC_URL       = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT      = BASE_DIR / 'staticfiles'
+
+# Whitenoise serves collected static files directly from Django (no nginx).
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
+WHITENOISE_MAX_AGE = 60 * 60 * 24 * 30  # 30 days for immutable content
 
 MEDIA_URL  = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
