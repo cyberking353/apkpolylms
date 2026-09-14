@@ -426,8 +426,8 @@ def lecturer_lecture_create(request, slug, module_id):
         upload_error = None
         if notes:
             try:
-                from alhikma_lms.uploads import validate_doc_upload
-                validate_doc_upload(notes)
+                from alhikma_lms.uploads import process_notes_upload
+                notes = process_notes_upload(notes)
             except ValueError as exc:
                 upload_error = str(exc)
         if title and not upload_error:
@@ -518,8 +518,8 @@ def lecturer_lecture_edit(request, slug, lecture_id):
         upload_error = None
         if notes:
             try:
-                from alhikma_lms.uploads import validate_doc_upload
-                validate_doc_upload(notes)
+                from alhikma_lms.uploads import process_notes_upload
+                notes = process_notes_upload(notes)
             except ValueError as exc:
                 upload_error = str(exc)
         if title and not upload_error:

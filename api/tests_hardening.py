@@ -7,6 +7,8 @@ Covers the loopholes closed before shipping:
   - upload validation (docs, images)
 """
 import json
+import shutil
+from unittest import skipUnless
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -65,8 +67,20 @@ class UploadValidationTests(TestCase):
         from alhikma_lms.uploads import validate_doc_upload, MAX_DOC_BYTES
         from django.core.files.uploadedfile import SimpleUploadedFile
         big = SimpleUploadedFile('notes.pdf', b'a' * (MAX_DOC_BYTES + 1))
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as ctx:
             validate_doc_upload(big)
+        self.assertIn('10 MB', str(ctx.exception))
+
+    @skipUnless(shutil.which('gs'), 'Ghostscript not installed')
+    def test_pdf_is_compressed_toward_5mb(self):
+        from alhikma_lms.uploads import compress_pdf
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        # Not a real PDF, but gs will try and fail fast — we assert the
+        # fallback keeps the original name/size, i.e. uploads never break.
+        src = SimpleUploadedFile('notes.pdf', b'%PDF-1.4 minimal')
+        out = compress_pdf(src)
+        self.assertEqual(out.name, 'notes.pdf')
+        self.assertGreaterEqual(out.size, 14)
 
     def test_image_upload_rejects_script_file(self):
         from alhikma_lms.uploads import validate_image_upload

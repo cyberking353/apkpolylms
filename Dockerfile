@@ -5,9 +5,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Runtime dependency for Pillow image handling (keep image slim, no build tools).
+# Runtime deps: Pillow image handling + Ghostscript (PDF compression for
+# notes). Keeps image slim (no build tools).
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libjpeg62-turbo zlib1g \
+        libjpeg62-turbo zlib1g ghostscript \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python deps FIRST so Docker layer caching survives code edits.
