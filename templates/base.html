@@ -114,8 +114,6 @@
               <a href="{% url 'accounts:logout' %}" class="dropdown-item dropdown-item-danger"><i data-lucide="log-out"></i> Sign Out</a>
             </div>
           </div>
-        {% else %}
-          <a href="{% url 'accounts:login' %}" class="btn btn-ink btn-sm">Login</a>
         {% endif %}
         <button class="hamburger" id="hamburger" aria-label="Toggle menu">
           <span></span><span></span><span></span>
@@ -169,8 +167,6 @@
             {% if user.is_authenticated %}
             <li><a href="{% url 'courses:dashboard' %}">Dashboard</a></li>
             <li><a href="{% url 'accounts:profile' %}">My Profile</a></li>
-            {% else %}
-            <li><a href="{% url 'accounts:login' %}">Portal Login</a></li>
             {% endif %}
           </ul>
         </div>
