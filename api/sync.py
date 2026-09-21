@@ -445,7 +445,7 @@ def build_scores_payload(academic_year, semester, staff_id='', course_code=None)
     Expected payload (what the Portal receives):
         {
           "academicSessionId": "<portal session uuid>",
-          "semester": "1" | "2",
+          "semesterId": "1" | "2",
           "staffId": "<portal staff uuid>",  # informational: who submitted
           "results": [
             {"studentId": "<portal student uuid>",
@@ -460,18 +460,35 @@ def build_scores_payload(academic_year, semester, staff_id='', course_code=None)
     whose student lacks a portal_id is skipped with a warning. Pass course_code
     to limit the export to a single course (e.g. a lecturer's own course).
 
+    The session row is self-healing: if the Portal never pushed a session for
+    this year (e.g. hosts that block outbound HTTP to the Portal, like
+    PythonAnywhere's free tier, cannot run sync_portal), the row is created
+    lazily with portal_id == name so the export can still proceed. When the
+    Portal is reachable and sends a real session uuid, that uuid is preferred.
+
     Returns (payload, warning list). Raises ValueError when the academic year
     has no Portal-mapped session or when there is nothing to export.
     """
     from results.models import Result
 
-    session = AcademicSession.objects.filter(name=academic_year).first()
-    if session is None or not session.portal_id:
-        raise ValueError(
-            f'export scores: no Portal-mapped session for {academic_year}; '
-            'sync sessions (portal_id) first')
-
     warnings = []
+    session = AcademicSession.objects.filter(name=academic_year).first()
+    if session is None:
+        AcademicSession.objects.get_or_create(
+            name=academic_year,
+            defaults={'portal_id': academic_year, 'is_current': True, 'is_active': True},
+        )
+        warnings.append(
+            f'sessions: created local session "{academic_year}" (Portal id '
+            'unavailable — outbound sync/portal unreachable).')
+        session = AcademicSession.objects.get(name=academic_year)
+    elif not session.portal_id:
+        session.portal_id = academic_year
+        session.save(update_fields=['portal_id'])
+        warnings.append(
+            f'sessions: session "{academic_year}" has no Portal id; used '
+            f'"{academic_year}" as academicSessionId.')
+
     export_rows = []
     qs = (Result.objects
           .filter(academic_year=academic_year, semester=semester)
@@ -501,7 +518,7 @@ def build_scores_payload(academic_year, semester, staff_id='', course_code=None)
 
     payload = {
         'academicSessionId': session.portal_id,
-        'semester': str(semester),
+        'semesterId': str(semester),
         # staffId is informational per the programmer's spec; override via
         # the command's --staff-id when a specific examiner should be recorded.
         'staffId': _clean(staff_id),
