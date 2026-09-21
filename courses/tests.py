@@ -10,6 +10,48 @@ from exams.models import Exam, ExamAttempt
 User = get_user_model()
 
 
+class LecturerResultExportTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.lecturer = User.objects.create_user(
+            username='lecturerX', password='pass', role='lecturer',
+            portal_id='lec-uuid', staff_id='LX1')
+        cls.cat = Category.objects.create(name='Exports')
+        from courses.models import AcademicSession
+        AcademicSession.objects.create(
+            portal_id='sess-uuid', name='2025/2026', is_current=True)
+        cls.course = Course.objects.create(
+            title='Export Course', slug='export-course',
+            description='', category=cls.cat, lecturer=cls.lecturer,
+            level='ND1', semester='1', status='published', code='EXP101')
+
+    def test_get_redirects_to_results(self):
+        self.client.force_login(self.lecturer)
+        resp = self.client.get(reverse('courses:lecturer_course_result_export', args=[self.course.slug]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, reverse('courses:lecturer_course_results', args=[self.course.slug]))
+
+    def test_exports_own_course(self):
+        from unittest.mock import patch
+        self.client.force_login(self.lecturer)
+        with patch('api.sync.export_scores_to_portal',
+                   return_value=(True, {'exported': 3, 'warnings': []})) as mock:
+            resp = self.client.post(
+                reverse('courses:lecturer_course_result_export', args=[self.course.slug]))
+        self.assertEqual(resp.status_code, 302)
+        mock.assert_called_once_with('2025/2026', '1',
+                                     staff_id='lec-uuid',
+                                     course_code='EXP101')
+
+    def test_other_lecturer_cannot_export_course(self):
+        other = User.objects.create_user(
+            username='lecturerY', password='pass', role='lecturer')
+        self.client.force_login(other)
+        resp = self.client.post(
+            reverse('courses:lecturer_course_result_export', args=[self.course.slug]))
+        self.assertEqual(resp.status_code, 404)
+
+
 class ModuleCompletionTest(TestCase):
     @classmethod
     def setUpTestData(cls):

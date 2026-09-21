@@ -153,6 +153,9 @@
       <a href="{% url 'portal:result_list' %}" class="pnl {% if 'result' in request.resolver_match.url_name %}on{% endif %}">
         <span class="ic"><i data-lucide="chart-column"></i></span> Results
       </a>
+      <a href="{% url 'portal:result_export_portal' %}" class="pnl {% if 'result_export_portal' == request.resolver_match.url_name %}on{% endif %}">
+        <span class="ic"><i data-lucide="send"></i></span> Send Results to SMS
+      </a>
       <a href="{% url 'portal:course_message_list' %}" class="pnl {% if 'message' in request.resolver_match.url_name %}on{% endif %}">
         <span class="ic"><i data-lucide="mail"></i></span> Course Messages
         {% if open_messages_count %}<span class="bge">{{ open_messages_count }}</span>{% endif %}

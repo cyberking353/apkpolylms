@@ -954,6 +954,36 @@ def lecturer_course_results(request, slug):
     })
 
 
+@lecturer_or_staff_required
+def lecturer_course_result_export(request, slug):
+    """
+    Export one course's final Results to the Portal (SMS). The lecturer's own
+    Portal identity is recorded as staffId, and only their course is exported.
+    """
+    from api.sync import export_scores_to_portal
+
+    if request.method != 'POST':
+        return redirect('courses:lecturer_course_results', slug=slug)
+
+    course = _course_for_user(slug, request.user)
+    school = AcademicSettings.get_current()
+
+    ok, info = export_scores_to_portal(
+        school.academic_year, school.current_semester,
+        staff_id=request.user.portal_id or request.user.staff_id or '',
+        course_code=course.code)
+
+    if ok:
+        messages.success(
+            request,
+            f'Exported {info["exported"]} result(s) for {course.code} '
+            f'({school.academic_year}, semester {school.current_semester}) to the Portal.')
+    else:
+        messages.error(request, info['error'] or 'Scores export failed.')
+
+    return redirect('courses:lecturer_course_results', slug=slug)
+
+
 @lecturer_required
 def lecturer_notifications(request):
     from .models import Notification

@@ -47,6 +47,20 @@
       <div class="wlc-em"><i data-lucide="chart-column"></i></div>
     </div>
 
+    {% if rows %}
+    <div class="card" style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px">
+      <div style="font-size:.85rem;color:var(--muted)">
+        <strong>Export to Portal</strong> — push these final marks to the SMS
+        so they become official. Sent as your staff account ({{ user.portal_id|default:user.staff_id|default:"no Portal ID" }}).
+      </div>
+      <form method="post" action="{% url 'courses:lecturer_course_result_export' course.slug %}"
+            onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Exporting…'">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-teal"><i data-lucide="send"></i> Export to Portal</button>
+      </form>
+    </div>
+    {% endif %}
+
     {% if not rows %}
     <div class="empty-state">
       <div class="empty-icon"><i data-lucide="chart-column"></i></div>

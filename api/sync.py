@@ -9,6 +9,7 @@ paths never drift.
 Errors are raised as ValueError with a human-readable message; the callers turn
 those into 400/422 responses or command warnings.
 """
+from django.conf import settings
 from django.utils.text import slugify
 
 from accounts.models import Student, ACADEMIC_LEVEL_CHOICES
@@ -428,20 +429,19 @@ def upsert_staff(data):
     return user, created, warnings
 
 
-def upsert_scores(data):
+def build_scores_payload(academic_year, semester, staff_id='', course_code=None):
     """
-    Mirror final result scores from the Portal (used for result computation).
+    Build the Portal `sync/scores` request body from this LMS's final Results.
 
-    The Portal owns the authoritative scorecard — a lecturer/examiner enters
-    CA and exam scores on the SMS, and the LMS stores them for the student to
-    see. Because these are final entered marks, the auto-calculated quiz/exam
-    scores are NOT used: overwrite them and mark both overrides so nothing
-    recomputes over them later.
+    The Portal (SMS) owns the authoritative scorecard — the LMS RE-EXPORTS its
+    computed Result rows so the Portal can use them. This is the LMS -> Portal
+    direction: the Portal exposes POST /api/v1/lms/sync/scores and we call it
+    (see manage.py export_scores).
 
-    Expected payload:
+    Expected payload (what the Portal receives):
         {
           "academicSessionId": "<portal session uuid>",
-          "semester": "1" | "2",   # or semesterId (UUID); falls back to current
+          "semester": "1" | "2",
           "staffId": "<portal staff uuid>",  # informational: who submitted
           "results": [
             {"studentId": "<portal student uuid>",
@@ -451,87 +451,59 @@ def upsert_scores(data):
           ]
         }
 
-    Returns (processed_count, warnings). Raises ValueError for structural errors.
+    Rows are mapped to Portal identifiers via `portal_id` on the session
+    (looked up by academic_year == session name) and on the student. Any row
+    whose student lacks a portal_id is skipped with a warning. Pass course_code
+    to limit the export to a single course (e.g. a lecturer's own course).
+
+    Returns (payload, warning list). Raises ValueError when the academic year
+    has no Portal-mapped session or when there is nothing to export.
     """
     from results.models import Result
 
-    session = None
-    session_id = _clean(data.get('academicSessionId') or data.get('academic_session_id'))
-    if session_id:
-        session = AcademicSession.objects.filter(portal_id=session_id).first()
-    academic_year = session.name if session else AcademicSettings.get_current().academic_year
+    session = AcademicSession.objects.filter(name=academic_year).first()
+    if session is None or not session.portal_id:
+        raise ValueError(
+            f'export scores: no Portal-mapped session for {academic_year}; '
+            'sync sessions (portal_id) first')
 
-    # The programmer's spec sends `semesterId` (a UUID on the Portal); the rest
-    # of the sync API sends a plain `semester` ("1"/"2"). Accept either field.
-    # A UUID can't be mapped to the LMS's '1'/'2', so fall back to the school's
-    # current semester rather than silently defaulting to '1'.
     warnings = []
-    semester_field = data.get('semester')
-    if semester_field is None:
-        semester_field = data.get('semesterId') or data.get('semester_id')
-    if semester_field is not None and str(semester_field).strip() in dict(SEMESTER_CHOICES):
-        semester = str(semester_field).strip()
-    else:
-        if semester_field is not None:
+    export_rows = []
+    qs = (Result.objects
+          .filter(academic_year=academic_year, semester=semester)
+          .select_related('student', 'course')
+          .order_by('course__code', 'student__matric_number'))
+    if course_code:
+        qs = qs.filter(course__code=course_code)
+    for result in qs:
+        student_id = result.student.portal_id
+        if not student_id:
+            course_code = result.course.code if result.course_id else '?'
             warnings.append(
-                f'semester "{semester_field}" is not a valid LMS semester '
-                f'(expected "1" or "2"); used current semester instead')
-        semester = AcademicSettings.get_current().current_semester
-    staff_id = _clean(data.get('staffId') or data.get('staff_id') or '')
-
-    raw_results = data.get('results') or []
-    if not isinstance(raw_results, list):
-        raise ValueError('scores: results must be a list')
-    if not raw_results:
-        raise ValueError('scores: results must not be empty')
-
-    processed = 0
-
-    for item in raw_results:
-        if not isinstance(item, dict):
-            warnings.append('skipped a non-object result entry')
+                f'skipped {result.student} for {course_code}: no portal_id; '
+                'sync students first')
             continue
-        student_id = _clean(item.get('studentId') or item.get('student_id'))
-        course_code = _clean(item.get('courseCode') or item.get('course_code'))
-        try:
-            ca = float(item.get('caScore', item.get('ca_score', 0)))
-            exam = float(item.get('examScore', item.get('exam_score', 0)))
-        except (TypeError, ValueError):
-            warnings.append(f'result for {student_id}/{course_code}: non-numeric score, skipped')
-            continue
+        export_rows.append({
+            'studentId': student_id,
+            'courseCode': result.course.code,
+            'caScore': round(result.ca_score, 2),
+            'examScore': round(result.exam_score, 2),
+        })
 
-        if not student_id or not course_code:
-            warnings.append('result entry missing studentId or courseCode, skipped')
-            continue
+    if not export_rows:
+        raise ValueError(
+            f'export scores: no exportable Results for {academic_year} '
+            f'semester {semester}')
 
-        student = Student.objects.filter(portal_id=student_id).first()
-        if student is None:
-            student = Student.objects.filter(matric_number=student_id).first()
-        if student is None:
-            warnings.append(f'result for {student_id}: student not found, skipped')
-            continue
-
-        course = Course.objects.filter(code=course_code).first()
-        if course is None:
-            warnings.append(f'result for {student_id}: course {course_code} not found, skipped')
-            continue
-
-        result, _ = Result.objects.update_or_create(
-            student=student,
-            course=course,
-            academic_year=academic_year,
-            semester=semester,
-            defaults={
-                'ca_score': round(ca, 2),
-                'ca_override': True,
-                'exam_score': round(exam, 2),
-                'exam_override': True,
-            },
-        )
-        result.save()  # recomputes total + grade from the entered marks
-        processed += 1
-
-    return processed, warnings
+    payload = {
+        'academicSessionId': session.portal_id,
+        'semester': str(semester),
+        # staffId is informational per the programmer's spec; override via
+        # the command's --staff-id when a specific examiner should be recorded.
+        'staffId': _clean(staff_id),
+        'results': export_rows,
+    }
+    return payload, warnings
 
 
 def reconcile_staff(returned_records):
@@ -572,3 +544,59 @@ def reconcile_staff(returned_records):
         user.save(update_fields=['is_active'])
         deactivated.append(user.staff_id or user.portal_id or f'user#{user.id}')
     return deactivated
+
+
+def export_scores_to_portal(academic_year, semester, staff_id='', course_code=None,
+                            base_url=None, token=None, timeout=60):
+    """
+    Build the Portal scores payload for a year/semester and POST it.
+
+    This is the single entry point used by the web UI (lecturer per-course
+    export and the admin results export) and by manage.py export_scores.
+
+    Configuration comes from PORTAL_BACKEND_URL / LMS_API_TOKEN (settings or
+    env) unless base_url/token are passed explicitly.
+
+    Returns (ok, info) where info is:
+        {'exported': int, 'warnings': [str], 'error': str|None}
+    """
+    import os
+
+    import requests
+
+    base_url = (base_url
+                or os.environ.get('SMS_API_URL')
+                or getattr(settings, 'PORTAL_BACKEND_URL', '') or '').rstrip('/')
+    token = (token
+             or os.environ.get('SMS_API_TOKEN')
+             or getattr(settings, 'LMS_API_TOKEN', '') or '')
+
+    info = {'exported': 0, 'warnings': [], 'error': None}
+
+    if not base_url:
+        return False, {**info, 'error': 'No Portal URL configured (PORTAL_BACKEND_URL).'}
+    if not token or token.endswith('change-me'):
+        return False, {**info, 'error': 'No Portal API token configured (LMS_API_TOKEN).'}
+
+    try:
+        payload, warnings = build_scores_payload(
+            academic_year, semester, staff_id=staff_id, course_code=course_code)
+    except ValueError as exc:
+        return False, {**info, 'error': str(exc)}
+    info['warnings'] = warnings
+
+    url = f'{base_url}/api/v1/lms/sync/scores'
+    headers = {'Authorization': f'Bearer {token}'}
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
+    except requests.RequestException as exc:
+        return False, {**info, 'error': f'Request failed: {exc}'}
+
+    if resp.status_code == 401:
+        return False, {**info, 'error': 'Unauthorized: check the LMS_API_TOKEN.'}
+    if resp.status_code != 200:
+        return False, {**info, 'error': f'Portal rejected the export (HTTP {resp.status_code}).'}
+
+    info['exported'] = len(payload['results'])
+    info.setdefault('payload', payload)
+    return True, info

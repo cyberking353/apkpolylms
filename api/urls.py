@@ -6,7 +6,6 @@ from .views import (
     SyncDepartmentView,
     SyncProgrammeView,
     SyncRegistrationView,
-    SyncScoresView,
     SyncSessionView,
     SyncStaffView,
     SyncStudentView,
@@ -22,6 +21,5 @@ urlpatterns = [
     path('v1/sync/programmes',    SyncProgrammeView.as_view(),     name='sync_programmes'),
     path('v1/sync/sessions',      SyncSessionView.as_view(),       name='sync_sessions'),
     path('v1/sync/registrations', SyncRegistrationView.as_view(),  name='sync_registrations'),
-    path('v1/lms/sync/scores',    SyncScoresView.as_view(),        name='sync_scores'),
     path('v1/auth/sso',           SsoAuthView.as_view(),           name='auth_sso'),
 ]
