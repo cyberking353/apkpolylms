@@ -127,6 +127,11 @@
       <a href="{% url 'portal:dashboard' %}" class="pnl {% if request.resolver_match.url_name == 'dashboard' %}on{% endif %}">
         <span class="ic"><i data-lucide="house"></i></span> Dashboard
       </a>
+      {% if user.role == 'lecturer' %}
+      <a href="{% url 'courses:lecturer_dashboard' %}" class="pnl">
+        <span class="ic"><i data-lucide="book-open"></i></span> My Courses
+      </a>
+      {% endif %}
 
       <div class="pnl-section">People</div>
       <a href="{% url 'portal:student_list' %}" class="pnl {% if 'student' in request.resolver_match.url_name %}on{% endif %}">
