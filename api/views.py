@@ -8,7 +8,10 @@ Server-to-server sync (Bearer LMS_API_TOKEN, all idempotent upserts):
     POST /api/v1/sync/programmes
     POST /api/v1/sync/sessions
     POST /api/v1/sync/registrations
-    POST /api/v1/lms/sync/scores
+
+Outbound result export (this LMS -> Portal):
+    POST {PORTAL_BACKEND_URL}/api/v1/lms/sync/scores
+    (see manage.py export_scores; no inbound endpoint exists here)
 
 SSO (user-facing):
     POST /api/v1/auth/sso          JSON JWT verification (returns session)
@@ -208,26 +211,6 @@ class SyncRegistrationView(SyncAPIView):
         return _success(
             'Registration synced successfully',
             enrollments_created=created_count,
-            warning=warnings or None,
-        )
-
-
-class SyncScoresView(SyncAPIView):
-    """POST /api/v1/lms/sync/scores — store Portal-entered result scores."""
-
-    def post(self, request):
-        data = _parse_json_body(request)
-        if data is None:
-            return _bad_request('Invalid JSON body')
-        if not isinstance(data, dict):
-            return _bad_request('scores: expected a JSON object')
-        try:
-            processed_count, warnings = sync_helpers.upsert_scores(data)
-        except ValueError as exc:
-            return _bad_request(str(exc))
-        return _success(
-            'Scores synced successfully',
-            results_processed=processed_count,
             warning=warnings or None,
         )
 

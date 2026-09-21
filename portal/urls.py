@@ -36,6 +36,7 @@ urlpatterns = [
     # Results
     path('results/',                views.result_list,       name='result_list'),
     path('results/export/',          views.result_export,        name='result_export'),
+    path('results/export-portal/',   views.result_export_portal, name='result_export_portal'),
     path('results/<int:pk>/edit/',  views.result_edit,       name='result_edit'),
     path('results/sync/',           views.result_sync_all,   name='result_sync'),
     # Settings

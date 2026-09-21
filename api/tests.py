@@ -592,12 +592,8 @@ class SsoCallbackTests(TestCase):
 
 
 @override_settings(LMS_API_TOKEN=TEST_TOKEN, PORTAL_SSO_SECRET=TEST_SECRET)
-class ScoresSyncTests(TestCase):
-    URL = reverse('api:sync_scores')
-
-    def _post(self, payload):
-        return self.client.post(self.URL, data=json.dumps(payload),
-                                content_type='application/json', **AUTH)
+class ScoresExportTests(TestCase):
+    """Export builder tests: LMS -> Portal scores export."""
 
     def setUp(self):
         self.session = AcademicSession.objects.create(
@@ -607,105 +603,62 @@ class ScoresSyncTests(TestCase):
             matric_number='AHP/ND/CSC/24/0042', portal_id='student-uuid')
         self.course = Course.objects.create(code='CSC101', title='Intro to CS')
 
-    def test_store_scores_creates_result(self):
-        resp = self._post({
-            'academicSessionId': 'session-uuid', 'semester': '1',
-            'staffId': 'staff-uuid',
-            'results': [
-                {'studentId': 'student-uuid', 'courseCode': 'CSC101',
-                 'caScore': 30, 'examScore': 60},
-            ],
-        })
-        self.assertEqual(resp.status_code, 200)
-        body = resp.json()
-        self.assertEqual(body['results_processed'], 1)
-        self.assertIsNone(body['warning'])
-        result = Result.objects.get(student=self.student, course=self.course)
-        self.assertEqual(result.academic_year, '2025/2026')
-        self.assertEqual(result.semester, '1')
-        self.assertEqual(result.ca_score, 30)
-        self.assertEqual(result.exam_score, 60)
-        self.assertTrue(result.ca_override)
-        self.assertTrue(result.exam_override)
-        self.assertEqual(result.total, 90)
-        self.assertEqual(result.grade, 'A')
+    def _result(self, student=None, course=None, ca=30.0, exam=60.0):
+        return Result.objects.create(
+            student=student or self.student,
+            course=course or self.course,
+            academic_year='2025/2026', semester='1',
+            ca_score=ca, exam_score=exam,
+            ca_override=True, exam_override=True)
 
-    def test_scores_are_idempotent(self):
-        payload = {
-            'academicSessionId': 'session-uuid', 'semester': '1',
-            'results': [{'studentId': 'student-uuid', 'courseCode': 'CSC101',
-                         'caScore': 25, 'examScore': 50}],
-        }
-        self._post(payload)
-        self._post(payload)
-        self.assertEqual(Result.objects.count(), 1)
+    def test_builds_payload_with_portal_ids(self):
+        self._result()
+        payload, warnings = sync_helpers.build_scores_payload(
+            '2025/2026', '1', staff_id='staff-uuid')
+        self.assertFalse(warnings)
+        self.assertEqual(payload['academicSessionId'], 'session-uuid')
+        self.assertEqual(payload['semester'], '1')
+        self.assertEqual(payload['staffId'], 'staff-uuid')
+        self.assertEqual(payload['results'], [{
+            'studentId': 'student-uuid',
+            'courseCode': 'CSC101',
+            'caScore': 30.0,
+            'examScore': 60.0,
+        }])
 
-    def test_unknown_student_warns_and_skips(self):
-        resp = self._post({
-            'academicSessionId': 'session-uuid', 'semester': '1',
-            'results': [{'studentId': 'ghost-uuid', 'courseCode': 'CSC101',
-                         'caScore': 10, 'examScore': 20}],
-        })
-        self.assertEqual(resp.status_code, 200)
-        body = resp.json()
-        self.assertEqual(body['results_processed'], 0)
-        self.assertIsNotNone(body['warning'])
+    def test_missing_session_mapping_raises(self):
+        self._result()
+        with self.assertRaises(ValueError):
+            sync_helpers.build_scores_payload('2099/2100', '1')
 
-    def test_unknown_session_falls_back_to_current_settings(self):
-        settings = AcademicSettings.get_current()
-        settings.academic_year = '2024/2025'
-        settings.save()
-        resp = self._post({
-            'academicSessionId': 'missing-uuid', 'semester': '2',
-            'results': [{'studentId': 'student-uuid', 'courseCode': 'CSC101',
-                         'caScore': 10, 'examScore': 20}],
-        })
-        self.assertEqual(resp.status_code, 200)
-        result = Result.objects.get(student=self.student, course=self.course)
-        self.assertEqual(result.academic_year, '2024/2025')
-        self.assertEqual(result.semester, '2')
+    def test_student_without_portal_id_skipped_with_warning(self):
+        ghost = Student.objects.create_user(
+            username='ghost@example.com', email='ghost@example.com',
+            password='x', matric_number='AHP/ND/CSC/24/0099')
+        self._result()
+        self._result(student=ghost)
+        payload, warnings = sync_helpers.build_scores_payload('2025/2026', '1')
+        self.assertEqual(payload['results'], [{
+            'studentId': 'student-uuid',
+            'courseCode': 'CSC101',
+            'caScore': 30.0,
+            'examScore': 60.0,
+        }])
+        self.assertEqual(len(warnings), 1)
 
-    def test_empty_results_is_400(self):
-        resp = self._post({'academicSessionId': 'session-uuid',
-                           'semester': '1', 'results': []})
-        self.assertEqual(resp.status_code, 400)
+    def test_empty_results_raises(self):
+        Result.objects.all().delete()
+        with self.assertRaises(ValueError):
+            sync_helpers.build_scores_payload('2025/2026', '1')
 
-    def test_semester_id_uuid_falls_back_to_current_semester(self):
-        settings = AcademicSettings.get_current()
-        settings.current_semester = '2'
-        settings.save()
-        resp = self._post({
-            'academicSessionId': 'session-uuid', 'semesterId': 'sem2-uuid',
-            'results': [{'studentId': 'student-uuid', 'courseCode': 'CSC101',
-                         'caScore': 15, 'examScore': 25}],
-        })
-        self.assertEqual(resp.status_code, 200)
-        body = resp.json()
-        self.assertEqual(body['results_processed'], 1)
-        self.assertIsNotNone(body['warning'])
-        result = Result.objects.get(student=self.student, course=self.course)
-        self.assertEqual(result.semester, '2')
-
-    def test_semester_id_numeric_is_honoured(self):
-        resp = self._post({
-            'academicSessionId': 'session-uuid', 'semesterId': '2',
-            'results': [{'studentId': 'student-uuid', 'courseCode': 'CSC101',
-                         'caScore': 15, 'examScore': 25}],
-        })
-        self.assertEqual(resp.status_code, 200)
-        result = Result.objects.get(student=self.student, course=self.course)
-        self.assertEqual(result.semester, '2')
-
-    def test_plain_semester_takes_precedence_over_semester_id(self):
-        settings = AcademicSettings.get_current()
-        settings.current_semester = '1'
-        settings.save()
-        resp = self._post({
-            'academicSessionId': 'session-uuid', 'semester': '1',
-            'semesterId': '2',
-            'results': [{'studentId': 'student-uuid', 'courseCode': 'CSC101',
-                         'caScore': 15, 'examScore': 25}],
-        })
-        self.assertEqual(resp.status_code, 200)
-        result = Result.objects.get(student=self.student, course=self.course)
-        self.assertEqual(result.semester, '1')
+    def test_filters_by_semester(self):
+        self._result()
+        Result.objects.create(
+            student=self.student, course=self.course,
+            academic_year='2025/2026', semester='2',
+            ca_score=10, exam_score=20,
+            ca_override=True, exam_override=True)
+        payload, _ = sync_helpers.build_scores_payload('2025/2026', '2')
+        self.assertEqual(payload['semester'], '2')
+        self.assertEqual(payload['results'][0]['caScore'], 10.0)
+        self.assertEqual(payload['results'][0]['examScore'], 20.0)

@@ -961,6 +961,54 @@ def result_export(request):
 
 
 @portal_required
+def result_export_portal(request):
+    """
+    Push final Result rows from the LMS to the Portal (SMS) scores endpoint.
+    Admin can export a whole year/semester or a single course, and optionally
+    attribute the submission to a specific exam officer (staffId).
+    """
+    from api.sync import export_scores_to_portal
+    from results.models import Result
+    from courses.models import Course, SEMESTER_CHOICES
+    from accounts.models import Student
+    staff_choices = Student.objects.filter(
+        role='lecturer', is_active=True, is_sms_synced=True
+    ).order_by('last_name', 'first_name')
+
+    if request.method == 'POST':
+        yr    = request.POST.get('year', '').strip()
+        sem   = request.POST.get('sem', '').strip()
+        code  = request.POST.get('course', '').strip()
+        staff = request.POST.get('staff_id', '').strip()
+        if not yr or sem not in ('1', '2'):
+            messages.error(request, 'Choose an academic year and a semester (1 or 2).')
+        else:
+            ok, info = export_scores_to_portal(
+                yr, sem,
+                staff_id=staff,
+                course_code=code or None)
+            if ok:
+                messages.success(
+                    request,
+                    f'Exported {info["exported"]} result(s) for '
+                    f'{yr} semester {sem}{f" · {code}" if code else ""} to the Portal.')
+            else:
+                messages.error(request, info['error'] or 'Scores export failed.')
+        return redirect('portal:result_export_portal')
+
+    year_choices = (Result.objects.values_list('academic_year', flat=True)
+                    .distinct().order_by('-academic_year'))
+    courses = (Course.objects.filter(status='published')
+               .order_by('code'))
+    return render(request, 'portal/result_export_portal.html', {
+        'year_choices': year_choices,
+        'semester_choices': SEMESTER_CHOICES,
+        'course_choices': courses,
+        'staff_choices': staff_choices,
+    })
+
+
+@portal_required
 def result_edit(request, pk):
     from results.models import Result
     result = get_object_or_404(Result, pk=pk)

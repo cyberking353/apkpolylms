@@ -1,0 +1,59 @@
+{% extends 'portal/base.html' %}
+{% block title %}Send Results to Portal{% endblock %}
+{% block page_title %}Send Results to Portal{% endblock %}
+
+{% block content %}
+<div class="portal-card" style="max-width:560px">
+  <div class="portal-card-head">
+    <h3>Push results to the SMS</h3>
+  </div>
+  <div class="portal-card-body">
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:18px">
+      Exports the LMS's final result rows to the Portal (SMS) scores endpoint so
+      they become official. Pick a year/semester; optionally restrict to one
+      course and attribute the submission to a specific exam officer.
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-weight:600;font-size:.85rem;margin-bottom:5px">Academic Year</label>
+        <select name="year" required style="width:100%">
+          {% for y in year_choices %}
+          <option value="{{ y }}">{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-weight:600;font-size:.85rem;margin-bottom:5px">Semester</label>
+        <select name="sem" style="width:100%">
+          {% for code,label in semester_choices %}
+          <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-weight:600;font-size:.85rem;margin-bottom:5px">Course <span style="font-weight:400;color:var(--muted)">(optional — all courses if blank)</span></label>
+        <select name="course" style="width:100%">
+          <option value="">— All courses —</option>
+          {% for c in course_choices %}
+          <option value="{{ c.code }}">{{ c.code }} — {{ c.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:22px">
+        <label style="display:block;font-weight:600;font-size:.85rem;margin-bottom:5px">Attributing officer <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <select name="staff_id" style="width:100%">
+          <option value="">— None —</option>
+          {% for s in staff_choices %}
+          <option value="{{ s.portal_id|default:s.staff_id|default:'' }}">{{ s.display_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button type="submit" class="btn btn-teal"><i data-lucide="send"></i> Send to Portal</button>
+        <a href="{% url 'portal:result_list' %}" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
