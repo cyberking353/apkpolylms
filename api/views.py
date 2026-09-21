@@ -8,6 +8,7 @@ Server-to-server sync (Bearer LMS_API_TOKEN, all idempotent upserts):
     POST /api/v1/sync/programmes
     POST /api/v1/sync/sessions
     POST /api/v1/sync/registrations
+    POST /api/v1/lms/sync/scores
 
 SSO (user-facing):
     POST /api/v1/auth/sso          JSON JWT verification (returns session)
@@ -21,6 +22,7 @@ import json
 
 from django.conf import settings
 from django.contrib.auth import login
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -210,6 +212,26 @@ class SyncRegistrationView(SyncAPIView):
         )
 
 
+class SyncScoresView(SyncAPIView):
+    """POST /api/v1/lms/sync/scores — store Portal-entered result scores."""
+
+    def post(self, request):
+        data = _parse_json_body(request)
+        if data is None:
+            return _bad_request('Invalid JSON body')
+        if not isinstance(data, dict):
+            return _bad_request('scores: expected a JSON object')
+        try:
+            processed_count, warnings = sync_helpers.upsert_scores(data)
+        except ValueError as exc:
+            return _bad_request(str(exc))
+        return _success(
+            'Scores synced successfully',
+            results_processed=processed_count,
+            warning=warnings or None,
+        )
+
+
 # ---------------------------------------------------------------------------
 # SSO
 # ---------------------------------------------------------------------------
@@ -282,22 +304,52 @@ def _resolve_sso_user(payload):
     # staff
     staff_id = (payload.get('staff_id') or '').strip()
     user = None
+    # Staff are matched to existing accounts only (never auto-created). The
+    # account is a lecturer OR a portal admin (role may even be 'student' for an
+    # is_staff account — the tests create such admins, and role is secondary to
+    # the is_staff flag that gates the portal).
+    staff_accounts = Student.objects.filter(Q(role='lecturer') | Q(is_staff=True))
     if sub:
         user = Student.objects.filter(portal_id=sub).first()
     if user is None and staff_id:
-        user = Student.objects.filter(role='lecturer', staff_id=staff_id).first()
+        user = staff_accounts.filter(staff_id=staff_id).first()
     if user is None and email:
-        user = Student.objects.filter(role='lecturer', email__iexact=email).first()
+        user = staff_accounts.filter(email__iexact=email).first()
     if user is None:
         raise SsoError('Staff account not provisioned in the LMS. Please contact the administrator.')
     if sub and not user.portal_id:
         user.portal_id = sub
         user.save(update_fields=['portal_id'])
+    if _payload_is_admin(payload) and not user.is_staff:
+        # Forward-compatible: if the Portal ever sends an admin signal, mirror
+        # it into our own is_staff flag so the portal pages (gated on is_staff)
+        # unlock for this account automatically.
+        user.is_staff = True
+        user.save(update_fields=['is_staff'])
     if not getattr(user, 'lms_access', True):
         raise SsoError('Your LMS access is disabled. Please contact the school office.')
     if not user.is_active:
         raise SsoError('This account has been deactivated. Please contact the school office.')
     return user
+
+
+def _payload_is_admin(payload):
+    """Best-effort 'is admin' signal from the Portal assertion. The Portal now
+    sends a `permissions` array on staff assertions; containing 'manage_lms'
+    grants LMS admin. We also accept the shapes the Portal might reasonably
+    send (role/user_type == 'admin', or an explicit is_admin flag) so the admin
+    redirect keeps working whichever way the Portal expresses it; absent any
+    signal we leave the account's own is_staff to decide."""
+    permissions = payload.get('permissions') or []
+    if isinstance(permissions, list) and 'manage_lms' in permissions:
+        return True
+    if (payload.get('user_type') or '').strip().lower() == 'admin':
+        return True
+    if (payload.get('role') or '').strip().lower() == 'admin':
+        return True
+    if payload.get('is_admin') in (True, 1, '1', 'true', 'True'):
+        return True
+    return False
 
 
 def _user_payload(user):
@@ -308,6 +360,7 @@ def _user_payload(user):
         'first_name': user.first_name,
         'last_name': user.last_name,
         'user_type': 'lecturer' if user.role == 'lecturer' else 'student',
+        'is_admin': bool(getattr(user, 'is_staff', False)),
         'matric_number': getattr(user, 'matric_number', None) or '',
         'staff_id': getattr(user, 'staff_id', None) or '',
     }
@@ -394,6 +447,8 @@ class SsoCallbackView(View):
 
 
 def _home_url_for(user):
+    if getattr(user, 'is_staff', False):
+        return reverse('portal:dashboard')
     if getattr(user, 'role', 'student') == 'lecturer':
         return reverse('courses:lecturer_dashboard')
     return reverse('courses:dashboard')

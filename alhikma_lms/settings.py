@@ -88,6 +88,10 @@ PORTAL_SSO_SECRET = (
 # (manage.py sync_portal) to hit GET /api/v1/lms/sync/init/*.
 PORTAL_BACKEND_URL = os.environ.get('PORTAL_BACKEND_URL', '')
 
+# Where the SSO handoff page sends the browser to start the Portal-initiated SSO
+# flow. Falls back to the Portal backend URL if not set explicitly.
+PORTAL_LOGIN_URL = os.environ.get('PORTAL_LOGIN_URL') or PORTAL_BACKEND_URL
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

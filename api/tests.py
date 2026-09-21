@@ -10,6 +10,7 @@ from courses.models import (
     Programme,
 )
 from departments.models import Department
+from results.models import Result
 
 from .sso import sign_jwt
 from . import sync as sync_helpers
@@ -418,6 +419,61 @@ class SsoApiTests(TestCase):
         self.assertEqual(resp.status_code, 401)
         self.assertIn('deactivated', resp.json()['message'])
 
+    def test_staff_admin_account_is_staff_logs_in(self):
+        # A portal admin can have role='student' + is_staff=True; SSO must still
+        # match their account (staff lookup is widened to is_staff accounts).
+        Student.objects.create_user(
+            username='boss@example.com', email='boss@example.com',
+            password='x', role='student', is_staff=True, staff_id='ADMIN001')
+        token = sign_jwt({'sub': 'bs1', 'staff_id': 'ADMIN001',
+                          'email': 'boss@example.com', 'user_type': 'staff'},
+                         TEST_SECRET)
+        resp = self._sso(token)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()['user']['is_admin'])
+
+    def test_payload_is_admin_promotes_account_to_staff(self):
+        Student.objects.create_user(
+            username='promo@example.com', email='promo@example.com',
+            password='x', role='lecturer', staff_id='PROMO1')
+        token = sign_jwt({'sub': 'pr1', 'staff_id': 'PROMO1',
+                          'email': 'promo@example.com', 'user_type': 'staff',
+                          'role': 'admin'},
+                         TEST_SECRET)
+        resp = self._sso(token)
+        self.assertEqual(resp.status_code, 200)
+        user = Student.objects.get(staff_id='PROMO1')
+        self.assertTrue(user.is_staff)
+        self.assertTrue(resp.json()['user']['is_admin'])
+
+    def test_manage_lms_permission_promotes_account_to_staff(self):
+        Student.objects.create_user(
+            username='perm@example.com', email='perm@example.com',
+            password='x', role='lecturer', staff_id='PERM1')
+        token = sign_jwt({'sub': 'pe1', 'staff_id': 'PERM1',
+                          'email': 'perm@example.com', 'user_type': 'staff',
+                          'permissions': ['manage_lms']},
+                         TEST_SECRET)
+        resp = self._sso(token)
+        self.assertEqual(resp.status_code, 200)
+        user = Student.objects.get(staff_id='PERM1')
+        self.assertTrue(user.is_staff)
+        self.assertTrue(resp.json()['user']['is_admin'])
+
+    def test_empty_permissions_does_not_promote_account(self):
+        Student.objects.create_user(
+            username='noperm@example.com', email='noperm@example.com',
+            password='x', role='lecturer', staff_id='NOPERM1')
+        token = sign_jwt({'sub': 'np1', 'staff_id': 'NOPERM1',
+                          'email': 'noperm@example.com', 'user_type': 'staff',
+                          'permissions': []},
+                         TEST_SECRET)
+        resp = self._sso(token)
+        self.assertEqual(resp.status_code, 200)
+        user = Student.objects.get(staff_id='NOPERM1')
+        self.assertFalse(user.is_staff)
+        self.assertFalse(resp.json()['user']['is_admin'])
+
 
 @override_settings(LMS_API_TOKEN=TEST_TOKEN, PORTAL_SSO_SECRET=TEST_SECRET)
 class SsoCallbackTests(TestCase):
@@ -442,3 +498,169 @@ class SsoCallbackTests(TestCase):
                          TEST_SECRET, ttl=60, now=int(time.time()) - 120)
         resp = self.client.get(self.URL, {'assertion': token})
         self.assertContains(resp, 'Assertion expired', status_code=401)
+
+    def test_staff_is_staff_redirects_to_portal_dashboard(self):
+        Student.objects.create_user(
+            username='boss@example.com', email='boss@example.com',
+            password='x', role='lecturer', staff_id='STAFF900', is_staff=True)
+        token = sign_jwt({'sub': 'cb9', 'staff_id': 'STAFF900',
+                          'email': 'boss@example.com', 'user_type': 'staff'},
+                         TEST_SECRET)
+        resp = self.client.get(self.URL, {'assertion': token})
+        self.assertRedirects(resp, reverse('portal:dashboard'))
+
+    def test_payload_is_admin_redirects_to_portal_dashboard(self):
+        Student.objects.create_user(
+            username='promo2@example.com', email='promo2@example.com',
+            password='x', role='lecturer', staff_id='PROMO2')
+        token = sign_jwt({'sub': 'cb10', 'staff_id': 'PROMO2',
+                          'email': 'promo2@example.com', 'user_type': 'staff',
+                          'is_admin': True},
+                         TEST_SECRET)
+        resp = self.client.get(self.URL, {'assertion': token})
+        self.assertRedirects(resp, reverse('portal:dashboard'))
+        self.assertTrue(Student.objects.get(staff_id='PROMO2').is_staff)
+
+    def test_manage_lms_permission_redirects_to_portal_dashboard(self):
+        Student.objects.create_user(
+            username='promo3@example.com', email='promo3@example.com',
+            password='x', role='lecturer', staff_id='PROMO3')
+        token = sign_jwt({'sub': 'cb11', 'staff_id': 'PROMO3',
+                          'email': 'promo3@example.com', 'user_type': 'staff',
+                          'permissions': ['manage_lms']},
+                         TEST_SECRET)
+        resp = self.client.get(self.URL, {'assertion': token})
+        self.assertRedirects(resp, reverse('portal:dashboard'))
+        self.assertTrue(Student.objects.get(staff_id='PROMO3').is_staff)
+
+    def test_empty_permissions_redirects_to_lecturer_dashboard(self):
+        Student.objects.create_user(
+            username='noperm2@example.com', email='noperm2@example.com',
+            password='x', role='lecturer', staff_id='NOPERM2')
+        token = sign_jwt({'sub': 'cb12', 'staff_id': 'NOPERM2',
+                          'email': 'noperm2@example.com', 'user_type': 'staff',
+                          'permissions': []},
+                         TEST_SECRET)
+        resp = self.client.get(self.URL, {'assertion': token})
+        self.assertRedirects(resp, reverse('courses:lecturer_dashboard'))
+        self.assertFalse(Student.objects.get(staff_id='NOPERM2').is_staff)
+
+
+@override_settings(LMS_API_TOKEN=TEST_TOKEN, PORTAL_SSO_SECRET=TEST_SECRET)
+class ScoresSyncTests(TestCase):
+    URL = reverse('api:sync_scores')
+
+    def _post(self, payload):
+        return self.client.post(self.URL, data=json.dumps(payload),
+                                content_type='application/json', **AUTH)
+
+    def setUp(self):
+        self.session = AcademicSession.objects.create(
+            portal_id='session-uuid', name='2025/2026', is_current=True)
+        self.student = Student.objects.create_user(
+            username='stu@example.com', email='stu@example.com', password='x',
+            matric_number='AHP/ND/CSC/24/0042', portal_id='student-uuid')
+        self.course = Course.objects.create(code='CSC101', title='Intro to CS')
+
+    def test_store_scores_creates_result(self):
+        resp = self._post({
+            'academicSessionId': 'session-uuid', 'semester': '1',
+            'staffId': 'staff-uuid',
+            'results': [
+                {'studentId': 'student-uuid', 'courseCode': 'CSC101',
+                 'caScore': 30, 'examScore': 60},
+            ],
+        })
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body['results_processed'], 1)
+        self.assertIsNone(body['warning'])
+        result = Result.objects.get(student=self.student, course=self.course)
+        self.assertEqual(result.academic_year, '2025/2026')
+        self.assertEqual(result.semester, '1')
+        self.assertEqual(result.ca_score, 30)
+        self.assertEqual(result.exam_score, 60)
+        self.assertTrue(result.ca_override)
+        self.assertTrue(result.exam_override)
+        self.assertEqual(result.total, 90)
+        self.assertEqual(result.grade, 'A')
+
+    def test_scores_are_idempotent(self):
+        payload = {
+            'academicSessionId': 'session-uuid', 'semester': '1',
+            'results': [{'studentId': 'student-uuid', 'courseCode': 'CSC101',
+                         'caScore': 25, 'examScore': 50}],
+        }
+        self._post(payload)
+        self._post(payload)
+        self.assertEqual(Result.objects.count(), 1)
+
+    def test_unknown_student_warns_and_skips(self):
+        resp = self._post({
+            'academicSessionId': 'session-uuid', 'semester': '1',
+            'results': [{'studentId': 'ghost-uuid', 'courseCode': 'CSC101',
+                         'caScore': 10, 'examScore': 20}],
+        })
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body['results_processed'], 0)
+        self.assertIsNotNone(body['warning'])
+
+    def test_unknown_session_falls_back_to_current_settings(self):
+        settings = AcademicSettings.get_current()
+        settings.academic_year = '2024/2025'
+        settings.save()
+        resp = self._post({
+            'academicSessionId': 'missing-uuid', 'semester': '2',
+            'results': [{'studentId': 'student-uuid', 'courseCode': 'CSC101',
+                         'caScore': 10, 'examScore': 20}],
+        })
+        self.assertEqual(resp.status_code, 200)
+        result = Result.objects.get(student=self.student, course=self.course)
+        self.assertEqual(result.academic_year, '2024/2025')
+        self.assertEqual(result.semester, '2')
+
+    def test_empty_results_is_400(self):
+        resp = self._post({'academicSessionId': 'session-uuid',
+                           'semester': '1', 'results': []})
+        self.assertEqual(resp.status_code, 400)
+
+    def test_semester_id_uuid_falls_back_to_current_semester(self):
+        settings = AcademicSettings.get_current()
+        settings.current_semester = '2'
+        settings.save()
+        resp = self._post({
+            'academicSessionId': 'session-uuid', 'semesterId': 'sem2-uuid',
+            'results': [{'studentId': 'student-uuid', 'courseCode': 'CSC101',
+                         'caScore': 15, 'examScore': 25}],
+        })
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertEqual(body['results_processed'], 1)
+        self.assertIsNotNone(body['warning'])
+        result = Result.objects.get(student=self.student, course=self.course)
+        self.assertEqual(result.semester, '2')
+
+    def test_semester_id_numeric_is_honoured(self):
+        resp = self._post({
+            'academicSessionId': 'session-uuid', 'semesterId': '2',
+            'results': [{'studentId': 'student-uuid', 'courseCode': 'CSC101',
+                         'caScore': 15, 'examScore': 25}],
+        })
+        self.assertEqual(resp.status_code, 200)
+        result = Result.objects.get(student=self.student, course=self.course)
+        self.assertEqual(result.semester, '2')
+
+    def test_plain_semester_takes_precedence_over_semester_id(self):
+        settings = AcademicSettings.get_current()
+        settings.current_semester = '1'
+        settings.save()
+        resp = self._post({
+            'academicSessionId': 'session-uuid', 'semester': '1',
+            'semesterId': '2',
+            'results': [{'studentId': 'student-uuid', 'courseCode': 'CSC101',
+                         'caScore': 15, 'examScore': 25}],
+        })
+        self.assertEqual(resp.status_code, 200)
+        result = Result.objects.get(student=self.student, course=self.course)
+        self.assertEqual(result.semester, '1')

@@ -54,7 +54,7 @@
             {% if enrolled %}
               <a href="#modules" class="btn btn-success btn-full"><i data-lucide="check"></i> Continue Learning</a>
             {% else %}
-              <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="btn btn-ink btn-full">Login to View</a>
+              <span class="btn btn-ink btn-full" style="opacity:.7;cursor:default" aria-disabled="true">Assigned to your study plan</span>
             {% endif %}
             <div class="ec-inc">
               <div class="ec-inc-t">What's Included</div>
@@ -187,7 +187,7 @@
             <a href="{% url 'courses:message_new' course.slug %}" class="btn btn-ghost btn-full btn-sm" style="margin-top:8px"><i data-lucide="mail"></i> Report a Problem</a>
             {% endif %}
             {% else %}
-            <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="btn btn-teal btn-full btn-sm">Login to View</a>
+            <span class="btn btn-teal btn-full btn-sm" style="opacity:.7;cursor:default" aria-disabled="true">Assigned to your study plan</span>
             {% endif %}
           </div>
         </div>

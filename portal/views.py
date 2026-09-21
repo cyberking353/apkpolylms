@@ -2,7 +2,7 @@ import os
 from functools import wraps
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.contrib.auth import login, logout
+from django.contrib.auth import logout
 from django.utils import timezone
 from django.db import connection, transaction
 from django.db.models import Count, Avg, Q
@@ -12,7 +12,7 @@ def portal_required(view_func):
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated or not request.user.is_staff:
-            return redirect('portal:login')
+            return redirect('accounts:login')
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -25,24 +25,17 @@ def _is_htmx(request):
 # ── Auth ───────────────────────────────────────────────────────────────
 
 def portal_login(request):
+    """Admins now sign in through the same Portal-driven SSO as everyone else.
+    This view just hands them off to the SSO handoff page (accounts:login),
+    which itself redirects to the Portal."""
     if request.user.is_authenticated and request.user.is_staff:
         return redirect('portal:dashboard')
-    error = None
-    if request.method == 'POST':
-        from django.contrib.auth import authenticate
-        user = authenticate(request,
-            username=request.POST.get('username'),
-            password=request.POST.get('password'))
-        if user and user.is_staff:
-            login(request, user)
-            return redirect('portal:dashboard')
-        error = 'Invalid credentials or insufficient permissions.'
-    return render(request, 'portal/login.html', {'error': error})
+    return redirect('accounts:login')
 
 
 def portal_logout(request):
     logout(request)
-    return redirect('portal:login')
+    return redirect('accounts:login')
 
 
 # ── Dashboard ──────────────────────────────────────────────────────────
