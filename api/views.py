@@ -320,11 +320,14 @@ def _resolve_sso_user(payload):
     if sub and not user.portal_id:
         user.portal_id = sub
         user.save(update_fields=['portal_id'])
-    if _payload_is_admin(payload) and not user.is_staff:
-        # Forward-compatible: if the Portal ever sends an admin signal, mirror
-        # it into our own is_staff flag so the portal pages (gated on is_staff)
-        # unlock for this account automatically.
-        user.is_staff = True
+    admin_state = _payload_admin_state(payload)
+    if admin_state is not None and admin_state != bool(getattr(user, 'is_staff', False)):
+        # Mirror the Portal's current admin status into our own is_staff flag
+        # so the portal pages (gated on is_staff) unlock AND lock consistently.
+        # The Portal assertion is authoritative when it speaks: 'manage_lms' in
+        # permissions promotes, its absence (e.g. permissions not granted this
+        # round) demotes an account that was previously promoted.
+        user.is_staff = admin_state
         user.save(update_fields=['is_staff'])
     if not getattr(user, 'lms_access', True):
         raise SsoError('Your LMS access is disabled. Please contact the school office.')
@@ -333,23 +336,28 @@ def _resolve_sso_user(payload):
     return user
 
 
-def _payload_is_admin(payload):
-    """Best-effort 'is admin' signal from the Portal assertion. The Portal now
-    sends a `permissions` array on staff assertions; containing 'manage_lms'
-    grants LMS admin. We also accept the shapes the Portal might reasonably
-    send (role/user_type == 'admin', or an explicit is_admin flag) so the admin
-    redirect keeps working whichever way the Portal expresses it; absent any
-    signal we leave the account's own is_staff to decide."""
-    permissions = payload.get('permissions') or []
-    if isinstance(permissions, list) and 'manage_lms' in permissions:
-        return True
+def _payload_admin_state(payload):
+    """Best-effort 'is admin' signal from the Portal assertion.
+
+    Returns True (explicit admin), False (explicitly not admin), or None
+    (Portal said nothing either way). The Portal now sends a `permissions`
+    array on staff assertions; containing 'manage_lms' grants LMS admin and an
+    array without it is an authoritative "not admin" this round (this is what
+    demotes a previously-granted account). Legacy shapes (role/user_type ==
+    'admin', or an explicit is_admin flag) only promote — absent the
+    permissions array, None keeps the account's own is_staff untouched so
+    locally seeded admins are never demoted accidentally.
+    """
+    permissions = payload.get('permissions')
+    if isinstance(permissions, list):
+        return 'manage_lms' in permissions
     if (payload.get('user_type') or '').strip().lower() == 'admin':
         return True
     if (payload.get('role') or '').strip().lower() == 'admin':
         return True
     if payload.get('is_admin') in (True, 1, '1', 'true', 'True'):
         return True
-    return False
+    return None
 
 
 def _user_payload(user):
