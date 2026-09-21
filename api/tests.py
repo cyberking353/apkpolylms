@@ -474,6 +474,29 @@ class SsoApiTests(TestCase):
         self.assertFalse(user.is_staff)
         self.assertFalse(resp.json()['user']['is_admin'])
 
+    def test_removed_manage_lms_demotes_previously_promoted_account(self):
+        # Regression: an account promoted via manage_lms must be demoted again
+        # when the Portal stops granting the permission.
+        Student.objects.create_user(
+            username='rev@example.com', email='rev@example.com',
+            password='x', role='lecturer', staff_id='REV1')
+        granted = sign_jwt({'sub': 'rv1', 'staff_id': 'REV1',
+                            'email': 'rev@example.com', 'user_type': 'staff',
+                            'permissions': ['manage_lms']},
+                           TEST_SECRET)
+        self.assertEqual(self._sso(granted).status_code, 200)
+        self.assertTrue(Student.objects.get(staff_id='REV1').is_staff)
+
+        revoked = sign_jwt({'sub': 'rv1', 'staff_id': 'REV1',
+                            'email': 'rev@example.com', 'user_type': 'staff',
+                            'permissions': []},
+                           TEST_SECRET)
+        resp = self._sso(revoked)
+        self.assertEqual(resp.status_code, 200)
+        user = Student.objects.get(staff_id='REV1')
+        self.assertFalse(user.is_staff)
+        self.assertFalse(resp.json()['user']['is_admin'])
+
 
 @override_settings(LMS_API_TOKEN=TEST_TOKEN, PORTAL_SSO_SECRET=TEST_SECRET)
 class SsoCallbackTests(TestCase):
@@ -544,6 +567,28 @@ class SsoCallbackTests(TestCase):
         resp = self.client.get(self.URL, {'assertion': token})
         self.assertRedirects(resp, reverse('courses:lecturer_dashboard'))
         self.assertFalse(Student.objects.get(staff_id='NOPERM2').is_staff)
+
+    def test_removed_manage_lms_no_longer_redirects_to_portal(self):
+        # Regression: after manage_lms is revoked the callback must send the
+        # lecturer to their courses dashboard, not the portal admin.
+        Student.objects.create_user(
+            username='rev2@example.com', email='rev2@example.com',
+            password='x', role='lecturer', staff_id='REV2')
+        granted = sign_jwt({'sub': 'cb13', 'staff_id': 'REV2',
+                            'email': 'rev2@example.com', 'user_type': 'staff',
+                            'permissions': ['manage_lms']},
+                           TEST_SECRET)
+        self.assertRedirects(self.client.get(self.URL, {'assertion': granted}),
+                             reverse('portal:dashboard'))
+        self.assertTrue(Student.objects.get(staff_id='REV2').is_staff)
+
+        revoked = sign_jwt({'sub': 'cb13', 'staff_id': 'REV2',
+                            'email': 'rev2@example.com', 'user_type': 'staff',
+                            'permissions': []},
+                           TEST_SECRET)
+        resp = self.client_class().get(self.URL, {'assertion': revoked})
+        self.assertRedirects(resp, reverse('courses:lecturer_dashboard'))
+        self.assertFalse(Student.objects.get(staff_id='REV2').is_staff)
 
 
 @override_settings(LMS_API_TOKEN=TEST_TOKEN, PORTAL_SSO_SECRET=TEST_SECRET)
