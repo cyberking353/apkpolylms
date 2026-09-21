@@ -1,0 +1,5 @@
+{% if user.is_staff %}
+<a href="{% url 'portal:dashboard' %}" class="sbl">
+  <span class="ic"><i data-lucide="shield-half"></i></span> Admin Portal
+</a>
+{% endif %}

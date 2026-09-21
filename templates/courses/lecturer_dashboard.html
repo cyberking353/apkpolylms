@@ -48,6 +48,8 @@
       {% if unread_notifications %}<span class="bge" style="background:var(--gold)">{{ unread_notifications }}</span>{% endif %}
     </a>
 
+    {% include 'courses/_admin_portal_link.html' %}
+
     <div class="sb-sec-lbl" style="margin-top:8px">Account</div>
     <a href="{% url 'accounts:profile' %}" class="sbl">
       <span class="ic"><i data-lucide="user"></i></span> Profile
