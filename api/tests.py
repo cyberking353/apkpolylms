@@ -150,6 +150,17 @@ class SessionSyncTests(TestCase):
         # School-wide academic year follows the current portal session.
         self.assertEqual(AcademicSettings.get_current().academic_year, '2025/2026')
 
+    def test_missing_id_falls_back_to_name(self):
+        # The Portal's init endpoint can omit the session uuid; portal_id must
+        # not become empty (uniqueness + scores export needs a non-empty id).
+        url = reverse('api:sync_sessions')
+        resp = self.client.post(url, data=json.dumps({
+            'name': '2026/2027', 'is_current': True, 'is_active': True,
+        }), content_type='application/json', **AUTH)
+        self.assertEqual(resp.status_code, 200)
+        session = AcademicSession.objects.get(name='2026/2027')
+        self.assertEqual(session.portal_id, '2026/2027')
+
 
 @override_settings(LMS_API_TOKEN=TEST_TOKEN, PORTAL_SSO_SECRET=TEST_SECRET)
 class CourseSyncTests(TestCase):
@@ -603,11 +614,12 @@ class ScoresExportTests(TestCase):
             matric_number='AHP/ND/CSC/24/0042', portal_id='student-uuid')
         self.course = Course.objects.create(code='CSC101', title='Intro to CS')
 
-    def _result(self, student=None, course=None, ca=30.0, exam=60.0):
+    def _result(self, student=None, course=None, ca=30.0, exam=60.0,
+                academic_year='2025/2026', semester='1'):
         return Result.objects.create(
             student=student or self.student,
             course=course or self.course,
-            academic_year='2025/2026', semester='1',
+            academic_year=academic_year, semester=semester,
             ca_score=ca, exam_score=exam,
             ca_override=True, exam_override=True)
 
@@ -617,7 +629,7 @@ class ScoresExportTests(TestCase):
             '2025/2026', '1', staff_id='staff-uuid')
         self.assertFalse(warnings)
         self.assertEqual(payload['academicSessionId'], 'session-uuid')
-        self.assertEqual(payload['semester'], '1')
+        self.assertEqual(payload['semesterId'], '1')
         self.assertEqual(payload['staffId'], 'staff-uuid')
         self.assertEqual(payload['results'], [{
             'studentId': 'student-uuid',
@@ -626,10 +638,13 @@ class ScoresExportTests(TestCase):
             'examScore': 60.0,
         }])
 
-    def test_missing_session_mapping_raises(self):
-        self._result()
-        with self.assertRaises(ValueError):
-            sync_helpers.build_scores_payload('2099/2100', '1')
+    def test_missing_session_is_self_healing(self):
+        self._result(academic_year='2099/2100')
+        payload, warnings = sync_helpers.build_scores_payload('2099/2100', '1')
+        self.assertEqual(payload['academicSessionId'], '2099/2100')
+        self.assertTrue(any('created local session' in w for w in warnings))
+        self.assertTrue(AcademicSession.objects.filter(
+            name='2099/2100', portal_id='2099/2100').exists())
 
     def test_student_without_portal_id_skipped_with_warning(self):
         ghost = Student.objects.create_user(
@@ -659,6 +674,6 @@ class ScoresExportTests(TestCase):
             ca_score=10, exam_score=20,
             ca_override=True, exam_override=True)
         payload, _ = sync_helpers.build_scores_payload('2025/2026', '2')
-        self.assertEqual(payload['semester'], '2')
+        self.assertEqual(payload['semesterId'], '2')
         self.assertEqual(payload['results'][0]['caScore'], 10.0)
         self.assertEqual(payload['results'][0]['examScore'], 20.0)
