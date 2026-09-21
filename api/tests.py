@@ -150,6 +150,17 @@ class SessionSyncTests(TestCase):
         # School-wide academic year follows the current portal session.
         self.assertEqual(AcademicSettings.get_current().academic_year, '2025/2026')
 
+    def test_missing_id_falls_back_to_name(self):
+        # The Portal's init endpoint can omit the session uuid; portal_id must
+        # not become empty (uniqueness + scores export needs a non-empty id).
+        url = reverse('api:sync_sessions')
+        resp = self.client.post(url, data=json.dumps({
+            'name': '2026/2027', 'is_current': True, 'is_active': True,
+        }), content_type='application/json', **AUTH)
+        self.assertEqual(resp.status_code, 200)
+        session = AcademicSession.objects.get(name='2026/2027')
+        self.assertEqual(session.portal_id, '2026/2027')
+
 
 @override_settings(LMS_API_TOKEN=TEST_TOKEN, PORTAL_SSO_SECRET=TEST_SECRET)
 class CourseSyncTests(TestCase):

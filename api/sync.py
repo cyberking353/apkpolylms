@@ -106,10 +106,14 @@ def upsert_session(data):
     if not name:
         raise ValueError('session: name is required')
     is_current = bool(data.get('is_current', False))
+    # The Portal's init endpoint may not send a stable uuid per session; fall
+    # back to the session name so local rows stay unique and the scores export
+    # always has a non-empty `academicSessionId` to send.
+    portal_id = _clean(data.get('id') or data.get('portal_id') or name)
     session, _ = AcademicSession.objects.update_or_create(
         name=name,
         defaults={
-            'portal_id': _clean(data.get('id')),
+            'portal_id': portal_id,
             'start_date': _parse_iso(data.get('start_date')),
             'end_date': _parse_iso(data.get('end_date')),
             'is_current': is_current,
