@@ -166,12 +166,11 @@ class Command(BaseCommand):
                 }
             )
             if created:
-                lecturer.set_password(os.environ.get('SEED_PASSWORD', 'changeme123'))
+                lecturer.set_unusable_password()
                 lecturer.save()
                 created_lecturers += 1
             lecturers[key] = lecturer
-        dflt = os.environ.get('SEED_PASSWORD', 'changeme123')
-        self.stdout.write(f"  👨‍🏫  {created_lecturers} lecturer(s) created (password: {dflt})")
+        self.stdout.write(f"  👨‍🏫  {created_lecturers} lecturer(s) created (SSO login — no local password)")
 
         created_courses = 0
 
@@ -332,16 +331,15 @@ class Command(BaseCommand):
                 }
             )
             if created:
-                student.set_password(os.environ.get('SEED_PASSWORD', 'changeme123'))
+                student.set_unusable_password()
                 student.save()
                 created_students += 1
             Enrollment.sync_for_student(student)
             self.stdout.write(f"  👤  {student.get_full_name()} — {student.get_department_display()} {student.get_academic_level_display()} ({student.username})")
 
-        dflt = os.environ.get('SEED_PASSWORD', 'changeme123')
         self.stdout.write(self.style.SUCCESS(
             f'\n✨ Created {created_students} demo student account(s) and {created_lecturers} lecturer account(s). '
-            f'Password for all: {dflt}\n'
+            f'All accounts sign in via Portal SSO — no local passwords.\n'
             f'   cs.nd2@demo.alhikma will see "Business Communication" — a course borrowed from BA — '
             f'on their dashboard, demonstrating the borrowed-course feature.\n'
             f'   Run: python manage.py createsuperuser — to create an admin account.\n'

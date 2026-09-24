@@ -11,14 +11,11 @@ urlpatterns = [
     path('students/new/',           views.student_create,       name='student_create'),
     path('students/bulk-upload/',   views.student_bulk_upload,  name='student_bulk_upload'),
     path('students/<int:pk>/edit/', views.student_edit,      name='student_edit'),
-    path('students/<int:pk>/promote/', views.student_promote, name='student_promote'),
-    path('students/<int:pk>/reset-password/', views.student_reset_password, name='student_reset_password'),
     # Lecturers
     path('lecturers/',              views.lecturer_list,     name='lecturer_list'),
     path('lecturers/new/',          views.lecturer_create,   name='lecturer_create'),
     path('lecturers/<int:pk>/edit/', views.lecturer_edit,    name='lecturer_edit'),
     path('lecturers/<int:pk>/delete/', views.lecturer_delete, name='lecturer_delete'),
-    path('lecturers/<int:pk>/reset-password/', views.lecturer_reset_password, name='lecturer_reset_password'),
     # Courses
     path('courses/',                views.course_list,       name='course_list'),
     path('courses/new/',            views.course_create,     name='course_create'),
