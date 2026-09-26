@@ -192,11 +192,10 @@
     if (tooBig) {
       var msg = document.createElement('div');
       msg.className = MSG_CLASS;
-      msg.setAttribute('style', 'color:#d33;font-size:.72rem;margin:2px 0 0;flex-basis:100%;text-align:right');
+      msg.setAttribute('style', 'color:#d33;font-size:.72rem;margin:2px 0 0;flex-basis:100%;width:100%');
       msg.textContent = 'File is ' + (file.size / (1024 * 1024)).toFixed(1) +
         ' MB — max allowed is 10 MB. Please choose a smaller file.';
-      var submit = form.querySelector('button[type="submit"]');
-      (submit ? submit.parentNode : form).appendChild(msg);
+      input.parentNode.insertBefore(msg, input.nextSibling);
     }
   }, true);
 
@@ -210,10 +209,9 @@
       if (!form.querySelector('.' + MSG_CLASS)) {
         var msg = document.createElement('div');
         msg.className = MSG_CLASS;
-        msg.setAttribute('style', 'color:#d33;font-size:.72rem;margin:2px 0 0;flex-basis:100%;text-align:right');
+        msg.setAttribute('style', 'color:#d33;font-size:.72rem;margin:2px 0 0;flex-basis:100%;width:100%');
         msg.textContent = 'File is too large — max allowed is 10 MB.';
-        var submit = form.querySelector('button[type="submit"]');
-        (submit ? submit.parentNode : form).appendChild(msg);
+        notes.parentNode.insertBefore(msg, notes.nextSibling);
       }
     }
   }, true);
