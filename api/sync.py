@@ -110,10 +110,22 @@ def upsert_session(data):
     # back to the session name so local rows stay unique and the scores export
     # always has a non-empty `academicSessionId` to send.
     portal_id = _clean(data.get('id') or data.get('portal_id') or name)
+    semester_portal_ids = {}
+    for sem in data.get('semesters') or []:
+        if not isinstance(sem, dict):
+            continue
+        semester_type = _clean(sem.get('semester_type'))
+        sem_portal_id = _clean(sem.get('portal_id') or sem.get('id'))
+        if not semester_type or not sem_portal_id:
+            continue
+        # FIRST/SECOND -> "1"/"2" (the score payload's semester dimension).
+        num = '1' if semester_type.upper().startswith('FIRST') else '2'
+        semester_portal_ids[num] = sem_portal_id
     session, _ = AcademicSession.objects.update_or_create(
         name=name,
         defaults={
             'portal_id': portal_id,
+            'semester_portal_ids': semester_portal_ids,
             'start_date': _parse_iso(data.get('start_date')),
             'end_date': _parse_iso(data.get('end_date')),
             'is_current': is_current,
@@ -445,20 +457,30 @@ def build_scores_payload(academic_year, semester, staff_id='', course_code=None)
     Expected payload (what the Portal receives):
         {
           "academicSessionId": "<portal session uuid>",
-          "semesterId": "1" | "2",
+          "semesterId": "<portal semester uuid>",
           "staffId": "<portal staff uuid>",  # informational: who submitted
           "results": [
-            {"studentId": "<portal student uuid>",
+            {"matricNumber": "<student matric number>",  # or student portal uuid
              "courseCode": "CS101",
              "caScore": 30,     # out of 40
              "examScore": 60}   # out of 60
           ]
         }
 
+    Live-verified against the demo Portal (all four ids must be real Portal
+    uuids; the matricNumber key is required — "studentId" is not accepted):
+
+        academicSessionId  session.portal_id (uuid, NOT the session name)
+        semesterId         session.semester_portal_ids[str(semester)] (uuid,
+                          NOT "1"/"2")
+        results[].matricNumber  student.matric_number (uuid also accepted)
+
     Rows are mapped to Portal identifiers via `portal_id` on the session
-    (looked up by academic_year == session name) and on the student. Any row
-    whose student lacks a portal_id is skipped with a warning. Pass course_code
-    to limit the export to a single course (e.g. a lecturer's own course).
+    (looked up by academic_year == session name), the stored semester portal
+    uuid, and the student's matric number (falling back to the student uuid).
+    Any row whose student lacks both a matric number and a portal_id is
+    skipped with a warning. Pass course_code to limit the export to a single
+    course (e.g. a lecturer's own course).
 
     The session row is self-healing: if the Portal never pushed a session for
     this year (e.g. hosts that block outbound HTTP to the Portal, like
@@ -497,15 +519,16 @@ def build_scores_payload(academic_year, semester, staff_id='', course_code=None)
     if course_code:
         qs = qs.filter(course__code=course_code)
     for result in qs:
-        student_id = result.student.portal_id
-        if not student_id:
+        matric_number = _clean(result.student.matric_number)
+        student_uuid = _clean(result.student.portal_id)
+        if not matric_number and not student_uuid:
             course_code = result.course.code if result.course_id else '?'
             warnings.append(
-                f'skipped {result.student} for {course_code}: no portal_id; '
-                'sync students first')
+                f'skipped {result.student} for {course_code}: no matric '
+                'number / portal_id; sync students first')
             continue
         export_rows.append({
-            'studentId': student_id,
+            'matricNumber': matric_number or student_uuid,
             'courseCode': result.course.code,
             'caScore': round(result.ca_score, 2),
             'examScore': round(result.exam_score, 2),
@@ -516,9 +539,16 @@ def build_scores_payload(academic_year, semester, staff_id='', course_code=None)
             f'export scores: no exportable Results for {academic_year} '
             f'semester {semester}')
 
+    semester_portal_id = (session.semester_portal_ids or {}).get(str(semester))
+    if not semester_portal_id:
+        warnings.append(
+            f'semesters: no Portal semester uuid stored for {academic_year} '
+            f'semester {semester}; falling back to "{semester}".')
+        semester_portal_id = str(semester)
+
     payload = {
         'academicSessionId': session.portal_id,
-        'semesterId': str(semester),
+        'semesterId': semester_portal_id,
         # staffId is informational per the programmer's spec; override via
         # the command's --staff-id when a specific examiner should be recorded.
         'staffId': _clean(staff_id),

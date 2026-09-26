@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from django.contrib import messages
 from .models import Student
 
 
@@ -42,28 +41,6 @@ class StudentAdmin(UserAdmin):
                             "For a Lecturer: set Department (their home department), staff ID, and title."
         }),
     )
-
-    actions = ['promote_selected_students']
-
-    @admin.action(description='Promote selected students to their next academic level')
-    def promote_selected_students(self, request, queryset):
-        students = queryset.filter(role='student')
-        promoted, at_top, unset = 0, 0, 0
-        for student in students:
-            if not student.academic_level:
-                unset += 1
-                continue
-            if student.promote():
-                promoted += 1
-            else:
-                at_top += 1
-
-        if promoted:
-            self.message_user(request, f"Promoted {promoted} student(s) to their next level.", level=messages.SUCCESS)
-        if at_top:
-            self.message_user(request, f"{at_top} student(s) are already at the highest level (HND2) and were not changed.", level=messages.WARNING)
-        if unset:
-            self.message_user(request, f"{unset} student(s) have no academic level set and were skipped.", level=messages.WARNING)
 
     def save_model(self, request, obj, form, change):
         """After a student's department/level is set or changed, auto-enroll them in the matching courses."""

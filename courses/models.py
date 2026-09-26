@@ -52,6 +52,9 @@ class AcademicSession(models.Model):
     """
     portal_id   = models.CharField(max_length=64, blank=True, null=True, unique=True,
                     help_text="Portal's UUID for this session.")
+    # Map of semester ("1"/"2") -> Portal semester UUID, e.g. {"1": "uuid", "2": "uuid"}.
+    semester_portal_ids = models.JSONField(default=dict, blank=True,
+                    help_text='Portal UUID per semester, {"1": "<uuid>", "2": "<uuid>"}.')
     name        = models.CharField(max_length=20, unique=True, help_text="e.g. 2024/2025")
     start_date  = models.DateTimeField(blank=True, null=True)
     end_date    = models.DateTimeField(blank=True, null=True)

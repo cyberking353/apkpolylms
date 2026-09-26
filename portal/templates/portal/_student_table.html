@@ -26,12 +26,6 @@
           <td>
             <div style="display:flex;gap:6px">
               <a href="{% url 'portal:student_edit' s.pk %}" class="btn btn-ghost btn-sm">Edit</a>
-              <a href="{% url 'portal:student_reset_password' s.pk %}" class="btn btn-ghost btn-sm"><i data-lucide="key"></i> Reset Password</a>
-              {% if s.next_academic_level %}
-              <form method="post" action="{% url 'portal:student_promote' s.pk %}">{% csrf_token %}
-                <button class="btn btn-gold btn-sm" data-confirm="Promote {{ s.get_full_name }} to {{ s.next_academic_level }}?">Promote</button>
-              </form>
-              {% endif %}
             </div>
           </td>
         </tr>

@@ -1,4 +1,3 @@
-import os
 from functools import wraps
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -188,10 +187,6 @@ def student_create(request):
     from accounts.models import Student, get_department_choices, ACADEMIC_LEVEL_CHOICES
     if request.method == 'POST':
         p = request.POST
-        pwd = p.get('password', '').strip()
-        if not pwd:
-            messages.error(request, 'Password is required.')
-            return redirect('portal:student_create')
         if Student.objects.filter(email=p['email']).exists():
             messages.error(request, 'An account with this email already exists.')
         else:
@@ -199,7 +194,6 @@ def student_create(request):
             s = Student.objects.create_user(
                 username=p['email'], email=p['email'],
                 first_name=p.get('first_name',''), last_name=p.get('last_name',''),
-                password=pwd,
                 role='student',
                 department=p.get('department',''),
                 academic_level=p.get('academic_level',''),
@@ -208,6 +202,7 @@ def student_create(request):
                 current_semester=p.get('current_semester',''),
                 is_sms_synced=False,  # manual portal creation, not SMS-originated
             )
+            s.set_unusable_password()
             from courses.models import Enrollment
             Enrollment.sync_for_student(s)
             messages.success(request, f'Student {s.get_full_name()} created.')
@@ -231,8 +226,6 @@ def student_edit(request, pk):
         student.department    = p.get('department', student.department)
         student.academic_level = p.get('academic_level', student.academic_level)
         student.is_active     = 'is_active' in p
-        if p.get('password'):
-            student.set_password(p['password'])
         student.save()
         from courses.models import Enrollment
         Enrollment.sync_for_student(student)
@@ -243,45 +236,6 @@ def student_edit(request, pk):
         'dept_choices': get_department_choices(),
         'level_choices': ACADEMIC_LEVEL_CHOICES,
     })
-
-
-@portal_required
-def student_promote(request, pk):
-    from accounts.models import Student
-    student = get_object_or_404(Student, pk=pk, role='student')
-    if student.promote():
-        from courses.models import Enrollment
-        Enrollment.sync_for_student(student)
-        messages.success(request, f'{student.get_full_name()} promoted to {student.get_academic_level_display()}.')
-    else:
-        messages.warning(request, f'{student.get_full_name()} is already at the highest level (HND2).')
-    return redirect('portal:student_list')
-
-
-@portal_required
-def student_reset_password(request, pk):
-    """
-    Quick, focused password reset for a student who's forgotten theirs — separate
-    from the full Edit Student form since this is the one thing an admin needs to
-    do fast, without wading through every other field. Since students don't self-
-    register or receive email, the admin sets the new password directly and relays
-    it to the student (in person, by phone, etc.).
-    """
-    from accounts.models import Student
-    student = get_object_or_404(Student, pk=pk, role='student')
-    if request.method == 'POST':
-        new_password = request.POST.get('password', '').strip()
-        if len(new_password) < 6:
-            messages.error(request, 'Password must be at least 6 characters.')
-            return render(request, 'portal/student_reset_password.html', {'student': student})
-        student.set_password(new_password)
-        student.save(update_fields=['password'])
-        messages.success(
-            request,
-            f'Password reset for {student.get_full_name()}.'
-        )
-        return redirect('portal:student_list')
-    return render(request, 'portal/student_reset_password.html', {'student': student})
 
 
 # ── Lecturers ──────────────────────────────────────────────────────────
@@ -313,23 +267,19 @@ def lecturer_create(request):
     from accounts.models import Student, get_department_choices
     if request.method == 'POST':
         p = request.POST
-        pwd = p.get('password', '').strip()
-        if not pwd:
-            messages.error(request, 'Password is required.')
-            return redirect('portal:lecturer_create')
         if Student.objects.filter(email=p['email']).exists():
             messages.error(request, 'An account with this email already exists.')
         else:
-            Student.objects.create_user(
+            lecturer = Student.objects.create_user(
                 username=p['email'], email=p['email'],
                 first_name=p.get('first_name',''), last_name=p.get('last_name',''),
-                password=pwd,
                 role='lecturer',
                 department=p.get('department',''),
                 staff_id=p.get('staff_id',''),
                 title=p.get('title',''),
                 is_active=True,
             )
+            lecturer.set_unusable_password()
             messages.success(request, 'Lecturer account created.')
             return redirect('portal:lecturer_list')
     return render(request, 'portal/lecturer_form.html', {
@@ -350,8 +300,6 @@ def lecturer_edit(request, pk):
         lecturer.staff_id   = p.get('staff_id', lecturer.staff_id)
         lecturer.department = p.get('department', lecturer.department)
         lecturer.is_active  = 'is_active' in p
-        if p.get('password'):
-            lecturer.set_password(p['password'])
         lecturer.save()
         messages.success(request, 'Lecturer updated.')
         return redirect('portal:lecturer_list')
@@ -359,26 +307,6 @@ def lecturer_edit(request, pk):
         'is_new': False, 'lecturer': lecturer,
         'dept_choices': get_department_choices(),
     })
-
-
-@portal_required
-def lecturer_reset_password(request, pk):
-    """Quick, focused password reset for a lecturer — see student_reset_password for the same idea."""
-    from accounts.models import Student
-    lecturer = get_object_or_404(Student, pk=pk, role='lecturer')
-    if request.method == 'POST':
-        new_password = request.POST.get('password', '').strip()
-        if len(new_password) < 6:
-            messages.error(request, 'Password must be at least 6 characters.')
-            return render(request, 'portal/lecturer_reset_password.html', {'lecturer': lecturer})
-        lecturer.set_password(new_password)
-        lecturer.save(update_fields=['password'])
-        messages.success(
-            request,
-            f'Password reset for {lecturer.display_name}.'
-        )
-        return redirect('portal:lecturer_list')
-    return render(request, 'portal/lecturer_reset_password.html', {'lecturer': lecturer})
 
 
 @portal_required
@@ -1122,9 +1050,8 @@ def student_bulk_upload(request):
     Upload a CSV file to create multiple student accounts at once.
     Expected columns (with header row):
     first_name, last_name, email, matric_number, department, academic_level
-    Password defaults to matric_number (or env DEFAULT_STUDENT_PASSWORD).
+    Accounts sign in via Portal SSO, so no local password is set.
     """
-    _DEFAULT_PWD = os.environ.get('DEFAULT_STUDENT_PASSWORD', 'changeme123')
     from accounts.models import Student, get_department_choices, ACADEMIC_LEVEL_CHOICES
     from courses.models import Enrollment
     import csv, io
@@ -1169,14 +1096,14 @@ def student_bulk_upload(request):
                 errors.append(f"Row {i}: {email} — invalid level '{level}' — skipped.")
                 continue
 
-            password = matric or _DEFAULT_PWD
             s = Student.objects.create_user(
                 username=email, email=email,
                 first_name=first_name, last_name=last_name,
-                password=password, role='student',
+                role='student',
                 department=department, academic_level=level,
                 matric_number=matric,
             )
+            s.set_unusable_password()
             Enrollment.sync_for_student(s)
             created.append(f"{s.get_full_name()} ({email})")
 

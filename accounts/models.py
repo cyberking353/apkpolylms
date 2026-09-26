@@ -31,9 +31,6 @@ ACADEMIC_LEVEL_CHOICES = [
     ('HND2', 'HND Year 2'),
 ]
 
-# Order used when promoting a student to the next level
-LEVEL_PROGRESSION = ['ND1', 'ND2', 'HND1', 'HND2']
-
 ROLE_CHOICES = [
     ('student',  'Student'),
     ('lecturer', 'Lecturer'),
@@ -138,22 +135,3 @@ class Student(AbstractUser):
         if len(parts) >= 2:
             return f"{parts[0][0]}{parts[-1][0]}".upper()
         return self.username[:2].upper()
-
-    @property
-    def next_academic_level(self):
-        """What this student would be promoted to, or None if already at the top or unset."""
-        if self.academic_level not in LEVEL_PROGRESSION:
-            return None
-        idx = LEVEL_PROGRESSION.index(self.academic_level)
-        if idx + 1 < len(LEVEL_PROGRESSION):
-            return LEVEL_PROGRESSION[idx + 1]
-        return None
-
-    def promote(self):
-        """Move student to the next academic level. Returns True if promoted, False if already at top."""
-        nxt = self.next_academic_level
-        if nxt:
-            self.academic_level = nxt
-            self.save(update_fields=['academic_level'])
-            return True
-        return False

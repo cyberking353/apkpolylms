@@ -161,6 +161,20 @@ class SessionSyncTests(TestCase):
         session = AcademicSession.objects.get(name='2026/2027')
         self.assertEqual(session.portal_id, '2026/2027')
 
+    def test_stores_semester_portal_ids(self):
+        url = reverse('api:sync_sessions')
+        resp = self.client.post(url, data=json.dumps({
+            'id': 'sess-uuid', 'name': '2026/2027', 'is_current': True,
+            'semesters': [
+                {'portal_id': 'sem-1-uuid', 'semester_type': 'FIRST'},
+                {'portal_id': 'sem-2-uuid', 'semester_type': 'SECOND'},
+            ],
+        }), content_type='application/json', **AUTH)
+        self.assertEqual(resp.status_code, 200)
+        session = AcademicSession.objects.get(name='2026/2027')
+        self.assertEqual(session.semester_portal_ids,
+                         {'1': 'sem-1-uuid', '2': 'sem-2-uuid'})
+
 
 @override_settings(LMS_API_TOKEN=TEST_TOKEN, PORTAL_SSO_SECRET=TEST_SECRET)
 class CourseSyncTests(TestCase):
@@ -608,7 +622,8 @@ class ScoresExportTests(TestCase):
 
     def setUp(self):
         self.session = AcademicSession.objects.create(
-            portal_id='session-uuid', name='2025/2026', is_current=True)
+            portal_id='session-uuid', name='2025/2026', is_current=True,
+            semester_portal_ids={'1': 'sem-1-uuid', '2': 'sem-2-uuid'})
         self.student = Student.objects.create_user(
             username='stu@example.com', email='stu@example.com', password='x',
             matric_number='AHP/ND/CSC/24/0042', portal_id='student-uuid')
@@ -629,10 +644,10 @@ class ScoresExportTests(TestCase):
             '2025/2026', '1', staff_id='staff-uuid')
         self.assertFalse(warnings)
         self.assertEqual(payload['academicSessionId'], 'session-uuid')
-        self.assertEqual(payload['semesterId'], '1')
+        self.assertEqual(payload['semesterId'], 'sem-1-uuid')
         self.assertEqual(payload['staffId'], 'staff-uuid')
         self.assertEqual(payload['results'], [{
-            'studentId': 'student-uuid',
+            'matricNumber': 'AHP/ND/CSC/24/0042',
             'courseCode': 'CSC101',
             'caScore': 30.0,
             'examScore': 60.0,
@@ -649,17 +664,18 @@ class ScoresExportTests(TestCase):
     def test_student_without_portal_id_skipped_with_warning(self):
         ghost = Student.objects.create_user(
             username='ghost@example.com', email='ghost@example.com',
-            password='x', matric_number='AHP/ND/CSC/24/0099')
+            password='x')
         self._result()
         self._result(student=ghost)
         payload, warnings = sync_helpers.build_scores_payload('2025/2026', '1')
         self.assertEqual(payload['results'], [{
-            'studentId': 'student-uuid',
+            'matricNumber': 'AHP/ND/CSC/24/0042',
             'courseCode': 'CSC101',
             'caScore': 30.0,
             'examScore': 60.0,
         }])
         self.assertEqual(len(warnings), 1)
+        self.assertIn('no matric number / portal_id', warnings[0])
 
     def test_empty_results_raises(self):
         Result.objects.all().delete()
@@ -674,6 +690,6 @@ class ScoresExportTests(TestCase):
             ca_score=10, exam_score=20,
             ca_override=True, exam_override=True)
         payload, _ = sync_helpers.build_scores_payload('2025/2026', '2')
-        self.assertEqual(payload['semesterId'], '2')
+        self.assertEqual(payload['semesterId'], 'sem-2-uuid')
         self.assertEqual(payload['results'][0]['caScore'], 10.0)
         self.assertEqual(payload['results'][0]['examScore'], 20.0)

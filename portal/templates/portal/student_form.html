@@ -29,9 +29,6 @@
           {% for code,label in level_choices %}<option value="{{ code }}" {% if student.academic_level == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
         </select>
       </div>
-      <div class="field"><label>Password {% if not is_new %}(leave blank to keep current){% endif %}</label>
-        <input type="password" name="password" {% if is_new %}required{% endif %} placeholder="{% if is_new %}Set password{% else %}Leave blank to keep current{% endif %}">
-      </div>
       {% if not is_new %}
       <div class="field"><label style="display:flex;align-items:center;gap:8px;cursor:pointer">
         <input type="checkbox" name="is_active" {% if student.is_active %}checked{% endif %}> Account Active
