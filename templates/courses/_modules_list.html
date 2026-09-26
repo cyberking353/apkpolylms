@@ -173,3 +173,49 @@
   </form>
   {% endif %}
 </div>
+
+<script>
+(function () {
+  var MAX_BYTES = 10 * 1024 * 1024; // 10 MB — matches MAX_DOC_BYTES in alhikma_lms/uploads.py
+  var MSG_CLASS = 'notes-size-error';
+
+  document.addEventListener('change', function (e) {
+    var input = e.target;
+    if (!input || input.name !== 'notes' || !input.files || !input.files.length) return;
+    var file = input.files[0];
+    var tooBig = file.size > MAX_BYTES;
+    var form = input.form || input.closest('form');
+    if (!form) return;
+    if (form.querySelector('.' + MSG_CLASS)) {
+      form.querySelector('.' + MSG_CLASS).remove();
+    }
+    if (tooBig) {
+      var msg = document.createElement('div');
+      msg.className = MSG_CLASS;
+      msg.setAttribute('style', 'color:#d33;font-size:.72rem;margin:2px 0 0;flex-basis:100%;text-align:right');
+      msg.textContent = 'File is ' + (file.size / (1024 * 1024)).toFixed(1) +
+        ' MB — max allowed is 10 MB. Please choose a smaller file.';
+      var submit = form.querySelector('button[type="submit"]');
+      (submit ? submit.parentNode : form).appendChild(msg);
+    }
+  }, true);
+
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form || form.tagName !== 'FORM') return;
+    var notes = form.querySelector('input[name="notes"]');
+    if (notes && notes.files && notes.files.length && notes.files[0].size > MAX_BYTES) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!form.querySelector('.' + MSG_CLASS)) {
+        var msg = document.createElement('div');
+        msg.className = MSG_CLASS;
+        msg.setAttribute('style', 'color:#d33;font-size:.72rem;margin:2px 0 0;flex-basis:100%;text-align:right');
+        msg.textContent = 'File is too large — max allowed is 10 MB.';
+        var submit = form.querySelector('button[type="submit"]');
+        (submit ? submit.parentNode : form).appendChild(msg);
+      }
+    }
+  }, true);
+})();
+</script>
